@@ -27,7 +27,9 @@ Thank you for your interest in contributing to Dev8.dev! 🎉 We're building the
 ## 🎯 Ways to Contribute
 
 ### 🐛 Bug Reports
+
 Found a bug? Please check our [existing issues](https://github.com/VAIBHAVSING/Dev8.dev/issues) first, then create a new one with:
+
 - Clear description of the issue
 - Steps to reproduce
 - Expected vs actual behavior
@@ -35,13 +37,16 @@ Found a bug? Please check our [existing issues](https://github.com/VAIBHAVSING/D
 - Your environment details
 
 ### ✨ Feature Requests
+
 Have an idea? We'd love to hear it! Open an issue with:
+
 - Problem description
 - Proposed solution
 - Use cases and benefits
 - Implementation ideas (optional)
 
 ### 🔧 Code Contributions
+
 1. **Find an issue** to work on or create one
 2. **Comment** on the issue to let us know you're working on it
 3. **Create a branch** for your feature:
@@ -59,13 +64,16 @@ Have an idea? We'd love to hear it! Open an issue with:
 ## 📋 Development Guidelines
 
 ### Code Style
+
 - Use **TypeScript** for all new code
 - Follow **ESLint** and **Prettier** configurations
 - Write **clear, descriptive** variable and function names
 - Add **JSDoc comments** for public APIs
 
 ### Commit Messages
+
 We use [Conventional Commits](https://www.conventionalcommits.org/):
+
 - `feat:` for new features
 - `fix:` for bug fixes
 - `docs:` for documentation
@@ -75,6 +83,7 @@ We use [Conventional Commits](https://www.conventionalcommits.org/):
 - `chore:` for maintenance tasks
 
 ### Testing
+
 - Write **unit tests** for new functions
 - Add **integration tests** for API endpoints
 - Ensure **E2E tests** pass for critical user flows
@@ -86,7 +95,7 @@ We use [Conventional Commits](https://www.conventionalcommits.org/):
 Dev8.dev/
 ├── apps/
 │   ├── web/          # Next.js frontend dashboard
-│   ├── docs/         # Documentation site  
+│   ├── docs/         # Documentation site
 │   └── agent/        # Go backend service
 ├── packages/
 │   ├── ui/           # Shared React components
@@ -119,6 +128,7 @@ Dev8.dev/
 ## 🎉 Recognition
 
 Contributors get:
+
 - 🏆 **GitHub profile** credit
 - 🎯 **Discord contributor** role
 - 📢 **Twitter shoutouts** for major contributions

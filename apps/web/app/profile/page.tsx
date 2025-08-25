@@ -1,31 +1,31 @@
-"use client"
+"use client";
 
-import { useSession, signOut } from "next-auth/react"
-import { useRouter } from "next/navigation"
-import { useEffect } from "react"
-import Link from "next/link"
+import { useSession, signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import Link from "next/link";
 
 export default function Profile() {
-  const { data: session, status } = useSession()
-  const router = useRouter()
+  const { data: session, status } = useSession();
+  const router = useRouter();
 
   useEffect(() => {
-    if (status === "loading") return
+    if (status === "loading") return;
     if (!session) {
-      router.push("/signin")
+      router.push("/signin");
     }
-  }, [session, status, router])
+  }, [session, status, router]);
 
   if (status === "loading") {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-lg">Loading...</div>
       </div>
-    )
+    );
   }
 
   if (!session) {
-    return null
+    return null;
   }
 
   return (
@@ -39,7 +39,10 @@ export default function Profile() {
               </Link>
             </div>
             <div className="flex items-center space-x-4">
-              <Link href="/dashboard" className="text-gray-700 hover:text-gray-900">
+              <Link
+                href="/dashboard"
+                className="text-gray-700 hover:text-gray-900"
+              >
                 Dashboard
               </Link>
               <span className="text-gray-700">
@@ -62,7 +65,7 @@ export default function Profile() {
             <h3 className="text-lg leading-6 font-medium text-gray-900 mb-6">
               Profile Information
             </h3>
-            
+
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
               <div>
                 <label className="block text-sm font-medium text-gray-700">
@@ -72,7 +75,7 @@ export default function Profile() {
                   {session.user?.name || "Not provided"}
                 </div>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700">
                   Email
@@ -81,7 +84,7 @@ export default function Profile() {
                   {session.user?.email || "Not provided"}
                 </div>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700">
                   Profile Image
@@ -96,13 +99,15 @@ export default function Profile() {
                   ) : (
                     <div className="h-20 w-20 rounded-full bg-gray-300 flex items-center justify-center">
                       <span className="text-gray-600 text-xl font-medium">
-                        {session.user?.name?.[0] || session.user?.email?.[0] || "U"}
+                        {session.user?.name?.[0] ||
+                          session.user?.email?.[0] ||
+                          "U"}
                       </span>
                     </div>
                   )}
                 </div>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700">
                   User ID
@@ -112,7 +117,7 @@ export default function Profile() {
                 </div>
               </div>
             </div>
-            
+
             <div className="mt-8 pt-8 border-t border-gray-200">
               <h4 className="text-md font-medium text-gray-900 mb-4">
                 Account Actions
@@ -136,5 +141,5 @@ export default function Profile() {
         </div>
       </main>
     </div>
-  )
+  );
 }

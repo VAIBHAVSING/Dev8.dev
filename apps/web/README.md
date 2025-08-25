@@ -55,7 +55,7 @@ AUTH_GOOGLE_ID="your-google-client-id"
 AUTH_GOOGLE_SECRET="your-google-client-secret"
 
 # GitHub OAuth (Get from GitHub Developer Settings)
-AUTH_GITHUB_ID="your-github-client-id" 
+AUTH_GITHUB_ID="your-github-client-id"
 AUTH_GITHUB_SECRET="your-github-client-secret"
 ```
 

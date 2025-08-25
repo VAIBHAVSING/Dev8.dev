@@ -1,12 +1,12 @@
-import NextAuth from "next-auth"
-import Google from "next-auth/providers/google"
-import GitHub from "next-auth/providers/github"
-import Credentials from "next-auth/providers/credentials"
-import { PrismaAdapter } from "@auth/prisma-adapter"
-import { prisma } from "./prisma"
-import bcrypt from "bcryptjs"
-import { signInSchema } from "./zod"
-import { ZodError } from "zod"
+import NextAuth from "next-auth";
+import Google from "next-auth/providers/google";
+import GitHub from "next-auth/providers/github";
+import Credentials from "next-auth/providers/credentials";
+import { PrismaAdapter } from "@auth/prisma-adapter";
+import { prisma } from "./prisma";
+import bcrypt from "bcryptjs";
+import { signInSchema } from "./zod";
+import { ZodError } from "zod";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
@@ -30,22 +30,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
       authorize: async (credentials) => {
         try {
-          const { email, password } = await signInSchema.parseAsync(credentials)
+          const { email, password } =
+            await signInSchema.parseAsync(credentials);
 
           // Find user in database
           const user = await prisma.user.findUnique({
             where: { email },
-          })
+          });
 
           if (!user || !user.password) {
-            throw new Error("Invalid credentials.")
+            throw new Error("Invalid credentials.");
           }
 
           // Verify password
-          const isValidPassword = await bcrypt.compare(password, user.password)
-          
+          const isValidPassword = await bcrypt.compare(password, user.password);
+
           if (!isValidPassword) {
-            throw new Error("Invalid credentials.")
+            throw new Error("Invalid credentials.");
           }
 
           return {
@@ -53,12 +54,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             email: user.email,
             name: user.name,
             image: user.image,
-          }
+          };
         } catch (error) {
           if (error instanceof ZodError) {
-            return null
+            return null;
           }
-          throw error
+          throw error;
         }
       },
     }),
@@ -66,28 +67,28 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.id = user.id
+        token.id = user.id;
       }
-      return token
+      return token;
     },
     async session({ session, token }) {
       if (token && session.user) {
-        session.user.id = token.id as string
+        session.user.id = token.id as string;
       }
-      return session
+      return session;
     },
     async signIn({ account, profile }) {
       if (account?.provider === "google") {
-        return (profile as any)?.email_verified === true
+        return (profile as any)?.email_verified === true;
       }
       if (account?.provider === "github") {
-        return true
+        return true;
       }
-      return true
+      return true;
     },
   },
   pages: {
     signIn: "/signin",
   },
   secret: process.env.AUTH_SECRET,
-})
+});

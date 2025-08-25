@@ -19,13 +19,14 @@
 
 ## ✨ What is Dev8.dev?
 
-Dev8.dev is a **cloud-based IDE hosting platform** that revolutionizes how developers work. Think GitHub Codespaces, but with **unlimited flexibility** and **transparent pricing**. 
+Dev8.dev is a **cloud-based IDE hosting platform** that revolutionizes how developers work. Think GitHub Codespaces, but with **unlimited flexibility** and **transparent pricing**.
 
 Launch fully-configured VS Code environments in seconds, choose your perfect machine specs, and code from any device with just a browser. No more "it works on my machine" – your entire development environment lives in the cloud.
 
 ### 🎯 Perfect For
+
 - **Remote Teams** - Standardized dev environments for everyone
-- **Students** - Access powerful development tools from any device  
+- **Students** - Access powerful development tools from any device
 - **Freelancers** - Switch between client projects instantly
 - **Enterprises** - Secure, scalable development infrastructure
 
@@ -80,6 +81,7 @@ graph TB
 ```
 
 ### Tech Stack
+
 - **Frontend**: Next.js 15 + TypeScript + Tailwind CSS
 - **Backend**: Go + TypeScript microservices
 - **IDE**: code-server (VS Code in browser)
@@ -90,12 +92,14 @@ graph TB
 ## 🚀 Quick Start
 
 ### For Users
+
 1. **Sign up** at [dev8.dev](https://dev8.dev)
 2. **Choose** your machine configuration
 3. **Launch** your environment
 4. **Start coding** immediately!
 
 ### For Developers
+
 ```bash
 # Clone the repository
 git clone https://github.com/VAIBHAVSING/Dev8.dev.git
@@ -185,6 +189,7 @@ Love Dev8.dev? Here's how you can help us grow:
 We welcome contributions from developers of all skill levels! Check out our [Contributing Guide](CONTRIBUTING.md) to get started.
 
 ### Development Setup
+
 ```bash
 # Fork and clone the repo
 git clone https://github.com/YOUR_USERNAME/Dev8.dev.git

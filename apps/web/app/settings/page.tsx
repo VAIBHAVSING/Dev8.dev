@@ -1,31 +1,31 @@
-"use client"
+"use client";
 
-import { useSession, signOut } from "next-auth/react"
-import { useRouter } from "next/navigation"
-import { useEffect } from "react"
-import Link from "next/link"
+import { useSession, signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import Link from "next/link";
 
 export default function Settings() {
-  const { data: session, status } = useSession()
-  const router = useRouter()
+  const { data: session, status } = useSession();
+  const router = useRouter();
 
   useEffect(() => {
-    if (status === "loading") return
+    if (status === "loading") return;
     if (!session) {
-      router.push("/signin")
+      router.push("/signin");
     }
-  }, [session, status, router])
+  }, [session, status, router]);
 
   if (status === "loading") {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-lg">Loading...</div>
       </div>
-    )
+    );
   }
 
   if (!session) {
-    return null
+    return null;
   }
 
   return (
@@ -39,10 +39,16 @@ export default function Settings() {
               </Link>
             </div>
             <div className="flex items-center space-x-4">
-              <Link href="/dashboard" className="text-gray-700 hover:text-gray-900">
+              <Link
+                href="/dashboard"
+                className="text-gray-700 hover:text-gray-900"
+              >
                 Dashboard
               </Link>
-              <Link href="/profile" className="text-gray-700 hover:text-gray-900">
+              <Link
+                href="/profile"
+                className="text-gray-700 hover:text-gray-900"
+              >
                 Profile
               </Link>
               <span className="text-gray-700">
@@ -66,7 +72,7 @@ export default function Settings() {
               <h3 className="text-lg leading-6 font-medium text-gray-900 mb-6">
                 Account Settings
               </h3>
-              
+
               <div className="space-y-6">
                 <div className="border-b border-gray-200 pb-6">
                   <h4 className="text-md font-medium text-gray-900 mb-4">
@@ -75,18 +81,26 @@ export default function Settings() {
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
                       <div>
-                        <p className="text-sm font-medium text-gray-900">Password</p>
-                        <p className="text-sm text-gray-500">Change your account password</p>
+                        <p className="text-sm font-medium text-gray-900">
+                          Password
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Change your account password
+                        </p>
                       </div>
                       <button className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium">
                         Change Password
                       </button>
                     </div>
-                    
+
                     <div className="flex justify-between items-center">
                       <div>
-                        <p className="text-sm font-medium text-gray-900">Two-Factor Authentication</p>
-                        <p className="text-sm text-gray-500">Add an extra layer of security</p>
+                        <p className="text-sm font-medium text-gray-900">
+                          Two-Factor Authentication
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Add an extra layer of security
+                        </p>
                       </div>
                       <button className="bg-gray-300 text-gray-600 px-4 py-2 rounded-md text-sm font-medium cursor-not-allowed">
                         Coming Soon
@@ -94,7 +108,7 @@ export default function Settings() {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="border-b border-gray-200 pb-6">
                   <h4 className="text-md font-medium text-gray-900 mb-4">
                     Connected Accounts
@@ -121,16 +135,24 @@ export default function Settings() {
                           />
                         </svg>
                         <div>
-                          <p className="text-sm font-medium text-gray-900">Google</p>
-                          <p className="text-sm text-gray-500">OAuth connection</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            Google
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            OAuth connection
+                          </p>
                         </div>
                       </div>
                       <span className="text-sm text-green-600">Connected</span>
                     </div>
-                    
+
                     <div className="flex justify-between items-center">
                       <div className="flex items-center">
-                        <svg className="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                        <svg
+                          className="w-5 h-5 mr-3"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
                           <path
                             fillRule="evenodd"
                             d="M10 0C4.477 0 0 4.484 0 10.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0110 4.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.203 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.942.359.31.678.921.678 1.856 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0020 10.017C20 4.484 15.522 0 10 0z"
@@ -138,15 +160,19 @@ export default function Settings() {
                           />
                         </svg>
                         <div>
-                          <p className="text-sm font-medium text-gray-900">GitHub</p>
-                          <p className="text-sm text-gray-500">OAuth connection</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            GitHub
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            OAuth connection
+                          </p>
                         </div>
                       </div>
                       <span className="text-sm text-green-600">Connected</span>
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="pt-6">
                   <h4 className="text-md font-medium text-gray-900 mb-4">
                     Danger Zone
@@ -154,8 +180,16 @@ export default function Settings() {
                   <div className="bg-red-50 border border-red-200 rounded-md p-4">
                     <div className="flex">
                       <div className="flex-shrink-0">
-                        <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                        <svg
+                          className="h-5 w-5 text-red-400"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                            clipRule="evenodd"
+                          />
                         </svg>
                       </div>
                       <div className="ml-3">
@@ -163,7 +197,10 @@ export default function Settings() {
                           Delete Account
                         </h3>
                         <div className="mt-2 text-sm text-red-700">
-                          <p>Once you delete your account, there is no going back. Please be certain.</p>
+                          <p>
+                            Once you delete your account, there is no going
+                            back. Please be certain.
+                          </p>
                         </div>
                         <div className="mt-4">
                           <button className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium">
@@ -180,5 +217,5 @@ export default function Settings() {
         </div>
       </main>
     </div>
-  )
+  );
 }

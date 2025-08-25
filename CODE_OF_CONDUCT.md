@@ -9,7 +9,9 @@ We pledge to act and interact in ways that contribute to an open, welcoming, div
 ## ✨ Our Standards
 
 ### Positive Behavior
+
 Examples of behavior that contributes to a positive environment:
+
 - 🤝 Being respectful and inclusive
 - 💡 Constructive feedback and criticism
 - 🔍 Focusing on what's best for the community
@@ -18,7 +20,9 @@ Examples of behavior that contributes to a positive environment:
 - 🎉 Celebrating diverse perspectives and experiences
 
 ### Unacceptable Behavior
+
 Examples of unacceptable behavior include:
+
 - 🚫 Harassment, trolling, or personal attacks
 - 💬 Use of sexualized language or imagery
 - 📧 Unwelcome sexual attention or advances
@@ -33,6 +37,7 @@ Community leaders are responsible for clarifying and enforcing our standards of 
 ## 📍 Scope
 
 This Code of Conduct applies within all community spaces, including:
+
 - 💬 Discord server
 - 🐙 GitHub repositories and discussions
 - 🌐 Official Dev8.dev platforms
@@ -54,18 +59,22 @@ All reports will be handled with discretion and confidentiality.
 Community leaders will follow these guidelines in determining consequences:
 
 ### 1. 📢 Correction
+
 **Impact**: Minor inappropriate behavior
 **Consequence**: Private warning with explanation
 
 ### 2. ⚠️ Warning
+
 **Impact**: Single incident or series of actions
 **Consequence**: Warning with consequences for continued behavior
 
 ### 3. ⏸️ Temporary Ban
+
 **Impact**: Serious violation or sustained inappropriate behavior
 **Consequence**: Temporary ban from community interactions
 
 ### 4. 🚫 Permanent Ban
+
 **Impact**: Pattern of violations or severe single incident
 **Consequence**: Permanent ban from all community spaces
 
