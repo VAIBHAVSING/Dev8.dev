@@ -1,0 +1,8 @@
+{
+  "name": "agent",
+  "private": true,
+  "scripts": {
+    "dev": "command -v go >/dev/null 2>&1 && go run . || echo 'Go is not installed.'",
+    "build": "command -v go >/dev/null 2>&1 && go install && go build -o bin/agent . || echo 'Go is not installed.'"
+  }
+}

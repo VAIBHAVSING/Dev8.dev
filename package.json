@@ -1,5 +1,5 @@
 {
-  "name": "Dev8.dev",
+  "name": "dev8dotdev",
   "private": true,
   "scripts": {
     "build": "turbo run build",
