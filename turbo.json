@@ -5,17 +5,53 @@
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": [".next/**", "!.next/cache/**","apps/agent/bin/**"]
+      "outputs": [".next/**", "!.next/cache/**", "bin/**"],
+      "env": [
+        "NODE_ENV",
+        "NEXTAUTH_SECRET",
+        "NEXTAUTH_URL",
+        "AUTH_SECRET",
+        "AUTH_GOOGLE_ID",
+        "AUTH_GOOGLE_SECRET",
+        "AUTH_GITHUB_ID",
+        "AUTH_GITHUB_SECRET",
+        "DATABASE_URL",
+        "AGENT_PORT"
+      ]
     },
     "lint": {
       "dependsOn": ["^lint"]
+    },
+    "lint:go": {
+      "cache": false
+    },
+    "format": {
+      "dependsOn": ["^format"]
+    },
+    "format:go": {
+      "cache": false
     },
     "check-types": {
       "dependsOn": ["^check-types"]
     },
     "dev": {
       "cache": false,
-      "persistent": true
+      "persistent": true,
+      "env": [
+        "NODE_ENV",
+        "NEXTAUTH_SECRET",
+        "NEXTAUTH_URL",
+        "AUTH_SECRET",
+        "AUTH_GOOGLE_ID",
+        "AUTH_GOOGLE_SECRET",
+        "AUTH_GITHUB_ID",
+        "AUTH_GITHUB_SECRET",
+        "DATABASE_URL",
+        "AGENT_PORT"
+      ]
+    },
+    "clean": {
+      "cache": false
     }
   }
 }

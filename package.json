@@ -5,8 +5,12 @@
     "build": "turbo run build",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
-    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "check-types": "turbo run check-types"
+    "lint:go": "turbo run lint:go",
+    "format": "prettier --write \"**/*.{ts,tsx,md}\" && turbo run format:go",
+    "format:go": "turbo run format:go",
+    "check-types": "turbo run check-types",
+    "setup:go": "cd apps/agent && ./setup-go-tools.sh",
+    "clean": "turbo run clean"
   },
   "devDependencies": {
     "prettier": "^3.6.2",
