@@ -3,7 +3,10 @@
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { auth } from "@/lib/auth";
+import { redirect } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function Dashboard() {
   const { data: session, status } = useSession();
@@ -73,10 +76,12 @@ export default function Dashboard() {
               <div className="flex items-center">
                 <div className="flex-shrink-0">
                   {session.user?.image ? (
-                    <img
+                    <Image
                       className="h-10 w-10 rounded-full"
                       src={session.user.image}
                       alt="Profile"
+                      width={40}
+                      height={40}
                     />
                   ) : (
                     <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">

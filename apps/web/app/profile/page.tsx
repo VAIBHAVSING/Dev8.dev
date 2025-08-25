@@ -3,7 +3,10 @@
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { auth } from "@/lib/auth";
+import { redirect } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function Profile() {
   const { data: session, status } = useSession();
@@ -91,10 +94,12 @@ export default function Profile() {
                 </label>
                 <div className="mt-1">
                   {session.user?.image ? (
-                    <img
+                    <Image
                       className="h-20 w-20 rounded-full"
                       src={session.user.image}
                       alt="Profile"
+                      width={80}
+                      height={80}
                     />
                   ) : (
                     <div className="h-20 w-20 rounded-full bg-gray-300 flex items-center justify-center">

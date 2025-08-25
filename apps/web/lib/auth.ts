@@ -6,7 +6,6 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "./prisma";
 import bcrypt from "bcryptjs";
 import { signInSchema } from "./zod";
-import { ZodError } from "zod";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
@@ -14,15 +13,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     strategy: "jwt",
   },
   providers: [
-    Google({
-      clientId: process.env.AUTH_GOOGLE_ID!,
-      clientSecret: process.env.AUTH_GOOGLE_SECRET!,
-      authorization: { params: { access_type: "offline", prompt: "consent" } },
-    }),
-    GitHub({
-      clientId: process.env.AUTH_GITHUB_ID!,
-      clientSecret: process.env.AUTH_GITHUB_SECRET!,
-    }),
+    ...(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET 
+      ? [Google({
+          clientId: process.env.AUTH_GOOGLE_ID,
+          clientSecret: process.env.AUTH_GOOGLE_SECRET,
+          authorization: { params: { access_type: "offline", prompt: "consent" } },
+        })]
+      : []
+    ),
+    ...(process.env.AUTH_GITHUB_ID && process.env.AUTH_GITHUB_SECRET
+      ? [GitHub({
+          clientId: process.env.AUTH_GITHUB_ID,
+          clientSecret: process.env.AUTH_GITHUB_SECRET,
+        })]
+      : []
+    ),
     Credentials({
       credentials: {
         email: { label: "Email", type: "email" },
@@ -55,11 +60,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             name: user.name,
             image: user.image,
           };
-        } catch (error) {
-          if (error instanceof ZodError) {
-            return null;
-          }
-          throw error;
+        } catch {
+          return null;
         }
       },
     }),
@@ -78,8 +80,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return session;
     },
     async signIn({ account, profile }) {
-      if (account?.provider === "google") {
-        return (profile as any)?.email_verified === true;
+      if (account?.provider === "google" && profile) {
+        return (profile as { email_verified?: boolean })?.email_verified === true;
       }
       if (account?.provider === "github") {
         return true;
@@ -90,5 +92,5 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   pages: {
     signIn: "/signin",
   },
-  secret: process.env.AUTH_SECRET,
+  secret: process.env.AUTH_SECRET || "development-secret",
 });
