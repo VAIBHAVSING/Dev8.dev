@@ -3,6 +3,12 @@
   "private": true,
   "scripts": {
     "dev": "command -v go >/dev/null 2>&1 && go run . || echo 'Go is not installed.'",
-    "build": "command -v go >/dev/null 2>&1 && go install && go build -o bin/agent . || echo 'Go is not installed.'"
+    "build": "command -v go >/dev/null 2>&1 && go build -o bin/agent . || echo 'Go is not installed.'",
+    "lint": "command -v go >/dev/null 2>&1 && go vet ./... && go run honnef.co/go/tools/cmd/staticcheck@latest ./... || echo 'Go is not installed.'",
+    "lint:go": "command -v go >/dev/null 2>&1 && go vet ./... && go run honnef.co/go/tools/cmd/staticcheck@latest ./... || echo 'Go is not installed.'",
+    "format": "command -v go >/dev/null 2>&1 && go fmt ./... && $(go env GOPATH)/bin/goimports -w . || echo 'Go or goimports is not installed.'",
+    "format:go": "command -v go >/dev/null 2>&1 && go fmt ./... && $(go env GOPATH)/bin/goimports -w . || echo 'Go or goimports is not installed.'",
+    "test": "command -v go >/dev/null 2>&1 && go test ./... || echo 'Go is not installed.'",
+    "clean": "rm -rf bin/ tmp/ coverage.out"
   }
 }

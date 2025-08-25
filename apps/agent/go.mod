@@ -1,3 +1,3 @@
-module github.com/yourorg/agent
+module github.com/VAIBHAVSING/Dev8.dev/apps/agent
 
-go 1.24.6
+go 1.24
