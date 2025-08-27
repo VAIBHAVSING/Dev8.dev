@@ -37,6 +37,7 @@ jobs:
       - name: Test updates
         run: |
           pnpm install
+          pnpm --filter=web db:generate
           pnpm lint
           pnpm build
         env:

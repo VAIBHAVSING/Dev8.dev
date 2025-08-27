@@ -39,6 +39,9 @@ jobs:
       - name: Test
         run: pnpm test
         
+      - name: Generate Prisma Client
+        run: pnpm --filter=web db:generate
+        
       - name: Build
         run: pnpm build
         env:
