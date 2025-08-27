@@ -5,7 +5,7 @@
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": [".next/**", "!.next/cache/**", "apps/agent/bin/**"],
+      "outputs": [".next/**", "!.next/cache/**", "bin/**"],
       "env": [
         "NODE_ENV",
         "NEXTAUTH_SECRET",
