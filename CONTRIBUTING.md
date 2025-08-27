@@ -77,11 +77,21 @@ This ensures your changes will pass our CI pipeline.
 
 ## 🤖 CI/CD Pipeline
 
-Our GitHub Actions CI pipeline automatically runs on every pull request and push to main:
+Our simple GitHub Actions CI pipeline runs on every pull request and push:
 
-### Consolidated Pipeline Structure
+### Three Simple Jobs
 
-We use a single CI workflow with two main language-specific pipelines:
+- **🟦 TypeScript**: Lint → Type Check → Test → Build
+- **🟩 Go**: Lint → Format Check → Test → Build
+- **🛡️ Security**: Trivy vulnerability scanning
+
+### Local Testing
+
+Test your changes locally:
+
+````bash
+# Run the full CI suite
+make ci
 
 #### **🟦 TypeScript Pipeline**
 
@@ -125,7 +135,7 @@ make format
 make check-types
 make test
 make build
-```
+````
 
 ### Status Checks
 

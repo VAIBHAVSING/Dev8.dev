@@ -121,13 +121,13 @@ pnpm dev
 
 ## 🤖 CI/CD Pipeline
 
-This project uses a consolidated GitHub Actions CI pipeline organized by language:
+Simple and efficient GitHub Actions pipeline:
 
-### Single CI Workflow
+### Three Jobs, One Workflow
 
-Every pull request and push triggers a comprehensive pipeline with two main tracks:
-
-#### **🟦 TypeScript Pipeline**
+- **🟦 TypeScript**: Lint → Type Check → Test → Build
+- **🟩 Go**: Lint → Format Check → Test → Build
+- **�️ Security**: Trivy vulnerability scanning
 
 - **🧹 Linting**: ESLint with strict rules
 - **🎨 Code Formatting**: Prettier validation
@@ -157,20 +157,13 @@ Every pull request and push triggers a comprehensive pipeline with two main trac
 
 ### Local Development
 
-Simulate the CI pipeline locally:
+Run the same checks locally:
 
 ```bash
-# Install the development tools
-make install
-
-# Run all CI checks locally
-make ci
-
-# Individual checks
+make ci        # Run full pipeline
 make lint      # Lint all code
-make format    # Format all code
 make test      # Run all tests
-make build     # Build all applications
+make build     # Build everything
 ```
 
 ## 📁 Project Structure
