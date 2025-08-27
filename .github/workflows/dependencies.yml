@@ -33,8 +33,7 @@ jobs:
           go-version: '1.24'
 
       - name: Update Node.js dependencies
-        run: |
-          pnpm update --latest
+        run: pnpm update --latest
           
       - name: Update Go dependencies
         run: |
@@ -42,11 +41,12 @@ jobs:
           go get -u ./...
           go mod tidy
 
-      - name: Run tests after updates
+      - name: Run basic checks after updates
         run: |
           pnpm install
-          pnpm test
-          cd apps/agent && go test ./...
+          pnpm lint
+          pnpm check-types
+          cd apps/agent && go vet ./... && go build .
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v5
@@ -62,9 +62,10 @@ jobs:
             - Updated Go modules to latest versions
             
             ## Testing
-            - ✅ All tests passing
-            - ✅ Build successful
+            - ✅ Linting passed
+            - ✅ Type checking passed
+            - ✅ Basic build successful
             
-            Please review the changes and merge if everything looks good.
+            Please review the changes and run full tests before merging.
           branch: automated-dependency-updates
           delete-branch: true

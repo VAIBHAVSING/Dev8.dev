@@ -5,12 +5,16 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "./prisma";
 import bcrypt from "bcryptjs";
 import { signInSchema } from "./zod";
+import type { AuthOptions } from "next-auth";
+import type { JWT } from "next-auth/jwt";
+import type { Session, User } from "next-auth";
+import type { Account, Profile } from "next-auth";
 
 /**
  * Shared NextAuth configuration factory
  * This ensures DRY principles and consistency between auth.ts and route.ts
  */
-export function createAuthConfig(): any {
+export function createAuthConfig(): AuthOptions {
   const providers = [];
 
   // Only add Google provider if credentials are available
@@ -19,8 +23,10 @@ export function createAuthConfig(): any {
       Google({
         clientId: process.env.AUTH_GOOGLE_ID,
         clientSecret: process.env.AUTH_GOOGLE_SECRET,
-        authorization: { params: { access_type: "offline", prompt: "consent" } },
-      })
+        authorization: {
+          params: { access_type: "offline", prompt: "consent" },
+        },
+      }),
     );
   }
 
@@ -30,7 +36,7 @@ export function createAuthConfig(): any {
       GitHub({
         clientId: process.env.AUTH_GITHUB_ID,
         clientSecret: process.env.AUTH_GITHUB_SECRET,
-      })
+      }),
     );
   }
 
@@ -43,7 +49,8 @@ export function createAuthConfig(): any {
       },
       authorize: async (credentials) => {
         try {
-          const { email, password } = await signInSchema.parseAsync(credentials);
+          const { email, password } =
+            await signInSchema.parseAsync(credentials);
 
           // Find user in database
           const user = await prisma.user.findUnique({
@@ -71,7 +78,7 @@ export function createAuthConfig(): any {
           return null;
         }
       },
-    })
+    }),
   );
 
   return {
@@ -81,21 +88,29 @@ export function createAuthConfig(): any {
     },
     providers,
     callbacks: {
-      async jwt({ token, user }: { token: any; user: any }) {
+      async jwt({ token, user }: { token: JWT; user?: User }) {
         if (user) {
           token.id = user.id;
         }
         return token;
       },
-      async session({ session, token }: { session: any; token: any }) {
+      async session({ session, token }: { session: Session; token: JWT }) {
         if (token && session.user) {
           session.user.id = token.id as string;
         }
         return session;
       },
-      async signIn({ account, profile }: { account: any; profile?: any }) {
+      async signIn({
+        account,
+        profile,
+      }: {
+        account: Account | null;
+        profile?: Profile;
+      }) {
         if (account?.provider === "google" && profile) {
-          return (profile as { email_verified?: boolean })?.email_verified === true;
+          return (
+            (profile as { email_verified?: boolean })?.email_verified === true
+          );
         }
         if (account?.provider === "github") {
           return true;

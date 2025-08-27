@@ -32,7 +32,7 @@ Thank you for your interest in contributing to Dev8.dev! 🎉 We're building the
 
 ### Prerequisites
 
-- **Node.js** 18+ 
+- **Node.js** 18+
 - **pnpm** 9.0.0+
 - **Go** 1.24+
 - **PostgreSQL** 15+
@@ -53,7 +53,7 @@ make check-all        # runs lint, format, type-check, test, build
 
 # Individual checks
 make lint             # or pnpm lint
-make format           # or pnpm format  
+make format           # or pnpm format
 make test             # or pnpm test
 make build            # or pnpm build
 make check-types      # or pnpm check-types
@@ -79,28 +79,37 @@ This ensures your changes will pass our CI pipeline.
 
 Our GitHub Actions CI pipeline automatically runs on every pull request and push to main:
 
-### Continuous Integration Checks
+### Consolidated Pipeline Structure
 
-- **🔍 Change Detection**: Optimizes CI runs by detecting which parts of the codebase changed
-- **🧹 Linting**: ESLint for TypeScript, go vet + staticcheck for Go
-- **🎨 Formatting**: Prettier for TypeScript, gofmt + goimports for Go  
+We use a single CI workflow with two main language-specific pipelines:
+
+#### **🟦 TypeScript Pipeline**
+
+- **🧹 Linting**: ESLint with strict rules
+- **🎨 Formatting**: Prettier validation
 - **🔒 Type Checking**: TypeScript compiler strict checks
-- **🧪 Testing**: Unit tests for both Go and TypeScript
-- **🏗️ Building**: Next.js builds and Go binary compilation
-- **🗄️ Database**: PostgreSQL migration testing
+- **🧪 Testing**: Unit and integration tests
+- **🏗️ Building**: Next.js application builds
+- **📦 Security**: npm audit + CodeQL analysis
 
-### Security Scanning
+#### **🟩 Go Pipeline**
 
-- **🛡️ CodeQL**: Semantic code analysis
-- **🔍 Trivy**: Vulnerability scanning
-- **🔐 gosec**: Go security analysis
-- **📦 npm audit**: Node.js dependency security
+- **🧹 Linting**: go vet + staticcheck
+- **🎨 Formatting**: gofmt + goimports validation
+- **🧪 Testing**: Unit tests with race detection + coverage
+- **🏗️ Building**: Binary compilation
+- **🔐 Security**: gosec + CodeQL analysis
+
+#### **�️ General Security & Testing**
+
+- **🔍 Vulnerability Scanning**: Trivy for all dependencies
+- **�️ Database**: PostgreSQL migration testing
 
 ### Performance Optimizations
 
-- **📦 Caching**: Go modules, pnpm store, and build artifacts
-- **⚡ Parallelization**: Jobs run in parallel when possible
-- **🎯 Smart Triggers**: Only runs relevant checks based on changed files
+- **📦 Smart Caching**: Go modules, pnpm store, and build artifacts
+- **🎯 Change Detection**: Only runs relevant pipelines based on changed files
+- **⚡ Parallel Execution**: Language pipelines run concurrently
 
 ### Local CI Simulation
 
@@ -112,7 +121,7 @@ make ci
 
 # Or step by step
 make lint
-make format  
+make format
 make check-types
 make test
 make build
@@ -120,13 +129,12 @@ make build
 
 ### Status Checks
 
-All PRs must pass these checks:
-- ✅ Linting (TypeScript + Go)
-- ✅ Formatting (TypeScript + Go)  
-- ✅ Type checking (TypeScript)
-- ✅ Tests (TypeScript + Go)
-- ✅ Build (Next.js + Go binary)
-- ✅ Database migrations (PostgreSQL)
+All PRs must pass these consolidated checks:
+
+- ✅ TypeScript Pipeline (lint + format + type-check + test + build + security)
+- ✅ Go Pipeline (lint + format + test + build + security)
+- ✅ General Security Scanning (Trivy)
+- ✅ Database Migrations (PostgreSQL)
 
 ## 🎯 Ways to Contribute
 

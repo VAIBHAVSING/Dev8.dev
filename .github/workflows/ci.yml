@@ -5,6 +5,9 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
+  schedule:
+    # Run security scans daily at 3 AM UTC
+    - cron: '0 3 * * *'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -50,11 +53,15 @@ jobs:
             agent:
               - 'apps/agent/**'
 
-  # TypeScript/Node.js jobs
-  typescript-lint:
+  # TypeScript/Node.js Complete Pipeline
+  typescript-pipeline:
     needs: changes
     if: ${{ needs.changes.outputs.typescript == 'true' }}
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
     steps:
       - uses: actions/checkout@v4
       
@@ -86,39 +93,6 @@ jobs:
         
       - name: Lint TypeScript
         run: pnpm lint
-
-  typescript-format:
-    needs: changes
-    if: ${{ needs.changes.outputs.typescript == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9.0.0
-          
-      - name: Get pnpm store directory
-        shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
-          
-      - name: Setup pnpm cache
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
-            
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
         
       - name: Check TypeScript formatting
         run: |
@@ -128,75 +102,12 @@ jobs:
             git diff
             exit 1
           fi
-
-  typescript-typecheck:
-    needs: changes
-    if: ${{ needs.changes.outputs.typescript == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9.0.0
-          
-      - name: Get pnpm store directory
-        shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
-          
-      - name: Setup pnpm cache
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
-            
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
         
       - name: Type check
         run: pnpm check-types
-
-  typescript-build:
-    needs: changes
-    if: ${{ needs.changes.outputs.typescript == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9.0.0
-          
-      - name: Get pnpm store directory
-        shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
-          
-      - name: Setup pnpm cache
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
-            
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        
+      - name: Run tests
+        run: pnpm test
         
       - name: Build applications
         run: pnpm build
@@ -205,12 +116,29 @@ jobs:
           DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
           AUTH_SECRET: "dummy-secret-for-build"
           NEXTAUTH_URL: "http://localhost:3000"
+          
+      - name: Run npm audit
+        run: pnpm audit --audit-level high
+        
+      - name: Initialize CodeQL (JavaScript)
+        uses: github/codeql-action/init@v3
+        with:
+          languages: 'javascript'
+          
+      - name: Perform CodeQL Analysis (JavaScript)
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:javascript"
 
-  # Go jobs
-  go-lint:
+  # Go Complete Pipeline
+  go-pipeline:
     needs: changes
     if: ${{ needs.changes.outputs.go == 'true' }}
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
     defaults:
       run:
         working-directory: ./apps/agent
@@ -235,32 +163,17 @@ jobs:
       - name: Download dependencies
         run: go mod download
         
-      - name: Install staticcheck
-        run: go install honnef.co/go/tools/cmd/staticcheck@latest
+      - name: Install Go tools
+        run: |
+          go install honnef.co/go/tools/cmd/staticcheck@latest
+          go install golang.org/x/tools/cmd/goimports@latest
+          go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
         
       - name: Run go vet
         run: go vet ./...
         
       - name: Run staticcheck
         run: staticcheck ./...
-
-  go-format:
-    needs: changes
-    if: ${{ needs.changes.outputs.go == 'true' }}
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./apps/agent
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.24'
-          
-      - name: Install goimports
-        run: go install golang.org/x/tools/cmd/goimports@latest
         
       - name: Check Go formatting
         run: |
@@ -277,81 +190,68 @@ jobs:
             echo "Go imports are not properly formatted. Please run 'goimports -w .' and commit the changes."
             exit 1
           fi
-
-  go-test:
-    needs: changes
-    if: ${{ needs.changes.outputs.go == 'true' }}
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./apps/agent
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.24'
-          
-      - name: Cache Go modules
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-            
-      - name: Download dependencies
-        run: go mod download
         
-      - name: Run tests
+      - name: Run tests with coverage
         run: go test -v -race -coverprofile=coverage.out ./...
         
+      - name: Build application
+        run: go build -v -o bin/agent .
+        
+      - name: Run gosec Security Scanner
+        run: gosec -fmt sarif -out gosec-results.sarif ./...
+        
+      - name: Upload gosec scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: apps/agent/gosec-results.sarif
+          
+      - name: Initialize CodeQL (Go)
+        uses: github/codeql-action/init@v3
+        with:
+          languages: 'go'
+          
+      - name: Perform CodeQL Analysis (Go)
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:go"
+          
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
           file: ./apps/agent/coverage.out
           flags: go
           name: go-coverage
-
-  go-build:
-    needs: changes
-    if: ${{ needs.changes.outputs.go == 'true' }}
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./apps/agent
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.24'
-          
-      - name: Cache Go modules
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-            
-      - name: Download dependencies
-        run: go mod download
-        
-      - name: Build application
-        run: go build -v -o bin/agent .
         
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: agent-binary
           path: apps/agent/bin/agent
+
+  # General Security Scanning
+  security-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
 
   # Database migration test (for web app)
   test-db-migrations:
@@ -402,28 +302,18 @@ jobs:
     runs-on: ubuntu-latest
     needs: [
       changes,
-      typescript-lint,
-      typescript-format,
-      typescript-typecheck,
-      typescript-build,
-      go-lint,
-      go-format,
-      go-test,
-      go-build,
+      typescript-pipeline,
+      go-pipeline,
+      security-scan,
       test-db-migrations
     ]
     if: always()
     steps:
       - name: Check CI success
         run: |
-          if [[ "${{ needs.typescript-lint.result }}" == "failure" || \
-                "${{ needs.typescript-format.result }}" == "failure" || \
-                "${{ needs.typescript-typecheck.result }}" == "failure" || \
-                "${{ needs.typescript-build.result }}" == "failure" || \
-                "${{ needs.go-lint.result }}" == "failure" || \
-                "${{ needs.go-format.result }}" == "failure" || \
-                "${{ needs.go-test.result }}" == "failure" || \
-                "${{ needs.go-build.result }}" == "failure" || \
+          if [[ "${{ needs.typescript-pipeline.result }}" == "failure" || \
+                "${{ needs.go-pipeline.result }}" == "failure" || \
+                "${{ needs.security-scan.result }}" == "failure" || \
                 "${{ needs.test-db-migrations.result }}" == "failure" ]]; then
             echo "One or more CI jobs failed"
             exit 1

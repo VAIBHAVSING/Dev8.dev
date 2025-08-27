@@ -27,6 +27,7 @@ Run the setup script to install all Go development tools:
 ```
 
 This will install:
+
 - `golangci-lint` - Comprehensive linter
 - `goimports` - Import formatting
 - `gofumpt` - Enhanced Go formatter
@@ -142,9 +143,11 @@ pnpm dev
 ## 📡 API Endpoints
 
 ### `GET /`
+
 Root endpoint with basic information.
 
 **Response:**
+
 ```json
 {
   "message": "Go Agent API",
@@ -153,9 +156,11 @@ Root endpoint with basic information.
 ```
 
 ### `GET /health`
+
 Health check endpoint.
 
 **Response:**
+
 ```json
 {
   "message": "Agent is healthy",
@@ -164,9 +169,11 @@ Health check endpoint.
 ```
 
 ### `GET /hello`
+
 Hello world endpoint.
 
 **Response:**
+
 ```json
 {
   "message": "Hello from Go Agent",
@@ -231,6 +238,7 @@ make check
 ```
 
 This will:
+
 1. Check code formatting
 2. Run the linter
 3. Execute all tests

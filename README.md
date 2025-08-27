@@ -9,7 +9,7 @@
   
   [![Discord](https://img.shields.io/discord/YOUR_DISCORD_ID?color=7289da&label=Discord&logo=discord&logoColor=white&style=for-the-badge)](https://discord.gg/xE2u4b8S8g)
   [![CI](https://github.com/VAIBHAVSING/Dev8.dev/actions/workflows/ci.yml/badge.svg)](https://github.com/VAIBHAVSING/Dev8.dev/actions/workflows/ci.yml)
-  [![Security](https://github.com/VAIBHAVSING/Dev8.dev/actions/workflows/security.yml/badge.svg)](https://github.com/VAIBHAVSING/Dev8.dev/actions/workflows/security.yml)
+  [![Dependencies](https://github.com/VAIBHAVSING/Dev8.dev/actions/workflows/dependencies.yml/badge.svg)](https://github.com/VAIBHAVSING/Dev8.dev/actions/workflows/dependencies.yml)
   [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
   [![License](https://img.shields.io/github/license/VAIBHAVSING/Dev8.dev?style=for-the-badge)](LICENSE)
   [![GitHub stars](https://img.shields.io/github/stars/VAIBHAVSING/Dev8.dev?style=for-the-badge)](https://github.com/VAIBHAVSING/Dev8.dev/stargazers)
@@ -121,26 +121,39 @@ pnpm dev
 
 ## 🤖 CI/CD Pipeline
 
-This project uses GitHub Actions for continuous integration and deployment:
+This project uses a consolidated GitHub Actions CI pipeline organized by language:
 
-### Automated Checks
+### Single CI Workflow
 
-Every pull request and push triggers:
+Every pull request and push triggers a comprehensive pipeline with two main tracks:
 
-- **🔍 Smart Change Detection**: Only runs relevant jobs based on changed files
-- **🧹 Linting**: ESLint (TypeScript) + go vet + staticcheck (Go)
-- **🎨 Code Formatting**: Prettier (TypeScript) + gofmt + goimports (Go)
+#### **🟦 TypeScript Pipeline**
+
+- **🧹 Linting**: ESLint with strict rules
+- **🎨 Code Formatting**: Prettier validation
 - **🔒 Type Safety**: TypeScript strict compiler checks
-- **🧪 Testing**: Unit tests for both Go and TypeScript applications
-- **🏗️ Build Verification**: Next.js builds + Go binary compilation
-- **🗄️ Database Testing**: PostgreSQL migration validation
+- **🧪 Testing**: Unit and integration tests
+- **🏗️ Build Verification**: Next.js application builds
+- **📦 Security**: npm audit + CodeQL analysis
 
-### Security & Quality
+#### **🟩 Go Pipeline**
 
-- **🛡️ CodeQL Analysis**: Semantic security scanning
-- **🔍 Vulnerability Scanning**: Trivy for dependencies
-- **🔐 Go Security**: gosec static analysis
-- **📦 Dependency Auditing**: npm audit for Node.js packages
+- **🧹 Linting**: go vet + staticcheck
+- **🎨 Code Formatting**: gofmt + goimports validation
+- **🧪 Testing**: Unit tests with race detection + coverage
+- **🏗️ Build Verification**: Binary compilation
+- **🔐 Security**: gosec + CodeQL analysis
+
+#### **🛡️ General Security**
+
+- **🔍 Vulnerability Scanning**: Trivy for all dependencies
+- **�️ Database Testing**: PostgreSQL migration validation
+
+### Performance Features
+
+- **📦 Smart Caching**: Go modules, pnpm store, build artifacts
+- **🎯 Change Detection**: Only runs relevant pipelines based on file changes
+- **⚡ Parallel Execution**: Language pipelines run concurrently
 
 ### Local Development
 
@@ -159,12 +172,6 @@ make format    # Format all code
 make test      # Run all tests
 make build     # Build all applications
 ```
-
-### Performance Features
-
-- **📦 Intelligent Caching**: Go modules, pnpm store, build artifacts
-- **⚡ Parallel Execution**: Jobs run concurrently when possible
-- **🎯 Conditional Execution**: Skip unchanged components
 
 ## 📁 Project Structure
 
