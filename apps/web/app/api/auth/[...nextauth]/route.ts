@@ -102,7 +102,15 @@ const handler = NextAuth({
   pages: {
     signIn: "/signin",
   },
-  secret: process.env.AUTH_SECRET || "development-secret",
+  secret:
+    process.env.AUTH_SECRET ||
+    (process.env.NODE_ENV === "production"
+      ? (() => {
+          throw new Error(
+            "AUTH_SECRET environment variable must be set in production."
+          );
+        })()
+      : "development-secret"),
 });
 
 export { handler as GET, handler as POST };
