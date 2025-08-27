@@ -1,36 +1,121 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/create-next-app).
+# Dev8.dev Web Authentication System
 
-## Getting Started
+A modern authentication system built with Next.js 15, NextAuth.js, Prisma, and PostgreSQL.
 
-First, run the development server:
+## Features
+
+- 🔐 **Multiple Authentication Methods**
+  - Email/Password authentication with bcrypt hashing
+  - Google OAuth integration
+  - GitHub OAuth integration
+  - Session-based authentication
+
+- 🛡️ **Security Features**
+  - Protected routes with middleware
+  - Session management
+  - Input validation with Zod
+  - CSRF protection
+
+- 🗄️ **Database**
+  - PostgreSQL database with Prisma ORM
+  - Type-safe database operations
+  - Automatic migrations
+
+## Setup Instructions
+
+### 1. Database Setup
+
+First, set up a PostgreSQL database. You can use a local installation or a cloud service like Supabase.
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# Create a PostgreSQL database named 'dev8_web'
+createdb dev8_web
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Environment Variables
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Copy the environment file and fill in your credentials:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load Inter, a custom Google Font.
+```bash
+cp .env.example .env.local
+```
 
-## Learn More
+Edit `.env.local` with your actual values:
 
-To learn more about Next.js, take a look at the following resources:
+```env
+# NextAuth Configuration
+AUTH_SECRET="your-secret-key-here"
+NEXTAUTH_URL="http://localhost:3000"
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# Database Configuration
+DATABASE_URL="postgresql://username:password@localhost:5432/dev8_web?schema=public"
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+# Google OAuth (Get from Google Cloud Console)
+AUTH_GOOGLE_ID="your-google-client-id"
+AUTH_GOOGLE_SECRET="your-google-client-secret"
 
-## Deploy on Vercel
+# GitHub OAuth (Get from GitHub Developer Settings)
+AUTH_GITHUB_ID="your-github-client-id"
+AUTH_GITHUB_SECRET="your-github-client-secret"
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 3. OAuth Setup
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+#### Google OAuth Setup
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project or select existing one
+3. Enable Google+ API
+4. Go to "Credentials" → "Create Credentials" → "OAuth 2.0 Client IDs"
+5. Set application type to "Web application"
+6. Add authorized redirect URIs:
+   - `http://localhost:3000/api/auth/callback/google`
+   - `https://yourdomain.com/api/auth/callback/google` (for production)
+
+#### GitHub OAuth Setup
+
+1. Go to [GitHub Developer Settings](https://github.com/settings/developers)
+2. Click "New OAuth App"
+3. Fill in the application details:
+   - Application name: `Dev8.dev`
+   - Homepage URL: `http://localhost:3000`
+   - Authorization callback URL: `http://localhost:3000/api/auth/callback/github`
+
+### 4. Install Dependencies
+
+```bash
+pnpm install
+```
+
+### 5. Database Migration
+
+Generate and run the database migration:
+
+```bash
+# Generate Prisma client
+pnpm prisma generate
+
+# Run database migrations
+pnpm prisma migrate dev --name init
+
+# Optional: Open Prisma Studio to view your database
+pnpm prisma studio
+```
+
+### 6. Start Development Server
+
+```bash
+pnpm dev
+```
+
+The application will be available at `http://localhost:3000`.
+
+## Tech Stack
+
+- **Framework**: Next.js 15 with App Router
+- **Authentication**: NextAuth.js v4
+- **Database**: PostgreSQL with Prisma ORM
+- **Styling**: Tailwind CSS
+- **Validation**: Zod
+- **Password Hashing**: bcryptjs
+- **TypeScript**: Full type safety

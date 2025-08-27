@@ -1,52 +1,239 @@
-# Turborepo starter
+<div align="center">
+  <img src="https://github.com/VAIBHAVSING/Dev8.dev/assets/placeholder/logo.png" alt="Dev8.dev Logo" width="120" height="120">
+  
+  # Dev8.dev
+  
+  **🚀 The Future of Cloud Development Environments**
+  
+  *Launch customizable VS Code instances in the cloud with zero setup. Code anywhere, anytime.*
+  
+  [![Discord](https://img.shields.io/discord/YOUR_DISCORD_ID?color=7289da&label=Discord&logo=discord&logoColor=white&style=for-the-badge)](https://discord.gg/xE2u4b8S8g)
+  [![License](https://img.shields.io/github/license/VAIBHAVSING/Dev8.dev?style=for-the-badge)](LICENSE)
+  [![GitHub stars](https://img.shields.io/github/stars/VAIBHAVSING/Dev8.dev?style=for-the-badge)](https://github.com/VAIBHAVSING/Dev8.dev/stargazers)
+  
+  ---
+  
+  **[🌟 Try Demo](https://dev8.dev)** • **[📖 Documentation](https://docs.dev8.dev)** • **[💬 Discord](https://discord.gg/xE2u4b8S8g)** • **[🐛 Report Bug](https://github.com/VAIBHAVSING/Dev8.dev/issues)**
+  
+</div>
 
-This Turborepo starter is maintained by the Turborepo core team.
+## ✨ What is Dev8.dev?
 
-## Using this example
+Dev8.dev is a **cloud-based IDE hosting platform** that revolutionizes how developers work. Think GitHub Codespaces, but with **unlimited flexibility** and **transparent pricing**.
 
-Run the following command:
+Launch fully-configured VS Code environments in seconds, choose your perfect machine specs, and code from any device with just a browser. No more "it works on my machine" – your entire development environment lives in the cloud.
 
-```sh
-npx create-turbo@latest
+### 🎯 Perfect For
+
+- **Remote Teams** - Standardized dev environments for everyone
+- **Students** - Access powerful development tools from any device
+- **Freelancers** - Switch between client projects instantly
+- **Enterprises** - Secure, scalable development infrastructure
+
+## 🚀 Key Features
+
+<div align="center">
+  <table>
+    <tr>
+      <td align="center" width="33%">
+        <h3>⚡ Instant Launch</h3>
+        <p>Go from zero to coding in <strong>30 seconds</strong>. Pre-configured environments with your favorite tools.</p>
+      </td>
+      <td align="center" width="33%">
+        <h3>🎛️ Fully Customizable</h3>
+        <p>Choose your <strong>machine specs</strong>, from lightweight t2.medium to powerful m6g.xlarge instances.</p>
+      </td>
+      <td align="center" width="33%">
+        <h3>💾 Persistent Storage</h3>
+        <p><strong>Never lose work</strong>. Your files, settings, and extensions persist across sessions.</p>
+      </td>
+    </tr>
+    <tr>
+      <td align="center" width="33%">
+        <h3>🌐 Code Anywhere</h3>
+        <p>Full <strong>VS Code experience</strong> in your browser. iPad, Chromebook, or desktop – it just works.</p>
+      </td>
+      <td align="center" width="33%">
+        <h3>🔒 Enterprise Security</h3>
+        <p><strong>SOC 2 compliant</strong> infrastructure with isolated containers and encrypted storage.</p>
+      </td>
+      <td align="center" width="33%">
+        <h3>💰 Transparent Pricing</h3>
+        <p><strong>Pay only for what you use</strong>. No hidden fees, no vendor lock-in.</p>
+      </td>
+    </tr>
+  </table>
+</div>
+
+## 🏗️ Architecture
+
+```mermaid
+graph TB
+    A[Browser] --> B[Next.js Frontend]
+    B --> C[Go/TypeScript Backend]
+    C --> D[Docker Containers]
+    D --> E[code-server VSCode]
+    C --> F[AWS EC2 Instances]
+    C --> G[AWS S3 Storage]
+    F --> H[t2.medium]
+    F --> I[m6g.xlarge]
+    F --> J[Custom Specs]
 ```
 
-## What's inside?
+### Tech Stack
 
-This Turborepo includes the following packages/apps:
+- **Frontend**: Next.js 15 + TypeScript + Tailwind CSS
+- **Backend**: Go + TypeScript microservices
+- **IDE**: code-server (VS Code in browser)
+- **Containers**: Docker + Kubernetes (planned)
+- **Cloud**: AWS (EC2, S3, VPC)
+- **Auth**: NextAuth.js + OAuth providers
 
-### Apps and Packages
+## 🚀 Quick Start
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+### For Users
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+1. **Sign up** at [dev8.dev](https://dev8.dev)
+2. **Choose** your machine configuration
+3. **Launch** your environment
+4. **Start coding** immediately!
 
-### Utilities
+### For Developers
 
-This Turborepo has some additional tools already setup for you:
+```bash
+# Clone the repository
+git clone https://github.com/VAIBHAVSING/Dev8.dev.git
+cd Dev8.dev
 
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
+# Install dependencies
+pnpm install
 
-### Build
+# Set up environment variables
+cp apps/web/.env.example apps/web/.env.local
+# Edit .env.local with your configuration
 
-To build all apps and packages, run the following command:
+# Start development
+pnpm dev
+```
+
+## 📁 Project Structure
 
 ```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build
-yarn dlx turbo build
-pnpm exec turbo build
+Dev8.dev/
+├── apps/
+│   ├── web/          # Next.js frontend dashboard
+│   ├── docs/         # Documentation site
+│   └── agent/        # Go backend service
+├── packages/
+│   ├── ui/           # Shared React components
+│   ├── eslint-config/
+│   └── typescript-config/
+└── infrastructure/   # Cloud infrastructure code
 ```
+
+## 🌟 Roadmap
+
+<details>
+<summary><strong>🎯 Phase 1: MVP (Current)</strong></summary>
+
+- [x] User authentication & dashboard
+- [x] AWS EC2 integration
+- [x] Basic code-server deployment
+- [x] File persistence with S3
+- [ ] Instance management (start/stop/delete)
+- [ ] Basic monitoring & logs
+
+</details>
+
+<details>
+<summary><strong>🚀 Phase 2: Scale</strong></summary>
+
+- [ ] Kubernetes orchestration
+- [ ] Auto-scaling instances
+- [ ] Team collaboration features
+- [ ] Custom Docker images
+- [ ] SSH/terminal access
+- [ ] Billing & usage tracking
+
+</details>
+
+<details>
+<summary><strong>🌍 Phase 3: Expand</strong></summary>
+
+- [ ] Multi-cloud support (GCP, Azure)
+- [ ] Multiple IDE support (IntelliJ, Vim)
+- [ ] Marketplace for extensions/templates
+- [ ] API for third-party integrations
+- [ ] Enterprise SSO & audit logs
+
+</details>
+
+## 💝 Support the Project
+
+Love Dev8.dev? Here's how you can help us grow:
+
+- ⭐ **Star this repo** to show your support
+- 🐛 **Report bugs** and suggest features
+- 💬 **Join our [Discord](https://discord.gg/xE2u4b8S8g)** community
+- 🤝 **Contribute** code or documentation
+- 💰 **Sponsor** our development efforts
+
+<div align="center">
+  <a href="https://github.com/sponsors/VAIBHAVSING">
+    <img src="https://img.shields.io/badge/Sponsor-Dev8.dev-pink?style=for-the-badge&logo=github-sponsors" alt="Sponsor Dev8.dev">
+  </a>
+</div>
+
+## 🤝 Contributing
+
+We welcome contributions from developers of all skill levels! Check out our [Contributing Guide](CONTRIBUTING.md) to get started.
+
+### Development Setup
+
+```bash
+# Fork and clone the repo
+git clone https://github.com/YOUR_USERNAME/Dev8.dev.git
+
+# Install dependencies
+pnpm install
+
+# Run the development servers
+pnpm dev
+```
+
+## 👥 Community
+
+<div align="center">
+  
+  **Join thousands of developers building the future of cloud development**
+  
+  [![Discord](https://img.shields.io/badge/Discord-Join_Community-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/xE2u4b8S8g)
+  
+  *Share your ideas, get help, and connect with other developers*
+  
+</div>
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- The amazing [code-server](https://github.com/coder/code-server) team
+- [Turborepo](https://turbo.build/) for the fantastic monorepo setup
+- Our incredible [Discord community](https://discord.gg/xE2u4b8S8g)
+
+---
+
+<div align="center">
+  <p><strong>Built with ❤️ by developers, for developers</strong></p>
+  <p>
+    <a href="https://dev8.dev">Website</a> •
+    <a href="https://docs.dev8.dev">Docs</a> •
+    <a href="https://discord.gg/xE2u4b8S8g">Discord</a> •
+    <a href="https://twitter.com/dev8_dev">Twitter</a>
+  </p>
+</div>
 
 You can build a specific package by using a [filter](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters):
 
