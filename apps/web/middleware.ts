@@ -2,6 +2,12 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
+// Define public routes that don't require authentication
+const PUBLIC_ROUTES = ["/", "/signin", "/signup"];
+
+// Define protected routes that require authentication
+const PROTECTED_ROUTES = ["/dashboard", "/profile", "/settings"];
+
 export async function middleware(req: NextRequest) {
   const { nextUrl } = req;
   
