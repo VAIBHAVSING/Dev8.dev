@@ -92,5 +92,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   pages: {
     signIn: "/signin",
   },
-  secret: process.env.AUTH_SECRET || "development-secret",
+  secret: (() => {
+    if (process.env.NODE_ENV === "production" && !process.env.AUTH_SECRET) {
+      throw new Error("AUTH_SECRET must be set in production environments.");
+    }
+    return process.env.AUTH_SECRET || "development-secret";
+  })(),
 });
