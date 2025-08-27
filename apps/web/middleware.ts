@@ -9,15 +9,13 @@ export async function middleware(req: NextRequest) {
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
   const isLoggedIn = !!token;
 
-  // Define public routes that don't require authentication
-  const publicRoutes = ["/", "/signin", "/signup", "/api/auth"];
-  const isPublicRoute = publicRoutes.some((route) =>
+  // Check if current route is public
+  const isPublicRoute = PUBLIC_ROUTES.some((route) =>
     nextUrl.pathname.startsWith(route),
   );
 
-  // Define protected routes that require authentication
-  const protectedRoutes = ["/dashboard", "/profile", "/settings"];
-  const isProtectedRoute = protectedRoutes.some((route) =>
+  // Check if current route is protected
+  const isProtectedRoute = PROTECTED_ROUTES.some((route) =>
     nextUrl.pathname.startsWith(route),
   );
 
