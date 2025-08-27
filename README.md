@@ -8,6 +8,9 @@
   *Launch customizable VS Code instances in the cloud with zero setup. Code anywhere, anytime.*
   
   [![Discord](https://img.shields.io/discord/YOUR_DISCORD_ID?color=7289da&label=Discord&logo=discord&logoColor=white&style=for-the-badge)](https://discord.gg/xE2u4b8S8g)
+  [![CI](https://github.com/VAIBHAVSING/Dev8.dev/actions/workflows/ci.yml/badge.svg)](https://github.com/VAIBHAVSING/Dev8.dev/actions/workflows/ci.yml)
+  [![Security](https://github.com/VAIBHAVSING/Dev8.dev/actions/workflows/security.yml/badge.svg)](https://github.com/VAIBHAVSING/Dev8.dev/actions/workflows/security.yml)
+  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
   [![License](https://img.shields.io/github/license/VAIBHAVSING/Dev8.dev?style=for-the-badge)](LICENSE)
   [![GitHub stars](https://img.shields.io/github/stars/VAIBHAVSING/Dev8.dev?style=for-the-badge)](https://github.com/VAIBHAVSING/Dev8.dev/stargazers)
   
@@ -115,6 +118,53 @@ cp apps/web/.env.example apps/web/.env.local
 # Start development
 pnpm dev
 ```
+
+## 🤖 CI/CD Pipeline
+
+This project uses GitHub Actions for continuous integration and deployment:
+
+### Automated Checks
+
+Every pull request and push triggers:
+
+- **🔍 Smart Change Detection**: Only runs relevant jobs based on changed files
+- **🧹 Linting**: ESLint (TypeScript) + go vet + staticcheck (Go)
+- **🎨 Code Formatting**: Prettier (TypeScript) + gofmt + goimports (Go)
+- **🔒 Type Safety**: TypeScript strict compiler checks
+- **🧪 Testing**: Unit tests for both Go and TypeScript applications
+- **🏗️ Build Verification**: Next.js builds + Go binary compilation
+- **🗄️ Database Testing**: PostgreSQL migration validation
+
+### Security & Quality
+
+- **🛡️ CodeQL Analysis**: Semantic security scanning
+- **🔍 Vulnerability Scanning**: Trivy for dependencies
+- **🔐 Go Security**: gosec static analysis
+- **📦 Dependency Auditing**: npm audit for Node.js packages
+
+### Local Development
+
+Simulate the CI pipeline locally:
+
+```bash
+# Install the development tools
+make install
+
+# Run all CI checks locally
+make ci
+
+# Individual checks
+make lint      # Lint all code
+make format    # Format all code
+make test      # Run all tests
+make build     # Build all applications
+```
+
+### Performance Features
+
+- **📦 Intelligent Caching**: Go modules, pnpm store, build artifacts
+- **⚡ Parallel Execution**: Jobs run concurrently when possible
+- **🎯 Conditional Execution**: Skip unchanged components
 
 ## 📁 Project Structure
 

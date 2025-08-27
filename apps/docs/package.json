@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint --max-warnings 0",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "test": "echo 'No tests specified yet' && exit 0"
   },
   "dependencies": {
     "@repo/ui": "workspace:*",
