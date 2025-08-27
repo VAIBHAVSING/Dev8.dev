@@ -214,6 +214,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Generate Prisma client (for web workspace)
+        if: matrix.workspace == 'web'
+        run: pnpm --filter web db:generate
+
       - name: Build workspace
         run: pnpm --filter ${{ matrix.workspace }} build
 
@@ -305,6 +309,9 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm --filter web db:generate
 
       - name: Full monorepo build
         run: pnpm build
