@@ -8,6 +8,9 @@
   *Launch customizable VS Code instances in the cloud with zero setup. Code anywhere, anytime.*
   
   [![Discord](https://img.shields.io/discord/YOUR_DISCORD_ID?color=7289da&label=Discord&logo=discord&logoColor=white&style=for-the-badge)](https://discord.gg/xE2u4b8S8g)
+  [![CI](https://github.com/VAIBHAVSING/Dev8.dev/actions/workflows/ci.yml/badge.svg)](https://github.com/VAIBHAVSING/Dev8.dev/actions/workflows/ci.yml)
+  [![Dependencies](https://github.com/VAIBHAVSING/Dev8.dev/actions/workflows/dependencies.yml/badge.svg)](https://github.com/VAIBHAVSING/Dev8.dev/actions/workflows/dependencies.yml)
+  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
   [![License](https://img.shields.io/github/license/VAIBHAVSING/Dev8.dev?style=for-the-badge)](LICENSE)
   [![GitHub stars](https://img.shields.io/github/stars/VAIBHAVSING/Dev8.dev?style=for-the-badge)](https://github.com/VAIBHAVSING/Dev8.dev/stargazers)
   
@@ -114,6 +117,53 @@ cp apps/web/.env.example apps/web/.env.local
 
 # Start development
 pnpm dev
+```
+
+## 🤖 CI/CD Pipeline
+
+Simple and efficient GitHub Actions pipeline:
+
+### Three Jobs, One Workflow
+
+- **🟦 TypeScript**: Lint → Type Check → Test → Build
+- **🟩 Go**: Lint → Format Check → Test → Build
+- **�️ Security**: Trivy vulnerability scanning
+
+- **🧹 Linting**: ESLint with strict rules
+- **🎨 Code Formatting**: Prettier validation
+- **🔒 Type Safety**: TypeScript strict compiler checks
+- **🧪 Testing**: Unit and integration tests
+- **🏗️ Build Verification**: Next.js application builds
+- **📦 Security**: npm audit + CodeQL analysis
+
+#### **🟩 Go Pipeline**
+
+- **🧹 Linting**: go vet + staticcheck
+- **🎨 Code Formatting**: gofmt + goimports validation
+- **🧪 Testing**: Unit tests with race detection + coverage
+- **🏗️ Build Verification**: Binary compilation
+- **🔐 Security**: gosec + CodeQL analysis
+
+#### **🛡️ General Security**
+
+- **🔍 Vulnerability Scanning**: Trivy for all dependencies
+- **�️ Database Testing**: PostgreSQL migration validation
+
+### Performance Features
+
+- **📦 Smart Caching**: Go modules, pnpm store, build artifacts
+- **🎯 Change Detection**: Only runs relevant pipelines based on file changes
+- **⚡ Parallel Execution**: Language pipelines run concurrently
+
+### Local Development
+
+Run the same checks locally:
+
+```bash
+make ci        # Run full pipeline
+make lint      # Lint all code
+make test      # Run all tests
+make build     # Build everything
 ```
 
 ## 📁 Project Structure

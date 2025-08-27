@@ -10,7 +10,7 @@ const PROTECTED_ROUTES = ["/"]; // Protect all routes except those in PUBLIC_ROU
 
 export async function middleware(req: NextRequest) {
   const { nextUrl } = req;
-  
+
   // Get the token using next-auth/jwt which works with Edge Runtime
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
   const isLoggedIn = !!token;

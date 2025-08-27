@@ -1,0 +1,54 @@
+name: Dependencies
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'  # Weekly on Monday
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.0.0
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Update dependencies
+        run: |
+          pnpm update --latest
+          cd apps/agent && go get -u ./... && go mod tidy
+
+      - name: Test updates
+        run: |
+          pnpm install
+          pnpm --filter=web db:generate
+          pnpm lint
+          pnpm build
+        env:
+          DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
+          AUTH_SECRET: "dummy-secret"
+          NEXTAUTH_URL: "http://localhost:3000"
+
+      - name: Create PR
+        uses: peter-evans/create-pull-request@v5
+        with:
+          title: 'chore: update dependencies'
+          body: 'Automated dependency updates'
+          branch: deps-update
+          delete-branch: true

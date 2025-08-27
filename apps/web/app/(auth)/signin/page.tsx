@@ -30,7 +30,8 @@ export default function SignIn() {
         router.push("/");
         router.refresh();
       }
-    } catch (error) {
+    } catch (error: unknown) {
+      console.error("Sign in error:", error);
       setError("An error occurred. Please try again.");
     } finally {
       setIsLoading(false);

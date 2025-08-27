@@ -9,6 +9,7 @@
     "format": "prettier --write \"**/*.{ts,tsx,md}\" && turbo run format:go",
     "format:go": "turbo run format:go",
     "check-types": "turbo run check-types",
+    "test": "turbo run test",
     "setup:go": "cd apps/agent && ./setup-go-tools.sh",
     "clean": "turbo run clean"
   },

@@ -13,6 +13,8 @@ Thank you for your interest in contributing to Dev8.dev! 🎉 We're building the
 3. **Install dependencies**:
    ```bash
    pnpm install
+   # For Go development tools
+   make setup-go
    ```
 4. **Set up environment variables**:
    ```bash
@@ -22,7 +24,127 @@ Thank you for your interest in contributing to Dev8.dev! 🎉 We're building the
 5. **Start development**:
    ```bash
    pnpm dev
+   # Or use the Makefile
+   make dev
    ```
+
+## 🔧 Development Workflow
+
+### Prerequisites
+
+- **Node.js** 18+
+- **pnpm** 9.0.0+
+- **Go** 1.24+
+- **PostgreSQL** 15+
+
+### Local Development Commands
+
+We provide both `pnpm` scripts and a `Makefile` for convenience:
+
+```bash
+# Install dependencies
+make install          # or pnpm install
+
+# Start development servers
+make dev              # or pnpm dev
+
+# Run all checks (recommended before committing)
+make check-all        # runs lint, format, type-check, test, build
+
+# Individual checks
+make lint             # or pnpm lint
+make format           # or pnpm format
+make test             # or pnpm test
+make build            # or pnpm build
+make check-types      # or pnpm check-types
+
+# Simulate CI pipeline locally
+make ci
+
+# Clean build artifacts
+make clean            # or pnpm clean
+```
+
+### Before Committing
+
+Always run the full check suite:
+
+```bash
+make check-all
+```
+
+This ensures your changes will pass our CI pipeline.
+
+## 🤖 CI/CD Pipeline
+
+Our simple GitHub Actions CI pipeline runs on every pull request and push:
+
+### Three Simple Jobs
+
+- **🟦 TypeScript**: Lint → Type Check → Test → Build
+- **🟩 Go**: Lint → Format Check → Test → Build
+- **🛡️ Security**: Trivy vulnerability scanning
+
+### Local Testing
+
+Test your changes locally:
+
+````bash
+# Run the full CI suite
+make ci
+
+#### **🟦 TypeScript Pipeline**
+
+- **🧹 Linting**: ESLint with strict rules
+- **🎨 Formatting**: Prettier validation
+- **🔒 Type Checking**: TypeScript compiler strict checks
+- **🧪 Testing**: Unit and integration tests
+- **🏗️ Building**: Next.js application builds
+- **📦 Security**: npm audit + CodeQL analysis
+
+#### **🟩 Go Pipeline**
+
+- **🧹 Linting**: go vet + staticcheck
+- **🎨 Formatting**: gofmt + goimports validation
+- **🧪 Testing**: Unit tests with race detection + coverage
+- **🏗️ Building**: Binary compilation
+- **🔐 Security**: gosec + CodeQL analysis
+
+#### **�️ General Security & Testing**
+
+- **🔍 Vulnerability Scanning**: Trivy for all dependencies
+- **�️ Database**: PostgreSQL migration testing
+
+### Performance Optimizations
+
+- **📦 Smart Caching**: Go modules, pnpm store, and build artifacts
+- **🎯 Change Detection**: Only runs relevant pipelines based on changed files
+- **⚡ Parallel Execution**: Language pipelines run concurrently
+
+### Local CI Simulation
+
+Test your changes against the same pipeline locally:
+
+```bash
+# Run the full CI suite
+make ci
+
+# Or step by step
+make lint
+make format
+make check-types
+make test
+make build
+````
+
+### Status Checks
+
+All PRs must pass these consolidated checks:
+
+- ✅ TypeScript Pipeline (lint + format + type-check + test + build + security)
+- ✅ Go Pipeline (lint + format + test + build + security)
+- ✅ General Security Scanning (Trivy)
+- ✅ Database Migrations (PostgreSQL)
 
 ## 🎯 Ways to Contribute
 

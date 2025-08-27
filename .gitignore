@@ -36,3 +36,19 @@ yarn-error.log*
 # Misc
 .DS_Store
 *.pem
+
+# Go
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+coverage.out
+tmp/
+
+# CI/CD artifacts
+*.tar.gz
+*.zip
+trivy-results.sarif
+gosec-results.sarif
