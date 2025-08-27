@@ -1,0 +1,72 @@
+version: 2
+updates:
+  # Enable version updates for npm (JavaScript/TypeScript)
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    assignees:
+      - "VAIBHAVSING"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    groups:
+      next-deps:
+        patterns:
+          - "next*"
+          - "@next/*"
+        update-types:
+          - "minor"
+          - "patch"
+      react-deps:
+        patterns:
+          - "react*"
+          - "@types/react*"
+        update-types:
+          - "minor"
+          - "patch"
+      eslint-deps:
+        patterns:
+          - "eslint*"
+          - "@typescript-eslint/*"
+        update-types:
+          - "minor"
+          - "patch"
+      auth-deps:
+        patterns:
+          - "next-auth*"
+          - "@auth/*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Enable version updates for Go modules
+  - package-ecosystem: "gomod"
+    directory: "/apps/agent"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "10:00"
+    open-pull-requests-limit: 5
+    assignees:
+      - "VAIBHAVSING"
+    commit-message:
+      prefix: "deps(go)"
+      include: "scope"
+
+  # Enable version updates for GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "11:00"
+    open-pull-requests-limit: 5
+    assignees:
+      - "VAIBHAVSING"
+    commit-message:
+      prefix: "deps(actions)"
+      include: "scope"

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import Google from "next-auth/providers/google";
 import GitHub from "next-auth/providers/github";
 import Credentials from "next-auth/providers/credentials";
@@ -5,6 +6,9 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "./prisma";
 import bcrypt from "bcryptjs";
 import { signInSchema } from "./zod";
+import type { JWT } from "next-auth/jwt";
+import type { Session, User } from "next-auth";
+import type { AdapterUser } from "next-auth/adapters";
 
 /**
  * Shared NextAuth configuration factory
@@ -81,13 +85,13 @@ export function createAuthConfig(): any {
     },
     providers,
     callbacks: {
-      async jwt({ token, user }: { token: any; user: any }) {
+      async jwt({ token, user }: { token: JWT; user: User | AdapterUser }) {
         if (user) {
           token.id = user.id;
         }
         return token;
       },
-      async session({ session, token }: { session: any; token: any }) {
+      async session({ session, token }: { session: Session; token: JWT }) {
         if (token && session.user) {
           session.user.id = token.id as string;
         }

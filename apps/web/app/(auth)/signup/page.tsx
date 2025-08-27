@@ -54,7 +54,7 @@ export default function SignUp() {
       setTimeout(() => {
         router.push("/signin");
       }, 2000);
-    } catch (error) {
+    } catch {
       setError("An error occurred. Please try again.");
     } finally {
       setIsLoading(false);
