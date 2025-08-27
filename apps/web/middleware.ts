@@ -6,7 +6,7 @@ import { getToken } from "next-auth/jwt";
 const PUBLIC_ROUTES = ["/", "/signin", "/signup"];
 
 // Define protected routes that require authentication
-const PROTECTED_ROUTES = ["/dashboard", "/profile", "/settings"];
+const PROTECTED_ROUTES = ["/"]; // Protect all routes except those in PUBLIC_ROUTES
 
 export async function middleware(req: NextRequest) {
   const { nextUrl } = req;
