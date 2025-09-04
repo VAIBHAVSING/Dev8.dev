@@ -48,8 +48,17 @@ jobs:
       - name: Create PR
         uses: peter-evans/create-pull-request@v5
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           title: 'chore: update dependencies'
-          body: 'Automated dependency updates'
+          body: |
+            Automated dependency updates for Dev8.dev
+
+            This PR updates project dependencies including:
+            - Updated Go modules in apps/agent/
+            - Updated pnpm dependencies
+            - Rebuilt Go binary
+
+            Changes made by automated dependency update workflow.
           branch: deps-update
           base: main
           commit-message: 'chore: update dependencies'
@@ -57,3 +66,6 @@ jobs:
           committer: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
           delete-branch: true
           draft: false
+          labels: |
+            dependencies
+            automated
