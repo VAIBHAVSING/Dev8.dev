@@ -51,4 +51,9 @@ jobs:
           title: 'chore: update dependencies'
           body: 'Automated dependency updates'
           branch: deps-update
+          base: main
+          commit-message: 'chore: update dependencies'
+          author: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
+          committer: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
           delete-branch: true
+          draft: false
