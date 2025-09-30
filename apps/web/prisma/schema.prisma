@@ -21,6 +21,7 @@ model User {
   sessions      Session[]
   // Optional for WebAuthn support
   Authenticator Authenticator[]
+  environments  Environment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -80,3 +81,76 @@ model Authenticator {
 
   @@id([userId, credentialID])
 }
+
+enum EnvironmentStatus {
+  CREATING
+  STARTING
+  RUNNING
+  STOPPING
+  STOPPED
+  ERROR
+  DELETING
+}
+
+model Environment {
+  id                  String            @id @default(cuid())
+  userId              String
+  name                String
+  status              EnvironmentStatus @default(CREATING)
+
+  // Cloud Configuration
+  cloudProvider       String   @default("azure")
+  cloudRegion         String   @default("eastus")
+  aciContainerGroupId String?
+  aciPublicIp         String?
+
+  // Storage
+  azureFileShareName  String?
+  vsCodeUrl           String?
+
+  // Resources
+  cpuCores            Int      @default(2)
+  memoryGB            Int      @default(4)
+  storageGB           Int      @default(20)
+
+  // Template
+  baseImage           String   @default("node")
+
+  // Timestamps
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  lastAccessedAt      DateTime @default(now())
+
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@map("environments")
+}
+
+model Template {
+  id            String   @id @default(cuid())
+  name          String   @unique
+  displayName   String
+  description   String
+  baseImage     String
+  defaultCPU    Int      @default(2)
+  defaultMemory Int      @default(4)
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("templates")
+}
+
+model ResourceUsage {
+  id               String   @id @default(cuid())
+  environmentId    String
+  timestamp        DateTime @default(now())
+  cpuUsagePercent  Float?
+  memoryUsageMB    Int?
+
+  @@index([environmentId, timestamp])
+  @@map("resource_usage")
+}
+
