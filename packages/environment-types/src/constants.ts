@@ -53,26 +53,26 @@ export const BASE_IMAGE_DESCRIPTIONS = {
  * Environment status display labels
  */
 export const STATUS_LABELS = {
-  creating: 'Creating',
-  starting: 'Starting',
-  running: 'Running',
-  stopping: 'Stopping',
-  stopped: 'Stopped',
-  error: 'Error',
-  deleting: 'Deleting',
+  CREATING: 'Creating',
+  STARTING: 'Starting',
+  RUNNING: 'Running',
+  STOPPING: 'Stopping',
+  STOPPED: 'Stopped',
+  ERROR: 'Error',
+  DELETING: 'Deleting',
 } as const;
 
 /**
  * Environment status colors for UI
  */
 export const STATUS_COLORS = {
-  creating: 'yellow',
-  starting: 'blue',
-  running: 'green',
-  stopping: 'orange',
-  stopped: 'gray',
-  error: 'red',
-  deleting: 'red',
+  CREATING: 'yellow',
+  STARTING: 'blue',
+  RUNNING: 'green',
+  STOPPING: 'orange',
+  STOPPED: 'gray',
+  ERROR: 'red',
+  DELETING: 'red',
 } as const;
 
 /**

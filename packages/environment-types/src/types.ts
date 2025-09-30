@@ -4,16 +4,16 @@
 export type CloudProvider = 'azure' | 'aws' | 'gcp';
 
 /**
- * Environment status types
+ * Environment status types (matching Prisma schema enum)
  */
 export type EnvironmentStatus =
-  | 'creating'
-  | 'starting'
-  | 'running'
-  | 'stopping'
-  | 'stopped'
-  | 'error'
-  | 'deleting';
+  | 'CREATING'
+  | 'STARTING'
+  | 'RUNNING'
+  | 'STOPPING'
+  | 'STOPPED'
+  | 'ERROR'
+  | 'DELETING';
 
 /**
  * Base image templates
