@@ -45,6 +45,6 @@ Architecture Decision Records (ADRs) for all major technical decisions with cont
 
 ---
 
-**Last Updated:** March 29, 2025  
+**Last Updated:** September 30, 2025  
 **Documents:** 2 complete  
 **ADRs:** 10 accepted

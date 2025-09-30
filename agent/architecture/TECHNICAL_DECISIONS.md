@@ -388,12 +388,14 @@ Need authentication with OAuth (Google, GitHub) and credentials. Options:
 4. Custom implementation
 
 ### Decision
-Use **NextAuth.js v5** because:
+Use **NextAuth.js v4** because:
 - Built for Next.js
 - Supports multiple providers
 - Session management included
 - Database adapters for Prisma
 - Open source and free
+
+**Note:** Currently using v4.24.11. Migration to v5 (Auth.js) is planned for future releases.
 
 ### Consequences
 

@@ -252,7 +252,7 @@ model User {
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "dependencies": {
-    "zod": "^3.22.4"
+    "zod": "^4.1.1"
   }
 }
 
@@ -633,8 +633,15 @@ WORKDIR /workspace
 # Expose code-server port
 EXPOSE 8080
 
-# Start code-server
-CMD ["code-server", "--bind-addr", "0.0.0.0:8080", "--auth", "none", "."]
+# Start code-server (secure: password auth from env)
+# SECURITY NOTE:
+#  - Do NOT use --auth none in any environment (even dev) when exposed over a network.
+#  - Provide CODE_SERVER_PASSWORD (preferred) or PASSWORD via container environment / secret.
+#  - For Azure ACI: store secret in Azure Key Vault or secure parameter and inject at deployment.
+#  - Enforce network restrictions (private VNet / IP allow list, NSG rules) + HTTPS termination at ingress.
+#  - Regenerate per deployment; never bake static password into image.
+ENV CODE_SERVER_PASSWORD="${CODE_SERVER_PASSWORD:-changeme}"  # Placeholder overridden by runtime secret
+CMD ["/bin/sh", "-c", "test -n \"$CODE_SERVER_PASSWORD\" || CODE_SERVER_PASSWORD=$PASSWORD; exec code-server --bind-addr 0.0.0.0:8080 --auth password --disable-telemetry ."]
 
 □ Build and test base image
   docker build -t vscode-base:latest ./docker/base

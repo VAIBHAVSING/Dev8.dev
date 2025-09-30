@@ -45,8 +45,8 @@ export const BASE_IMAGE_LABELS = {
  */
 export const BASE_IMAGE_DESCRIPTIONS = {
   node: 'JavaScript and TypeScript development with Node.js LTS',
-  python: 'Python 3.11 development environment',
-  golang: 'Go 1.21 development environment',
+  python: 'Python 3.13.2 development environment',
+  golang: 'Go 1.24 development environment',
 } as const;
 
 /**

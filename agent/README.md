@@ -11,7 +11,7 @@ agent/
 ├── roadmaps/             # Implementation roadmaps
 │   └── ANALYSIS_SUMMARY.md           # Current analysis and recommendations
 ├── guides/               # Technical guides (add guides here)
-└── architecture/         # Architecture docs (future)
+└── architecture/         # Architecture docs (SYSTEM_ARCHITECTURE.md, TECHNICAL_DECISIONS.md, README.md)
 ```
 
 ## 🎯 Quick Start
@@ -36,7 +36,7 @@ agent/
 
 ### Directories
 - 📁 [guides/](./guides/) - Technical implementation guides (add as needed)
-- 📁 [architecture/](./architecture/) - Architecture documentation (future)
+- 📁 [architecture/](./architecture/) - Architecture documentation now available (see [architecture/README.md](./architecture/README.md), SYSTEM_ARCHITECTURE.md, TECHNICAL_DECISIONS.md)
 
 ## 🔗 GitHub Issues
 

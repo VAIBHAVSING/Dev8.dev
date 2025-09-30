@@ -61,8 +61,8 @@ Dev8.dev is a cloud-based IDE hosting platform that provides fully-configured VS
 
 **Key Features:**
 - Instant launch of VS Code environments (30 seconds)
-- Customizable machine specifications (t2.medium to m6g.xlarge)
-- Persistent file storage with AWS S3
+- Customizable container resource profiles (vCPU/RAM tiers)
+- Persistent file storage with Azure Blob Storage (per workspace container)
 - Full VS Code experience in browser
 - Enterprise security with SOC 2 compliance
 - Transparent pay-per-use pricing
@@ -77,16 +77,16 @@ Dev8.dev is a cloud-based IDE hosting platform that provides fully-configured VS
 - ✅ **UI Components**: Shared component library with Button, Card, Code components
 - ✅ **Development Tools**: Turborepo monorepo, ESLint, Prettier, TypeScript strict mode
 - ✅ **CI/CD**: GitHub Actions pipeline with parallel TypeScript/Go/Security jobs
-- 🔄 **Instance Management**: AWS EC2 integration (planned)
+- 🔄 **Instance Management**: Azure Container Instances (ACI) integration (planned per ADR-004)
 - 🔄 **Code-server Integration**: VS Code deployment (planned)
-- 🔄 **File Persistence**: S3 storage implementation (planned)
+- 🔄 **File Persistence**: Azure Blob Storage volume mounting (planned per ADR-004)
 
 ## Architecture
 
 ```
-Browser → Next.js Frontend → Go/TypeScript Backend → Docker Containers → code-server VSCode
-                                      ↓
-                               AWS EC2 Instances + S3 Storage
+Browser → Next.js Frontend → Go/TypeScript Backend → Ephemeral Containers → code-server (VS Code)
+             ↓
+         Azure Container Instances (ACI) + Azure Blob Storage
 ```
 
 ## Technology Stack
@@ -103,8 +103,8 @@ Browser → Next.js Frontend → Go/TypeScript Backend → Docker Containers →
 ### Backend
 - **Language:** Go 1.24
 - **Services:** REST API with JSON responses
-- **Infrastructure:** AWS (EC2, S3, VPC)
-- **Containerization:** Docker (planned Kubernetes orchestration)
+- **Infrastructure:** Azure (ACI for runtime containers, Blob Storage for persistence, Virtual Network planned)
+- **Containerization:** Docker (future: Azure Container Apps / Kubernetes evaluation)
 
 ### Development Tools
 - **Monorepo:** Turborepo for task orchestration
@@ -487,11 +487,11 @@ AGENT_PORT="8080"  # Default: 8080
 
 ### Phase 1: MVP (Current)
 - ✅ User authentication & dashboard
-- ✅ AWS EC2 integration
+- ✅ Azure ACI environment provisioning (initial prototype)
 - ✅ Basic code-server deployment
-- ✅ File persistence with S3
-- 🔄 Instance management (start/stop/delete)
-- 🔄 Basic monitoring & logs
+- ✅ File persistence with Azure Blob Storage (workspace containers mapped to blob mounts)
+- 🔄 Instance management (start/stop/delete, restart semantics in ACI)
+- 🔄 Basic monitoring & logs (Container diagnostics & Log Analytics integration)
 
 ### Phase 2: Scale
 - 🔄 Kubernetes orchestration

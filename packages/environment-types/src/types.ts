@@ -39,7 +39,7 @@ export interface Environment {
   status: EnvironmentStatus;
   cloudProvider: CloudProvider;
   cloudRegion: string;
-  baseImage: string;
+  baseImage: BaseImage;
   cpuCores: number;
   memoryGB: number;
   storageGB: number;
@@ -60,7 +60,7 @@ export interface Template {
   name: string;
   displayName: string;
   description: string;
-  baseImage: string;
+  baseImage: BaseImage;
   defaultCPU: number;
   defaultMemory: number;
   createdAt: Date;

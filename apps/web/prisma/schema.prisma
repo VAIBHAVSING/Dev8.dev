@@ -92,6 +92,12 @@ enum EnvironmentStatus {
   DELETING
 }
 
+enum CloudProvider {
+  AZURE
+  AWS
+  GCP
+}
+
 model Environment {
   id                  String            @id @default(cuid())
   userId              String
@@ -99,8 +105,8 @@ model Environment {
   status              EnvironmentStatus @default(CREATING)
 
   // Cloud Configuration
-  cloudProvider       String   @default("azure")
-  cloudRegion         String   @default("eastus")
+  cloudProvider       CloudProvider @default(AZURE)
+  cloudRegion         String        @default("eastus")
   aciContainerGroupId String?
   aciPublicIp         String?
 
@@ -121,7 +127,8 @@ model Environment {
   updatedAt           DateTime @updatedAt
   lastAccessedAt      DateTime @default(now())
 
-  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resourceUsage       ResourceUsage[]
 
   @@index([userId])
   @@index([status])
@@ -144,11 +151,12 @@ model Template {
 }
 
 model ResourceUsage {
-  id               String   @id @default(cuid())
+  id               String      @id @default(cuid())
   environmentId    String
-  timestamp        DateTime @default(now())
+  timestamp        DateTime    @default(now())
   cpuUsagePercent  Float?
   memoryUsageMB    Int?
+  environment      Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
 
   @@index([environmentId, timestamp])
   @@map("resource_usage")
