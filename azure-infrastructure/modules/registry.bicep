@@ -23,9 +23,6 @@ param adminUserEnabled bool = true
 @description('Enable public network access')
 param publicNetworkAccess bool = true
 
-@description('Enable anonymous pull access')
-param anonymousPullEnabled bool = false
-
 @description('Tags for the container registry')
 param tags object = {}
 
@@ -40,7 +37,6 @@ resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-07-01' =
   properties: {
     adminUserEnabled: adminUserEnabled
     publicNetworkAccess: publicNetworkAccess ? 'Enabled' : 'Disabled'
-    anonymousPullEnabled: anonymousPullEnabled
     dataEndpointEnabled: false
     networkRuleBypassOptions: 'AzureServices'
     policies: {

@@ -1,0 +1,123 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.37.4.10188",
+      "templateHash": "191151564393584647"
+    }
+  },
+  "parameters": {
+    "registryName": {
+      "type": "string",
+      "minLength": 5,
+      "maxLength": 50,
+      "metadata": {
+        "description": "Container registry name (must be globally unique, 5-50 alphanumeric)"
+      }
+    },
+    "location": {
+      "type": "string",
+      "metadata": {
+        "description": "Azure region for the container registry"
+      }
+    },
+    "sku": {
+      "type": "string",
+      "defaultValue": "Basic",
+      "allowedValues": [
+        "Basic",
+        "Standard",
+        "Premium"
+      ],
+      "metadata": {
+        "description": "Container Registry SKU"
+      }
+    },
+    "adminUserEnabled": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Enable admin user for the registry"
+      }
+    },
+    "publicNetworkAccess": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Enable public network access"
+      }
+    },
+    "anonymousPullEnabled": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Enable anonymous pull access"
+      }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {},
+      "metadata": {
+        "description": "Tags for the container registry"
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.ContainerRegistry/registries",
+      "apiVersion": "2023-07-01",
+      "name": "[parameters('registryName')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "sku": {
+        "name": "[parameters('sku')]"
+      },
+      "properties": {
+        "adminUserEnabled": "[parameters('adminUserEnabled')]",
+        "publicNetworkAccess": "[if(parameters('publicNetworkAccess'), 'Enabled', 'Disabled')]",
+        "dataEndpointEnabled": false,
+        "networkRuleBypassOptions": "AzureServices",
+        "policies": {
+          "quarantinePolicy": {
+            "status": "disabled"
+          },
+          "trustPolicy": {
+            "type": "Notary",
+            "status": "disabled"
+          },
+          "retentionPolicy": {
+            "days": 7,
+            "status": "disabled"
+          }
+        },
+        "encryption": {
+          "status": "disabled"
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "registryName": {
+      "type": "string",
+      "value": "[parameters('registryName')]"
+    },
+    "registryId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.ContainerRegistry/registries', parameters('registryName'))]"
+    },
+    "loginServer": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.ContainerRegistry/registries', parameters('registryName')), '2023-07-01').loginServer]"
+    },
+    "adminUsername": {
+      "type": "string",
+      "value": "[if(parameters('adminUserEnabled'), listCredentials(resourceId('Microsoft.ContainerRegistry/registries', parameters('registryName')), '2023-07-01').username, '')]"
+    },
+    "adminPassword": {
+      "type": "string",
+      "value": "[if(parameters('adminUserEnabled'), listCredentials(resourceId('Microsoft.ContainerRegistry/registries', parameters('registryName')), '2023-07-01').passwords[0].value, '')]"
+    }
+  }
+}

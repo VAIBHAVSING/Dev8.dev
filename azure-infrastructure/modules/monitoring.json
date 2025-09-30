@@ -1,0 +1,157 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.37.4.10188",
+      "templateHash": "198790594629020671"
+    }
+  },
+  "parameters": {
+    "budgetName": {
+      "type": "string",
+      "metadata": {
+        "description": "Budget name"
+      }
+    },
+    "budgetAmount": {
+      "type": "int",
+      "metadata": {
+        "description": "Monthly budget amount in USD"
+      }
+    },
+    "resourceGroupId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource group ID for the budget scope"
+      }
+    },
+    "startDate": {
+      "type": "string",
+      "defaultValue": "[utcNow('yyyy-MM-01')]",
+      "metadata": {
+        "description": "Budget start date (YYYY-MM-DD format)"
+      }
+    },
+    "endDate": {
+      "type": "string",
+      "defaultValue": "[dateTimeAdd(utcNow('yyyy-MM-01'), 'P1Y', 'yyyy-MM-dd')]",
+      "metadata": {
+        "description": "Budget end date (YYYY-MM-DD format, must be at least 1 month after start)"
+      }
+    },
+    "contactEmails": {
+      "type": "array",
+      "defaultValue": [],
+      "metadata": {
+        "description": "Email addresses for budget alerts"
+      }
+    },
+    "alertThresholds": {
+      "type": "array",
+      "defaultValue": [
+        50,
+        75,
+        90,
+        100
+      ],
+      "metadata": {
+        "description": "Alert thresholds (percentage of budget)"
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Consumption/budgets",
+      "apiVersion": "2023-05-01",
+      "name": "[parameters('budgetName')]",
+      "properties": {
+        "timePeriod": {
+          "startDate": "[parameters('startDate')]",
+          "endDate": "[parameters('endDate')]"
+        },
+        "timeGrain": "Monthly",
+        "amount": "[parameters('budgetAmount')]",
+        "category": "Cost",
+        "notifications": {
+          "Alert50": {
+            "enabled": true,
+            "operator": "GreaterThan",
+            "threshold": "[parameters('alertThresholds')[0]]",
+            "contactEmails": "[parameters('contactEmails')]",
+            "contactRoles": [
+              "Owner",
+              "Contributor"
+            ],
+            "thresholdType": "Actual"
+          },
+          "Alert75": {
+            "enabled": true,
+            "operator": "GreaterThan",
+            "threshold": "[parameters('alertThresholds')[1]]",
+            "contactEmails": "[parameters('contactEmails')]",
+            "contactRoles": [
+              "Owner",
+              "Contributor"
+            ],
+            "thresholdType": "Actual"
+          },
+          "Alert90": {
+            "enabled": true,
+            "operator": "GreaterThan",
+            "threshold": "[parameters('alertThresholds')[2]]",
+            "contactEmails": "[parameters('contactEmails')]",
+            "contactRoles": [
+              "Owner",
+              "Contributor"
+            ],
+            "thresholdType": "Actual"
+          },
+          "Alert100": {
+            "enabled": true,
+            "operator": "GreaterThan",
+            "threshold": "[parameters('alertThresholds')[3]]",
+            "contactEmails": "[parameters('contactEmails')]",
+            "contactRoles": [
+              "Owner",
+              "Contributor"
+            ],
+            "thresholdType": "Forecasted"
+          }
+        },
+        "filter": {
+          "dimensions": {
+            "name": "ResourceGroupName",
+            "operator": "In",
+            "values": [
+              "[last(split(parameters('resourceGroupId'), '/'))]"
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "budgetName": {
+      "type": "string",
+      "value": "[parameters('budgetName')]"
+    },
+    "budgetId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Consumption/budgets', parameters('budgetName'))]"
+    },
+    "budgetAmount": {
+      "type": "int",
+      "value": "[parameters('budgetAmount')]"
+    },
+    "budgetStartDate": {
+      "type": "string",
+      "value": "[parameters('startDate')]"
+    },
+    "budgetEndDate": {
+      "type": "string",
+      "value": "[parameters('endDate')]"
+    }
+  }
+}

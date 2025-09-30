@@ -1,0 +1,652 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.37.4.10188",
+      "templateHash": "12010877465222314258"
+    }
+  },
+  "parameters": {
+    "environment": {
+      "type": "string",
+      "defaultValue": "dev",
+      "allowedValues": [
+        "dev",
+        "staging",
+        "prod"
+      ],
+      "metadata": {
+        "description": "The environment name (dev, staging, prod)"
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "The Azure region for all resources"
+      }
+    },
+    "randomSuffix": {
+      "type": "string",
+      "defaultValue": "[uniqueString(resourceGroup().id)]",
+      "metadata": {
+        "description": "Random suffix for globally unique resource names"
+      }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {
+        "Project": "Dev8",
+        "Environment": "[parameters('environment')]",
+        "ManagedBy": "Bicep"
+      },
+      "metadata": {
+        "description": "Tags to apply to all resources"
+      }
+    },
+    "storageSku": {
+      "type": "string",
+      "defaultValue": "Standard_LRS",
+      "allowedValues": [
+        "Standard_LRS",
+        "Standard_GRS",
+        "Standard_RAGRS"
+      ],
+      "metadata": {
+        "description": "Storage account SKU"
+      }
+    },
+    "registrySku": {
+      "type": "string",
+      "defaultValue": "Basic",
+      "allowedValues": [
+        "Basic",
+        "Standard",
+        "Premium"
+      ],
+      "metadata": {
+        "description": "Container Registry SKU"
+      }
+    },
+    "registryAdminEnabled": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Enable admin user for Container Registry"
+      }
+    },
+    "budgetAmount": {
+      "type": "int",
+      "defaultValue": 50,
+      "metadata": {
+        "description": "Monthly budget amount in USD"
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "storage-deployment",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "storageAccountName": {
+            "value": "[format('dev8{0}storage{1}', parameters('environment'), parameters('randomSuffix'))]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "sku": {
+            "value": "[parameters('storageSku')]"
+          },
+          "tags": {
+            "value": "[parameters('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "5072357506518678331"
+            }
+          },
+          "parameters": {
+            "storageAccountName": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 24,
+              "metadata": {
+                "description": "Storage account name (must be globally unique, 3-24 lowercase alphanumeric)"
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region for the storage account"
+              }
+            },
+            "sku": {
+              "type": "string",
+              "defaultValue": "Standard_LRS",
+              "allowedValues": [
+                "Standard_LRS",
+                "Standard_GRS",
+                "Standard_RAGRS",
+                "Standard_ZRS",
+                "Premium_LRS"
+              ],
+              "metadata": {
+                "description": "Storage account SKU"
+              }
+            },
+            "kind": {
+              "type": "string",
+              "defaultValue": "StorageV2",
+              "allowedValues": [
+                "Storage",
+                "StorageV2",
+                "BlobStorage",
+                "FileStorage",
+                "BlockBlobStorage"
+              ],
+              "metadata": {
+                "description": "Storage account kind"
+              }
+            },
+            "minimumTlsVersion": {
+              "type": "string",
+              "defaultValue": "TLS1_2",
+              "allowedValues": [
+                "TLS1_0",
+                "TLS1_1",
+                "TLS1_2"
+              ],
+              "metadata": {
+                "description": "Minimum TLS version"
+              }
+            },
+            "enableHierarchicalNamespace": {
+              "type": "bool",
+              "defaultValue": false,
+              "metadata": {
+                "description": "Enable hierarchical namespace (Data Lake Gen2)"
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Tags for the storage account"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Storage/storageAccounts",
+              "apiVersion": "2023-01-01",
+              "name": "[parameters('storageAccountName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "sku": {
+                "name": "[parameters('sku')]"
+              },
+              "kind": "[parameters('kind')]",
+              "properties": {
+                "minimumTlsVersion": "[parameters('minimumTlsVersion')]",
+                "supportsHttpsTrafficOnly": true,
+                "isHnsEnabled": "[parameters('enableHierarchicalNamespace')]",
+                "allowBlobPublicAccess": false,
+                "allowSharedKeyAccess": true,
+                "networkAcls": {
+                  "defaultAction": "Allow",
+                  "bypass": "AzureServices"
+                },
+                "encryption": {
+                  "services": {
+                    "file": {
+                      "enabled": true,
+                      "keyType": "Account"
+                    },
+                    "blob": {
+                      "enabled": true,
+                      "keyType": "Account"
+                    }
+                  },
+                  "keySource": "Microsoft.Storage"
+                }
+              }
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/fileServices",
+              "apiVersion": "2023-01-01",
+              "name": "[format('{0}/{1}', parameters('storageAccountName'), 'default')]",
+              "properties": {
+                "shareDeleteRetentionPolicy": {
+                  "enabled": true,
+                  "days": 7
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/blobServices",
+              "apiVersion": "2023-01-01",
+              "name": "[format('{0}/{1}', parameters('storageAccountName'), 'default')]",
+              "properties": {
+                "deleteRetentionPolicy": {
+                  "enabled": true,
+                  "days": 7
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "storageAccountName": {
+              "type": "string",
+              "value": "[parameters('storageAccountName')]"
+            },
+            "storageAccountId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+            },
+            "primaryEndpoints": {
+              "type": "object",
+              "value": "[reference(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2023-01-01').primaryEndpoints]"
+            },
+            "connectionString": {
+              "type": "string",
+              "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};AccountKey={1};EndpointSuffix=core.windows.net', parameters('storageAccountName'), listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2023-01-01').keys[0].value)]"
+            },
+            "primaryKey": {
+              "type": "string",
+              "value": "[listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2023-01-01').keys[0].value]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "registry-deployment",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "registryName": {
+            "value": "[format('dev8{0}registry{1}', parameters('environment'), parameters('randomSuffix'))]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "sku": {
+            "value": "[parameters('registrySku')]"
+          },
+          "adminUserEnabled": {
+            "value": "[parameters('registryAdminEnabled')]"
+          },
+          "tags": {
+            "value": "[parameters('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "3203035725748058494"
+            }
+          },
+          "parameters": {
+            "registryName": {
+              "type": "string",
+              "minLength": 5,
+              "maxLength": 50,
+              "metadata": {
+                "description": "Container registry name (must be globally unique, 5-50 alphanumeric)"
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region for the container registry"
+              }
+            },
+            "sku": {
+              "type": "string",
+              "defaultValue": "Basic",
+              "allowedValues": [
+                "Basic",
+                "Standard",
+                "Premium"
+              ],
+              "metadata": {
+                "description": "Container Registry SKU"
+              }
+            },
+            "adminUserEnabled": {
+              "type": "bool",
+              "defaultValue": true,
+              "metadata": {
+                "description": "Enable admin user for the registry"
+              }
+            },
+            "publicNetworkAccess": {
+              "type": "bool",
+              "defaultValue": true,
+              "metadata": {
+                "description": "Enable public network access"
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Tags for the container registry"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.ContainerRegistry/registries",
+              "apiVersion": "2023-07-01",
+              "name": "[parameters('registryName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "sku": {
+                "name": "[parameters('sku')]"
+              },
+              "properties": {
+                "adminUserEnabled": "[parameters('adminUserEnabled')]",
+                "publicNetworkAccess": "[if(parameters('publicNetworkAccess'), 'Enabled', 'Disabled')]",
+                "dataEndpointEnabled": false,
+                "networkRuleBypassOptions": "AzureServices",
+                "policies": {
+                  "quarantinePolicy": {
+                    "status": "disabled"
+                  },
+                  "trustPolicy": {
+                    "type": "Notary",
+                    "status": "disabled"
+                  },
+                  "retentionPolicy": {
+                    "days": 7,
+                    "status": "disabled"
+                  }
+                },
+                "encryption": {
+                  "status": "disabled"
+                }
+              }
+            }
+          ],
+          "outputs": {
+            "registryName": {
+              "type": "string",
+              "value": "[parameters('registryName')]"
+            },
+            "registryId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.ContainerRegistry/registries', parameters('registryName'))]"
+            },
+            "loginServer": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.ContainerRegistry/registries', parameters('registryName')), '2023-07-01').loginServer]"
+            },
+            "adminUsername": {
+              "type": "string",
+              "value": "[if(parameters('adminUserEnabled'), listCredentials(resourceId('Microsoft.ContainerRegistry/registries', parameters('registryName')), '2023-07-01').username, '')]"
+            },
+            "adminPassword": {
+              "type": "string",
+              "value": "[if(parameters('adminUserEnabled'), listCredentials(resourceId('Microsoft.ContainerRegistry/registries', parameters('registryName')), '2023-07-01').passwords[0].value, '')]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "monitoring-deployment",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "budgetName": {
+            "value": "[format('dev8-{0}-budget', parameters('environment'))]"
+          },
+          "budgetAmount": {
+            "value": "[parameters('budgetAmount')]"
+          },
+          "resourceGroupId": {
+            "value": "[resourceGroup().id]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "198790594629020671"
+            }
+          },
+          "parameters": {
+            "budgetName": {
+              "type": "string",
+              "metadata": {
+                "description": "Budget name"
+              }
+            },
+            "budgetAmount": {
+              "type": "int",
+              "metadata": {
+                "description": "Monthly budget amount in USD"
+              }
+            },
+            "resourceGroupId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource group ID for the budget scope"
+              }
+            },
+            "startDate": {
+              "type": "string",
+              "defaultValue": "[utcNow('yyyy-MM-01')]",
+              "metadata": {
+                "description": "Budget start date (YYYY-MM-DD format)"
+              }
+            },
+            "endDate": {
+              "type": "string",
+              "defaultValue": "[dateTimeAdd(utcNow('yyyy-MM-01'), 'P1Y', 'yyyy-MM-dd')]",
+              "metadata": {
+                "description": "Budget end date (YYYY-MM-DD format, must be at least 1 month after start)"
+              }
+            },
+            "contactEmails": {
+              "type": "array",
+              "defaultValue": [],
+              "metadata": {
+                "description": "Email addresses for budget alerts"
+              }
+            },
+            "alertThresholds": {
+              "type": "array",
+              "defaultValue": [
+                50,
+                75,
+                90,
+                100
+              ],
+              "metadata": {
+                "description": "Alert thresholds (percentage of budget)"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Consumption/budgets",
+              "apiVersion": "2023-05-01",
+              "name": "[parameters('budgetName')]",
+              "properties": {
+                "timePeriod": {
+                  "startDate": "[parameters('startDate')]",
+                  "endDate": "[parameters('endDate')]"
+                },
+                "timeGrain": "Monthly",
+                "amount": "[parameters('budgetAmount')]",
+                "category": "Cost",
+                "notifications": {
+                  "Alert50": {
+                    "enabled": true,
+                    "operator": "GreaterThan",
+                    "threshold": "[parameters('alertThresholds')[0]]",
+                    "contactEmails": "[parameters('contactEmails')]",
+                    "contactRoles": [
+                      "Owner",
+                      "Contributor"
+                    ],
+                    "thresholdType": "Actual"
+                  },
+                  "Alert75": {
+                    "enabled": true,
+                    "operator": "GreaterThan",
+                    "threshold": "[parameters('alertThresholds')[1]]",
+                    "contactEmails": "[parameters('contactEmails')]",
+                    "contactRoles": [
+                      "Owner",
+                      "Contributor"
+                    ],
+                    "thresholdType": "Actual"
+                  },
+                  "Alert90": {
+                    "enabled": true,
+                    "operator": "GreaterThan",
+                    "threshold": "[parameters('alertThresholds')[2]]",
+                    "contactEmails": "[parameters('contactEmails')]",
+                    "contactRoles": [
+                      "Owner",
+                      "Contributor"
+                    ],
+                    "thresholdType": "Actual"
+                  },
+                  "Alert100": {
+                    "enabled": true,
+                    "operator": "GreaterThan",
+                    "threshold": "[parameters('alertThresholds')[3]]",
+                    "contactEmails": "[parameters('contactEmails')]",
+                    "contactRoles": [
+                      "Owner",
+                      "Contributor"
+                    ],
+                    "thresholdType": "Forecasted"
+                  }
+                },
+                "filter": {
+                  "dimensions": {
+                    "name": "ResourceGroupName",
+                    "operator": "In",
+                    "values": [
+                      "[last(split(parameters('resourceGroupId'), '/'))]"
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "outputs": {
+            "budgetName": {
+              "type": "string",
+              "value": "[parameters('budgetName')]"
+            },
+            "budgetId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Consumption/budgets', parameters('budgetName'))]"
+            },
+            "budgetAmount": {
+              "type": "int",
+              "value": "[parameters('budgetAmount')]"
+            },
+            "budgetStartDate": {
+              "type": "string",
+              "value": "[parameters('startDate')]"
+            },
+            "budgetEndDate": {
+              "type": "string",
+              "value": "[parameters('endDate')]"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "storageAccountName": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'storage-deployment'), '2022-09-01').outputs.storageAccountName.value]"
+    },
+    "storageAccountId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'storage-deployment'), '2022-09-01').outputs.storageAccountId.value]"
+    },
+    "storageConnectionString": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'storage-deployment'), '2022-09-01').outputs.connectionString.value]"
+    },
+    "storagePrimaryKey": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'storage-deployment'), '2022-09-01').outputs.primaryKey.value]"
+    },
+    "registryName": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'registry-deployment'), '2022-09-01').outputs.registryName.value]"
+    },
+    "registryId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'registry-deployment'), '2022-09-01').outputs.registryId.value]"
+    },
+    "registryLoginServer": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'registry-deployment'), '2022-09-01').outputs.loginServer.value]"
+    },
+    "registryAdminUsername": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'registry-deployment'), '2022-09-01').outputs.adminUsername.value]"
+    },
+    "registryAdminPassword": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'registry-deployment'), '2022-09-01').outputs.adminPassword.value]"
+    },
+    "resourceGroupName": {
+      "type": "string",
+      "value": "[resourceGroup().name]"
+    },
+    "resourceGroupLocation": {
+      "type": "string",
+      "value": "[resourceGroup().location]"
+    }
+  }
+}

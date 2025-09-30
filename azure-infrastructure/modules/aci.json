@@ -1,0 +1,199 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.37.4.10188",
+      "templateHash": "14654270702288225195"
+    }
+  },
+  "parameters": {
+    "containerGroupName": {
+      "type": "string",
+      "metadata": {
+        "description": "Container group name"
+      }
+    },
+    "location": {
+      "type": "string",
+      "metadata": {
+        "description": "Azure region for the container instance"
+      }
+    },
+    "containerImage": {
+      "type": "string",
+      "metadata": {
+        "description": "Container image (from Azure Container Registry)"
+      }
+    },
+    "cpuCores": {
+      "type": "string",
+      "defaultValue": "1",
+      "allowedValues": [
+        "0.5",
+        "1",
+        "2",
+        "4"
+      ],
+      "metadata": {
+        "description": "Number of CPU cores (0.5, 1, 2, 4)"
+      }
+    },
+    "memoryInGb": {
+      "type": "string",
+      "defaultValue": "2",
+      "allowedValues": [
+        "1",
+        "2",
+        "4",
+        "8",
+        "16"
+      ],
+      "metadata": {
+        "description": "Memory in GB (1, 2, 4, 8, 16)"
+      }
+    },
+    "registryLoginServer": {
+      "type": "string",
+      "metadata": {
+        "description": "Container registry login server"
+      }
+    },
+    "registryUsername": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Container registry username"
+      }
+    },
+    "registryPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Container registry password"
+      }
+    },
+    "fileShareName": {
+      "type": "string",
+      "metadata": {
+        "description": "Azure Files share name for workspace persistence"
+      }
+    },
+    "storageAccountName": {
+      "type": "string",
+      "metadata": {
+        "description": "Storage account name"
+      }
+    },
+    "storageAccountKey": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Storage account key"
+      }
+    },
+    "environmentVariables": {
+      "type": "array",
+      "defaultValue": [],
+      "metadata": {
+        "description": "Environment variables for the container"
+      }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {},
+      "metadata": {
+        "description": "Tags for the container instance"
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.ContainerInstance/containerGroups",
+      "apiVersion": "2023-05-01",
+      "name": "[parameters('containerGroupName')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "properties": {
+        "containers": [
+          {
+            "name": "vscode-server",
+            "properties": {
+              "image": "[parameters('containerImage')]",
+              "resources": {
+                "requests": {
+                  "cpu": "[json(parameters('cpuCores'))]",
+                  "memoryInGB": "[json(parameters('memoryInGb'))]"
+                }
+              },
+              "ports": [
+                {
+                  "port": 8080,
+                  "protocol": "TCP"
+                }
+              ],
+              "environmentVariables": "[parameters('environmentVariables')]",
+              "volumeMounts": [
+                {
+                  "name": "workspace",
+                  "mountPath": "/home/coder/workspace",
+                  "readOnly": false
+                }
+              ]
+            }
+          }
+        ],
+        "osType": "Linux",
+        "restartPolicy": "OnFailure",
+        "ipAddress": {
+          "type": "Public",
+          "ports": [
+            {
+              "port": 8080,
+              "protocol": "TCP"
+            }
+          ],
+          "dnsNameLabel": "[parameters('containerGroupName')]"
+        },
+        "imageRegistryCredentials": [
+          {
+            "server": "[parameters('registryLoginServer')]",
+            "username": "[parameters('registryUsername')]",
+            "password": "[parameters('registryPassword')]"
+          }
+        ],
+        "volumes": [
+          {
+            "name": "workspace",
+            "azureFile": {
+              "shareName": "[parameters('fileShareName')]",
+              "storageAccountName": "[parameters('storageAccountName')]",
+              "storageAccountKey": "[parameters('storageAccountKey')]",
+              "readOnly": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "outputs": {
+    "containerGroupName": {
+      "type": "string",
+      "value": "[parameters('containerGroupName')]"
+    },
+    "containerGroupId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.ContainerInstance/containerGroups', parameters('containerGroupName'))]"
+    },
+    "ipAddress": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.ContainerInstance/containerGroups', parameters('containerGroupName')), '2023-05-01').ipAddress.ip]"
+    },
+    "fqdn": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.ContainerInstance/containerGroups', parameters('containerGroupName')), '2023-05-01').ipAddress.fqdn]"
+    },
+    "provisioningState": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.ContainerInstance/containerGroups', parameters('containerGroupName')), '2023-05-01').provisioningState]"
+    }
+  }
+}
