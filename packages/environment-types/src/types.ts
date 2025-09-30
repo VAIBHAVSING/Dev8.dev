@@ -1,7 +1,7 @@
 /**
- * Cloud provider types
+ * Cloud provider types (matching Prisma schema enum)
  */
-export type CloudProvider = 'azure' | 'aws' | 'gcp';
+export type CloudProvider = 'AZURE' | 'AWS' | 'GCP';
 
 /**
  * Environment status types (matching Prisma schema enum)

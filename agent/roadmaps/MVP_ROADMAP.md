@@ -640,8 +640,8 @@ EXPOSE 8080
 #  - For Azure ACI: store secret in Azure Key Vault or secure parameter and inject at deployment.
 #  - Enforce network restrictions (private VNet / IP allow list, NSG rules) + HTTPS termination at ingress.
 #  - Regenerate per deployment; never bake static password into image.
-ENV CODE_SERVER_PASSWORD="${CODE_SERVER_PASSWORD:-changeme}"  # Placeholder overridden by runtime secret
-CMD ["/bin/sh", "-c", "test -n \"$CODE_SERVER_PASSWORD\" || CODE_SERVER_PASSWORD=$PASSWORD; exec code-server --bind-addr 0.0.0.0:8080 --auth password --disable-telemetry ."]
+ENV CODE_SERVER_PASSWORD=changeme  # Overridden by runtime secret injection
+CMD ["/bin/sh", "-c", "if [ -z \"$CODE_SERVER_PASSWORD\" ] && [ -n \"$PASSWORD\" ]; then CODE_SERVER_PASSWORD=$PASSWORD; fi; exec code-server --bind-addr 0.0.0.0:8080 --auth password --disable-telemetry ."]
 
 □ Build and test base image
   docker build -t vscode-base:latest ./docker/base
