@@ -56,3 +56,14 @@ tmp/
 *.zip
 trivy-results.sarif
 gosec-results.sarif
+
+# Infrastructure code (moved to private repo)
+azure-infrastructure/*
+!azure-infrastructure/README.md
+scripts/azure/*
+!scripts/azure/README.md
+
+# Private infrastructure files
+*.bicep
+*.bicepparam
+azure-credentials.json
