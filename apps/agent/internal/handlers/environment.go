@@ -1,0 +1,175 @@
+package handlers
+
+import (
+	"encoding/json"
+	"log"
+	"net/http"
+
+	"github.com/gorilla/mux"
+	"github.com/VAIBHAVSING/Dev8.dev/apps/agent/internal/models"
+	"github.com/VAIBHAVSING/Dev8.dev/apps/agent/internal/services"
+)
+
+// EnvironmentHandler handles environment-related HTTP requests
+type EnvironmentHandler struct {
+	service *services.EnvironmentService
+}
+
+// NewEnvironmentHandler creates a new environment handler
+func NewEnvironmentHandler(service *services.EnvironmentService) *EnvironmentHandler {
+	return &EnvironmentHandler{
+		service: service,
+	}
+}
+
+// CreateEnvironment handles POST /api/v1/environments
+func (h *EnvironmentHandler) CreateEnvironment(w http.ResponseWriter, r *http.Request) {
+	var req models.CreateEnvironmentRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid request body", err)
+		return
+	}
+
+	// TODO: Extract user ID from authentication context
+	// For now, we'll use a placeholder
+	if req.UserID == "" {
+		req.UserID = "default-user"
+	}
+
+	env, err := h.service.CreateEnvironment(r.Context(), &req)
+	if err != nil {
+		handleServiceError(w, err)
+		return
+	}
+
+	respondWithJSON(w, http.StatusCreated, models.EnvironmentResponse{
+		Environment: env,
+		Message:     "Environment created successfully",
+	})
+}
+
+// GetEnvironment handles GET /api/v1/environments/{id}
+func (h *EnvironmentHandler) GetEnvironment(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	envID := vars["id"]
+
+	// TODO: Extract user ID from authentication context
+	userID := "default-user"
+
+	env, err := h.service.GetEnvironment(r.Context(), envID, userID)
+	if err != nil {
+		handleServiceError(w, err)
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, models.EnvironmentResponse{
+		Environment: env,
+	})
+}
+
+// ListEnvironments handles GET /api/v1/environments
+func (h *EnvironmentHandler) ListEnvironments(w http.ResponseWriter, r *http.Request) {
+	// TODO: Implement list environments
+	// For now, return empty list
+	respondWithJSON(w, http.StatusOK, models.EnvironmentListResponse{
+		Environments: []models.Environment{},
+		Total:        0,
+	})
+}
+
+// StartEnvironment handles POST /api/v1/environments/{id}/start
+func (h *EnvironmentHandler) StartEnvironment(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	envID := vars["id"]
+
+	// TODO: Extract user ID from authentication context
+	userID := "default-user"
+
+	if err := h.service.StartEnvironment(r.Context(), envID, userID); err != nil {
+		handleServiceError(w, err)
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, map[string]string{
+		"message": "Environment started successfully",
+		"id":      envID,
+	})
+}
+
+// StopEnvironment handles POST /api/v1/environments/{id}/stop
+func (h *EnvironmentHandler) StopEnvironment(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	envID := vars["id"]
+
+	// TODO: Extract user ID from authentication context
+	userID := "default-user"
+
+	if err := h.service.StopEnvironment(r.Context(), envID, userID); err != nil {
+		handleServiceError(w, err)
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, map[string]string{
+		"message": "Environment stopped successfully",
+		"id":      envID,
+	})
+}
+
+// DeleteEnvironment handles DELETE /api/v1/environments/{id}
+func (h *EnvironmentHandler) DeleteEnvironment(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	envID := vars["id"]
+
+	// TODO: Extract user ID from authentication context
+	userID := "default-user"
+
+	if err := h.service.DeleteEnvironment(r.Context(), envID, userID); err != nil {
+		handleServiceError(w, err)
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, map[string]string{
+		"message": "Environment deleted successfully",
+		"id":      envID,
+	})
+}
+
+// Helper functions
+
+func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
+	response, err := json.Marshal(payload)
+	if err != nil {
+		log.Printf("Error marshaling JSON: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	w.Write(response)
+}
+
+func respondWithError(w http.ResponseWriter, code int, message string, err error) {
+	log.Printf("Error: %s - %v", message, err)
+	respondWithJSON(w, code, models.ErrorResponse{
+		Error:   message,
+		Message: err.Error(),
+	})
+}
+
+func handleServiceError(w http.ResponseWriter, err error) {
+	if appErr, ok := err.(*models.AppError); ok {
+		switch appErr.Code {
+		case "INVALID_REQUEST":
+			respondWithError(w, http.StatusBadRequest, "Invalid request", err)
+		case "NOT_FOUND":
+			respondWithError(w, http.StatusNotFound, "Resource not found", err)
+		case "UNAUTHORIZED":
+			respondWithError(w, http.StatusUnauthorized, "Unauthorized", err)
+		default:
+			respondWithError(w, http.StatusInternalServerError, "Internal server error", err)
+		}
+	} else {
+		respondWithError(w, http.StatusInternalServerError, "Internal server error", err)
+	}
+}
