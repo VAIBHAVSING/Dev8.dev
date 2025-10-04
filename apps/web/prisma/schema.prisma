@@ -11,12 +11,12 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
+  id            String          @id @default(cuid())
   name          String?
-  email         String    @unique
+  email         String          @unique
   emailVerified DateTime?
   image         String?
-  password      String?   // For credentials authentication
+  password      String? // For credentials authentication
   accounts      Account[]
   sessions      Session[]
   // Optional for WebAuthn support
@@ -99,10 +99,10 @@ enum CloudProvider {
 }
 
 model Environment {
-  id                  String            @id @default(cuid())
-  userId              String
-  name                String
-  status              EnvironmentStatus @default(CREATING)
+  id     String            @id @default(cuid())
+  userId String
+  name   String
+  status EnvironmentStatus @default(CREATING)
 
   // Cloud Configuration
   cloudProvider       CloudProvider @default(AZURE)
@@ -113,52 +113,90 @@ model Environment {
   // Storage
   azureFileShareName  String?
   vsCodeUrl           String?
+  sshConnectionString String?
 
   // Resources
-  cpuCores            Int      @default(2)
-  memoryGB            Int      @default(4)
-  storageGB           Int      @default(20)
+  cpuCores     Int    @default(2)
+  memoryGB     Int    @default(4)
+  storageGB    Int    @default(20)
+  instanceType String @default("balanced") // balanced, compute-optimized, memory-optimized
 
-  // Template
-  baseImage           String   @default("node")
+  // Template and Configuration
+  baseImage            String  @default("node")
+  templateName         String?
+  environmentVariables Json? // Key-value pairs for env vars
+  ports                Json? // Array of port configurations
+
+  // Cost tracking
+  estimatedCostPerHour Float? @default(0.0)
+  totalCost            Float? @default(0.0)
 
   // Timestamps
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-  lastAccessedAt      DateTime @default(now())
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  lastAccessedAt DateTime  @default(now())
+  stoppedAt      DateTime?
+  deletedAt      DateTime?
 
-  user                User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  resourceUsage       ResourceUsage[]
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resourceUsage ResourceUsage[]
 
   @@index([userId])
   @@index([status])
+  @@index([cloudProvider])
+  @@index([createdAt])
   @@map("environments")
 }
 
 model Template {
-  id            String   @id @default(cuid())
-  name          String   @unique
-  displayName   String
-  description   String
-  baseImage     String
-  defaultCPU    Int      @default(2)
-  defaultMemory Int      @default(4)
+  id             String @id @default(cuid())
+  name           String @unique
+  displayName    String
+  description    String
+  baseImage      String
+  defaultCPU     Int    @default(2)
+  defaultMemory  Int    @default(4)
+  defaultStorage Int    @default(20)
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  // Template configuration
+  category  String   @default("language") // language, framework, database, etc.
+  tags      String[] // ["nodejs", "javascript", "backend"]
+  icon      String? // Icon name or URL
+  isPopular Boolean  @default(false)
+  isActive  Boolean  @default(true)
 
+  // Additional config stored as JSON
+  defaultPorts   Json? // [{"port": 3000, "protocol": "http"}]
+  defaultEnvVars Json? // {"NODE_ENV": "development"}
+  extensions     Json? // ["dbaeumer.vscode-eslint"]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
+  @@index([isPopular])
   @@map("templates")
 }
 
 model ResourceUsage {
-  id               String      @id @default(cuid())
-  environmentId    String
-  timestamp        DateTime    @default(now())
-  cpuUsagePercent  Float?
-  memoryUsageMB    Int?
-  environment      Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  id            String   @id @default(cuid())
+  environmentId String
+  timestamp     DateTime @default(now())
+
+  // Resource metrics
+  cpuUsagePercent Float?
+  memoryUsageMB   Int?
+  diskUsageMB     Int?
+  networkInMB     Float?
+  networkOutMB    Float?
+
+  // Cost calculation
+  costAmount    Float?  @default(0.0)
+  billingPeriod String? // hourly, daily, monthly
+
+  environment Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
 
   @@index([environmentId, timestamp])
+  @@index([timestamp])
   @@map("resource_usage")
 }
-
