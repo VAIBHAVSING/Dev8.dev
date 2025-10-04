@@ -45,8 +45,8 @@ graph TB
     
     subgraph "API Layer"
         C[Next.js API Routes]
-        C1[/api/environments]
-        C2[/api/auth]
+        C1["/api/environments"]
+        C2["/api/auth"]
     end
     
     subgraph "Backend - Go Agent"
