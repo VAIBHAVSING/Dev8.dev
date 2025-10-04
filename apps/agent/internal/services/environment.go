@@ -13,8 +13,8 @@ import (
 
 // EnvironmentService handles environment lifecycle operations
 type EnvironmentService struct {
-	config        *config.Config
-	azureClient   *azure.Client
+	config         *config.Config
+	azureClient    *azure.Client
 	storageClients map[string]*azure.StorageClient
 }
 
@@ -61,21 +61,21 @@ func (s *EnvironmentService) CreateEnvironment(ctx context.Context, req *models.
 
 	// Create environment object
 	env := &models.Environment{
-		ID:                 envID,
-		UserID:             req.UserID,
-		Name:               req.Name,
-		Status:             models.StatusCreating,
-		CloudProvider:      models.ProviderAzure,
-		CloudRegion:        req.CloudRegion,
-		CPUCores:           req.CPUCores,
-		MemoryGB:           req.MemoryGB,
-		StorageGB:          req.StorageGB,
-		BaseImage:          req.BaseImage,
-		AzureFileShareName: fileShareName,
+		ID:                  envID,
+		UserID:              req.UserID,
+		Name:                req.Name,
+		Status:              models.StatusCreating,
+		CloudProvider:       models.ProviderAzure,
+		CloudRegion:         req.CloudRegion,
+		CPUCores:            req.CPUCores,
+		MemoryGB:            req.MemoryGB,
+		StorageGB:           req.StorageGB,
+		BaseImage:           req.BaseImage,
+		AzureFileShareName:  fileShareName,
 		ACIContainerGroupID: containerGroupName,
-		CreatedAt:          time.Now(),
-		UpdatedAt:          time.Now(),
-		LastAccessedAt:     time.Now(),
+		CreatedAt:           time.Now(),
+		UpdatedAt:           time.Now(),
+		LastAccessedAt:      time.Now(),
 	}
 
 	// Step 1: Create Azure File Share for persistent storage
@@ -279,7 +279,7 @@ func generateDNSLabel(envID string) string {
 func (s *EnvironmentService) getContainerImage(baseImage string) string {
 	// Map base image names to actual container registry images
 	registry := s.config.Azure.ContainerRegistry
-	
+
 	imageMap := map[string]string{
 		"node":   fmt.Sprintf("%s/vscode-node:latest", registry),
 		"python": fmt.Sprintf("%s/vscode-python:latest", registry),

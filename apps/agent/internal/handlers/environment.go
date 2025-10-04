@@ -5,9 +5,9 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/gorilla/mux"
 	"github.com/VAIBHAVSING/Dev8.dev/apps/agent/internal/models"
 	"github.com/VAIBHAVSING/Dev8.dev/apps/agent/internal/services"
+	"github.com/gorilla/mux"
 )
 
 // EnvironmentHandler handles environment-related HTTP requests

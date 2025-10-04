@@ -9,13 +9,13 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/gorilla/mux"
-	"github.com/joho/godotenv"
 	"github.com/VAIBHAVSING/Dev8.dev/apps/agent/internal/azure"
 	"github.com/VAIBHAVSING/Dev8.dev/apps/agent/internal/config"
 	"github.com/VAIBHAVSING/Dev8.dev/apps/agent/internal/handlers"
 	"github.com/VAIBHAVSING/Dev8.dev/apps/agent/internal/middleware"
 	"github.com/VAIBHAVSING/Dev8.dev/apps/agent/internal/services"
+	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
 )
 
 func main() {
@@ -106,7 +106,7 @@ func main() {
 		log.Printf("📊 Health check: http://%s/health", addr)
 		log.Printf("📡 API endpoint: http://%s/api/v1", addr)
 		log.Printf("🌍 Environment: %s", cfg.Environment)
-		
+
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Failed to start server: %v", err)
 		}

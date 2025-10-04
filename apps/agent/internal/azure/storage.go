@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/storage/azfile/share"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azfile/service"
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azfile/share"
 )
 
 // StorageClient provides Azure Files operations
@@ -19,7 +19,7 @@ type StorageClient struct {
 func NewStorageClient(accountName, accountKey string) (*StorageClient, error) {
 	// Create service client using account name and key
 	serviceURL := fmt.Sprintf("https://%s.file.core.windows.net/", accountName)
-	
+
 	// Create shared key credential
 	credential, err := service.NewSharedKeyCredential(accountName, accountKey)
 	if err != nil {
@@ -42,7 +42,7 @@ func NewStorageClient(accountName, accountKey string) (*StorageClient, error) {
 // CreateFileShare creates a new Azure File share
 func (s *StorageClient) CreateFileShare(ctx context.Context, shareName string, quotaGB int32) error {
 	shareClient := s.serviceClient.NewShareClient(shareName)
-	
+
 	_, err := shareClient.Create(ctx, &share.CreateOptions{
 		Quota: &quotaGB,
 	})
@@ -56,7 +56,7 @@ func (s *StorageClient) CreateFileShare(ctx context.Context, shareName string, q
 // DeleteFileShare deletes an Azure File share
 func (s *StorageClient) DeleteFileShare(ctx context.Context, shareName string) error {
 	shareClient := s.serviceClient.NewShareClient(shareName)
-	
+
 	_, err := shareClient.Delete(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("failed to delete file share: %w", err)
@@ -68,7 +68,7 @@ func (s *StorageClient) DeleteFileShare(ctx context.Context, shareName string) e
 // FileShareExists checks if a file share exists
 func (s *StorageClient) FileShareExists(ctx context.Context, shareName string) (bool, error) {
 	shareClient := s.serviceClient.NewShareClient(shareName)
-	
+
 	_, err := shareClient.GetProperties(ctx, nil)
 	if err != nil {
 		// Check if error is "share not found"
@@ -84,7 +84,7 @@ func (s *StorageClient) FileShareExists(ctx context.Context, shareName string) (
 // GetFileShareProperties gets the properties of a file share
 func (s *StorageClient) GetFileShareProperties(ctx context.Context, shareName string) (map[string]interface{}, error) {
 	shareClient := s.serviceClient.NewShareClient(shareName)
-	
+
 	resp, err := shareClient.GetProperties(ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get file share properties: %w", err)

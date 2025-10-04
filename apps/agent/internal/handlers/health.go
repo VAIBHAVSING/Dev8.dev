@@ -20,7 +20,7 @@ func NewHealthHandler() *HealthHandler {
 // HealthCheck handles GET /health
 func (h *HealthHandler) HealthCheck(w http.ResponseWriter, r *http.Request) {
 	uptime := time.Since(h.startTime)
-	
+
 	respondWithJSON(w, http.StatusOK, map[string]interface{}{
 		"status":  "healthy",
 		"uptime":  uptime.String(),

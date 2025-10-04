@@ -47,14 +47,14 @@ type Environment struct {
 
 // CreateEnvironmentRequest represents a request to create a new environment
 type CreateEnvironmentRequest struct {
-	UserID        string            `json:"userId"`
-	Name          string            `json:"name"`
-	CloudProvider CloudProvider     `json:"cloudProvider"`
-	CloudRegion   string            `json:"cloudRegion"`
-	CPUCores      int               `json:"cpuCores"`
-	MemoryGB      int               `json:"memoryGB"`
-	StorageGB     int               `json:"storageGB"`
-	BaseImage     string            `json:"baseImage"`
+	UserID        string        `json:"userId"`
+	Name          string        `json:"name"`
+	CloudProvider CloudProvider `json:"cloudProvider"`
+	CloudRegion   string        `json:"cloudRegion"`
+	CPUCores      int           `json:"cpuCores"`
+	MemoryGB      int           `json:"memoryGB"`
+	StorageGB     int           `json:"storageGB"`
+	BaseImage     string        `json:"baseImage"`
 }
 
 // UpdateEnvironmentRequest represents a request to update an environment

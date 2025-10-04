@@ -31,9 +31,9 @@ type AzureConfig struct {
 	StorageAccountName string
 	StorageAccountKey  string
 	ContainerRegistry  string
-	
+
 	// Multi-region support
-	Regions []RegionConfig
+	Regions       []RegionConfig
 	DefaultRegion string
 }
 
@@ -112,7 +112,7 @@ func loadRegions() ([]RegionConfig, error) {
 
 	var regions []RegionConfig
 	regionStrs := strings.Split(regionsEnv, ",")
-	
+
 	for _, regionStr := range regionStrs {
 		parts := strings.Split(strings.TrimSpace(regionStr), ":")
 		if len(parts) < 3 {
@@ -120,13 +120,13 @@ func loadRegions() ([]RegionConfig, error) {
 		}
 
 		enabled, _ := strconv.ParseBool(parts[2])
-		
+
 		region := RegionConfig{
 			Name:     parts[0],
 			Location: parts[1],
 			Enabled:  enabled,
 		}
-		
+
 		if len(parts) > 3 {
 			region.ResourceGroupName = parts[3]
 		}

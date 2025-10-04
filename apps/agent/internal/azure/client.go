@@ -86,7 +86,7 @@ func (c *Client) CreateContainerGroup(ctx context.Context, region, resourceGroup
 	// Build volumes if file share is specified
 	var volumes []*armcontainerinstance.Volume
 	var volumeMounts []*armcontainerinstance.VolumeMount
-	
+
 	if spec.FileShareName != "" && spec.StorageAccountName != "" && spec.StorageAccountKey != "" {
 		volumes = []*armcontainerinstance.Volume{
 			{
@@ -137,7 +137,7 @@ func (c *Client) CreateContainerGroup(ctx context.Context, region, resourceGroup
 				DNSNameLabel: to.Ptr(spec.DNSNameLabel),
 			},
 			RestartPolicy: to.Ptr(armcontainerinstance.ContainerGroupRestartPolicyOnFailure),
-			Volumes: volumes,
+			Volumes:       volumes,
 		},
 		Tags: map[string]*string{
 			"environment": to.Ptr(spec.EnvironmentID),
