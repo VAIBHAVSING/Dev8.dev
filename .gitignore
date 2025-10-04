@@ -38,7 +38,7 @@ yarn-error.log*
 *.pem
 
 # Go
-bin/
+**/bin/**
 *.exe
 *.exe~
 *.dll
