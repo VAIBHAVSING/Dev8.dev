@@ -2,8 +2,12 @@ package azure
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
+	"strings"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azfile/service"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azfile/share"
 )
@@ -103,6 +107,14 @@ func isNotFoundError(err error) bool {
 	if err == nil {
 		return false
 	}
-	// Azure SDK typically returns status code 404 for not found
-	return err.Error() == "404"
+
+	// Check if error is an Azure ResponseError with 404 status code
+	var respErr *azcore.ResponseError
+	if errors.As(err, &respErr) {
+		return respErr.StatusCode == http.StatusNotFound
+	}
+
+	// Fallback: case-insensitive substring match for non-azcore errors
+	errMsg := strings.ToLower(err.Error())
+	return strings.Contains(errMsg, "not found") || strings.Contains(errMsg, "404")
 }

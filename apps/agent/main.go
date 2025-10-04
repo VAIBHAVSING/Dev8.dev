@@ -33,6 +33,7 @@ func main() {
 	for _, region := range cfg.GetEnabledRegions() {
 		log.Printf("   - %s (%s)", region.Name, region.Location)
 	}
+	log.Printf("🔒 CORS allowed origins: %v", cfg.CORSAllowedOrigins)
 
 	// Initialize Azure client
 	azureClient, err := azure.NewClient(cfg)
@@ -57,7 +58,7 @@ func main() {
 
 	// Apply middleware
 	router.Use(middleware.LoggingMiddleware)
-	router.Use(middleware.CORSMiddleware)
+	router.Use(middleware.CORSMiddleware(cfg.CORSAllowedOrigins))
 
 	// Health check routes
 	router.HandleFunc("/health", healthHandler.HealthCheck).Methods("GET")

@@ -109,7 +109,9 @@ func (s *EnvironmentService) CreateEnvironment(ctx context.Context, req *models.
 
 	if err := s.azureClient.CreateContainerGroup(ctx, req.CloudRegion, resourceGroup, containerGroupName, containerSpec); err != nil {
 		// Cleanup: Delete file share if container creation fails
-		_ = storageClient.DeleteFileShare(ctx, fileShareName)
+		if cleanupErr := storageClient.DeleteFileShare(ctx, fileShareName); cleanupErr != nil {
+			fmt.Printf("Warning: failed to cleanup file share during error handling: %v\n", cleanupErr)
+		}
 		return nil, fmt.Errorf("failed to create container group: %w", err)
 	}
 
@@ -264,7 +266,21 @@ func generateFileShareName(userID, envID string) string {
 	// Azure File Share names must be lowercase and alphanumeric with hyphens
 	cleanUserID := strings.ToLower(strings.ReplaceAll(userID, "_", "-"))
 	cleanEnvID := strings.ToLower(strings.ReplaceAll(envID, "_", "-"))
-	return fmt.Sprintf("workspace-%s-%s", cleanUserID[:8], cleanEnvID[4:12])
+
+	// Ensure we don't exceed string bounds
+	userIDPart := cleanUserID
+	if len(cleanUserID) > 8 {
+		userIDPart = cleanUserID[:8]
+	}
+
+	envIDPart := cleanEnvID
+	if len(cleanEnvID) > 12 {
+		envIDPart = cleanEnvID[4:12]
+	} else if len(cleanEnvID) > 4 {
+		envIDPart = cleanEnvID[4:]
+	}
+
+	return fmt.Sprintf("workspace-%s-%s", userIDPart, envIDPart)
 }
 
 func generateContainerGroupName(envID string) string {

@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -18,6 +19,9 @@ type Config struct {
 
 	// Azure Configuration
 	Azure AzureConfig
+
+	// CORS Configuration
+	CORSAllowedOrigins []string
 
 	// Application Settings
 	Environment string
@@ -55,6 +59,9 @@ func Load() (*Config, error) {
 		Environment: getEnv("ENVIRONMENT", "development"),
 		LogLevel:    getEnv("LOG_LEVEL", "info"),
 	}
+
+	// Load CORS configuration
+	config.CORSAllowedOrigins = loadCORSAllowedOrigins()
 
 	// Load Azure configuration
 	azureConfig, err := loadAzureConfig()
@@ -116,10 +123,15 @@ func loadRegions() ([]RegionConfig, error) {
 	for _, regionStr := range regionStrs {
 		parts := strings.Split(strings.TrimSpace(regionStr), ":")
 		if len(parts) < 3 {
+			log.Printf("WARNING: Skipping malformed region config (expected format 'name:location:enabled[:resourceGroup[:storageAccount]]'): %s", regionStr)
 			continue
 		}
 
-		enabled, _ := strconv.ParseBool(parts[2])
+		enabled, err := strconv.ParseBool(parts[2])
+		if err != nil {
+			log.Printf("WARNING: Invalid boolean value for enabled flag in region config '%s': %v - skipping region", regionStr, err)
+			continue
+		}
 
 		region := RegionConfig{
 			Name:     parts[0],
@@ -137,7 +149,34 @@ func loadRegions() ([]RegionConfig, error) {
 		regions = append(regions, region)
 	}
 
+	// If no valid regions were parsed, return an error
+	if len(regions) == 0 && regionsEnv != "" {
+		return nil, fmt.Errorf("no valid regions could be parsed from AZURE_REGIONS environment variable")
+	}
+
 	return regions, nil
+}
+
+// loadCORSAllowedOrigins loads CORS allowed origins from environment variables
+func loadCORSAllowedOrigins() []string {
+	// CORS_ALLOWED_ORIGINS format: comma-separated list of origins
+	// Example: "https://dev8.dev,https://app.dev8.dev,http://localhost:3000"
+	originsEnv := getEnv("CORS_ALLOWED_ORIGINS", "")
+	if originsEnv == "" {
+		// Default to localhost for development
+		return []string{"http://localhost:3000"}
+	}
+
+	origins := strings.Split(originsEnv, ",")
+	var trimmedOrigins []string
+	for _, origin := range origins {
+		trimmed := strings.TrimSpace(origin)
+		if trimmed != "" {
+			trimmedOrigins = append(trimmedOrigins, trimmed)
+		}
+	}
+
+	return trimmedOrigins
 }
 
 // Validate validates the configuration
