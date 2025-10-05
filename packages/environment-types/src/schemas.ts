@@ -55,12 +55,12 @@ export const hardwareConfigSchema = z.object({
   cpuCores: z
     .number()
     .int('CPU cores must be an integer')
-    .min(1, 'Minimum 1 CPU core')
+    .min(2, 'Minimum 2 CPU cores')
     .max(32, 'Maximum 32 CPU cores'),
   memoryGB: z
     .number()
     .int('Memory must be an integer')
-    .min(2, 'Minimum 2GB memory')
+    .min(4, 'Minimum 4GB memory')
     .max(128, 'Maximum 128GB memory'),
   storageGB: z
     .number()
@@ -89,21 +89,21 @@ export const createEnvironmentSchema = z
     cpuCores: z
       .number()
       .int('CPU cores must be an integer')
-      .min(1, 'Minimum 1 CPU core')
+      .min(2, 'Minimum 2 CPU cores')
       .max(32, 'Maximum 32 CPU cores')
       .default(2),
     memoryGB: z
       .number()
       .int('Memory must be an integer')
-      .min(2, 'Minimum 2GB memory')
+      .min(4, 'Minimum 4GB memory')
       .max(128, 'Maximum 128GB memory')
       .default(4),
     storageGB: z
       .number()
-      .int('Storage must be an integer')
-      .min(20, 'Minimum 20GB storage')
-      .max(1000, 'Maximum 1000GB storage')
-      .default(20),
+    .int('Storage must be an integer')
+    .min(20, 'Minimum 20GB storage')
+    .max(1000, 'Maximum 1000GB storage')
+    .default(20),
     instanceType: instanceTypeEnum.default('balanced'),
     templateName: z.string().optional(),
     environmentVariables: environmentVariablesSchema.optional(),
@@ -142,13 +142,13 @@ export const updateEnvironmentSchema = z.object({
   cpuCores: z
     .number()
     .int('CPU cores must be an integer')
-    .min(1, 'Minimum 1 CPU core')
+    .min(2, 'Minimum 2 CPU cores')
     .max(32, 'Maximum 32 CPU cores')
     .optional(),
   memoryGB: z
     .number()
     .int('Memory must be an integer')
-    .min(2, 'Minimum 2GB memory')
+    .min(4, 'Minimum 4GB memory')
     .max(128, 'Maximum 128GB memory')
     .optional(),
   storageGB: z
@@ -220,13 +220,22 @@ export function validatePortNumber(port: number): boolean {
   return Number.isInteger(port) && port >= 1 && port <= 65535;
 }
 
-export function validateResourceLimits(cpuCores: number, memoryGB: number): boolean {
-  return (
-    cpuCores >= 1 &&
-    cpuCores <= 32 &&
-    memoryGB >= 2 &&
-    memoryGB <= 128 &&
-    memoryGB >= cpuCores * 2
-  );
-}
+type InstanceTypeInput = z.infer<typeof instanceTypeEnum>;
 
+export function validateResourceLimits(
+  cpuCores: number,
+  memoryGB: number,
+  instanceType: InstanceTypeInput = 'balanced'
+): boolean {
+  if (
+    cpuCores < 2 ||
+    cpuCores > 32 ||
+    memoryGB < 4 ||
+    memoryGB > 128
+  ) {
+    return false;
+  }
+
+  const requiredRatio = instanceType === 'memory-optimized' ? 4 : 2;
+  return memoryGB >= cpuCores * requiredRatio;
+}
