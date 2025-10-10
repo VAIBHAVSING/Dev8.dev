@@ -119,6 +119,43 @@ cp apps/web/.env.example apps/web/.env.local
 pnpm dev
 ```
 
+## 🐳 Docker Images
+
+Dev8.dev provides pre-configured Docker images with **DevCopilot Agent** for automatic GitHub/Copilot authentication:
+
+### Available Images
+
+| Image | Languages | Size | Features |
+|-------|-----------|------|----------|
+| **dev8-nodejs** | Node.js, Bun | ~1.8GB | code-server, GitHub Copilot, pnpm, yarn |
+| **dev8-python** | Python 3.11 | ~2.2GB | code-server, Jupyter, poetry, black, pytest |
+| **dev8-fullstack** | Node, Python, Go, Rust | ~3.5GB | All languages + code-server + Copilot |
+
+### Quick Test
+
+```bash
+# Build images
+cd docker && ./build.sh
+
+# Run Node.js environment
+docker run -it --rm \
+  -p 8080:8080 -p 2222:2222 \
+  -e GITHUB_TOKEN="your_token" \
+  dev8-nodejs:latest
+
+# Access VS Code: http://localhost:8080
+# SSH: ssh -p 2222 dev8@localhost
+```
+
+**DevCopilot Agent** automatically:
+- ✅ Authenticates GitHub CLI & installs Copilot
+- ✅ Configures Git credentials
+- ✅ Sets up SSH keys
+- ✅ Starts code-server (browser-based VS Code)
+- ✅ Monitors & refreshes authentication
+
+See [docker/README.md](docker/README.md) for detailed documentation.
+
 ## 🤖 CI/CD Pipeline
 
 Simple and efficient GitHub Actions pipeline:
@@ -190,6 +227,9 @@ Dev8.dev/
 - [x] AWS EC2 integration
 - [x] Basic code-server deployment
 - [x] File persistence with S3
+- [x] Docker images with DevCopilot Agent
+- [x] GitHub Copilot integration
+- [x] Multi-language support (Node, Python, Go, Rust)
 - [ ] Instance management (start/stop/delete)
 - [ ] Basic monitoring & logs
 

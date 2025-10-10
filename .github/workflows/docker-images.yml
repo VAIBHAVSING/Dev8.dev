@@ -1,0 +1,409 @@
+name: Docker Images CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'docker/**'
+      - '.github/workflows/docker-images.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'docker/**'
+      - '.github/workflows/docker-images.yml'
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      build_base:
+        description: 'Build base image'
+        required: false
+        default: 'true'
+      build_nodejs:
+        description: 'Build Node.js image'
+        required: false
+        default: 'true'
+      build_python:
+        description: 'Build Python image'
+        required: false
+        default: 'true'
+      build_fullstack:
+        description: 'Build Fullstack image'
+        required: false
+        default: 'true'
+
+env:
+  DOCKER_BUILDKIT: 1
+  COMPOSE_DOCKER_CLI_BUILD: 1
+
+concurrency:
+  group: docker-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Determine what to build
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      build_base: ${{ steps.check.outputs.build_base }}
+      build_nodejs: ${{ steps.check.outputs.build_nodejs }}
+      build_python: ${{ steps.check.outputs.build_python }}
+      build_fullstack: ${{ steps.check.outputs.build_fullstack }}
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine what to build
+        id: check
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "build_base=${{ github.event.inputs.build_base }}" >> $GITHUB_OUTPUT
+            echo "build_nodejs=${{ github.event.inputs.build_nodejs }}" >> $GITHUB_OUTPUT
+            echo "build_python=${{ github.event.inputs.build_python }}" >> $GITHUB_OUTPUT
+            echo "build_fullstack=${{ github.event.inputs.build_fullstack }}" >> $GITHUB_OUTPUT
+          else
+            # Check which files changed
+            if git diff --name-only HEAD^ HEAD | grep -q "docker/base/"; then
+              echo "build_base=true" >> $GITHUB_OUTPUT
+              # If base changes, rebuild all dependent images
+              echo "build_nodejs=true" >> $GITHUB_OUTPUT
+              echo "build_python=true" >> $GITHUB_OUTPUT
+              echo "build_fullstack=true" >> $GITHUB_OUTPUT
+            else
+              echo "build_base=false" >> $GITHUB_OUTPUT
+              echo "build_nodejs=$(git diff --name-only HEAD^ HEAD | grep -q "docker/nodejs/" && echo true || echo false)" >> $GITHUB_OUTPUT
+              echo "build_python=$(git diff --name-only HEAD^ HEAD | grep -q "docker/python/" && echo true || echo false)" >> $GITHUB_OUTPUT
+              echo "build_fullstack=$(git diff --name-only HEAD^ HEAD | grep -q "docker/fullstack/" && echo true || echo false)" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - name: Determine version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            echo "version=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${{ github.sha }}" >> $GITHUB_OUTPUT
+          fi
+
+  # Build and test base image
+  build-base:
+    runs-on: ubuntu-latest
+    needs: setup
+    if: needs.setup.outputs.build_base == 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Cache Docker layers
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-base-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-base-
+
+      - name: Build base image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./docker/base
+          file: ./docker/base/Dockerfile
+          push: false
+          load: true
+          tags: dev8-base:${{ needs.setup.outputs.version }},dev8-base:latest
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+
+      - name: Test base image
+        run: |
+          docker run --rm -e GITHUB_TOKEN=test_token dev8-base:latest echo "Base image works!"
+
+      - name: Scan for vulnerabilities
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: dev8-base:${{ needs.setup.outputs.version }}
+          format: 'sarif'
+          output: 'trivy-base-results.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload Trivy results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-base-results.sarif'
+          category: docker-base
+
+      - name: Export image
+        run: |
+          docker save dev8-base:${{ needs.setup.outputs.version }} | gzip > dev8-base.tar.gz
+
+      - name: Upload base image artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: dev8-base-image
+          path: dev8-base.tar.gz
+          retention-days: 7
+
+      - name: Move cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+
+  # Build and test Node.js image
+  build-nodejs:
+    runs-on: ubuntu-latest
+    needs: [setup, build-base]
+    if: |
+      always() &&
+      (needs.build-base.result == 'success' || needs.build-base.result == 'skipped') &&
+      needs.setup.outputs.build_nodejs == 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Download base image
+        if: needs.build-base.result == 'success'
+        uses: actions/download-artifact@v3
+        with:
+          name: dev8-base-image
+
+      - name: Load base image
+        if: needs.build-base.result == 'success'
+        run: |
+          docker load < dev8-base.tar.gz
+
+      - name: Cache Docker layers
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-nodejs-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-nodejs-
+
+      - name: Build Node.js image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./docker/nodejs
+          file: ./docker/nodejs/Dockerfile
+          push: false
+          load: true
+          tags: dev8-nodejs:${{ needs.setup.outputs.version }},dev8-nodejs:latest
+          build-args: |
+            BASE_IMAGE=dev8-base:${{ needs.setup.outputs.version }}
+            VERSION=${{ needs.setup.outputs.version }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+
+      - name: Test Node.js image
+        run: |
+          docker run --rm dev8-nodejs:latest node --version
+          docker run --rm dev8-nodejs:latest npm --version
+          docker run --rm dev8-nodejs:latest pnpm --version
+          docker run --rm dev8-nodejs:latest bun --version
+          docker run --rm dev8-nodejs:latest code-server --version
+
+      - name: Scan for vulnerabilities
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: dev8-nodejs:${{ needs.setup.outputs.version }}
+          format: 'sarif'
+          output: 'trivy-nodejs-results.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload Trivy results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-nodejs-results.sarif'
+          category: docker-nodejs
+
+      - name: Move cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+
+  # Build and test Python image
+  build-python:
+    runs-on: ubuntu-latest
+    needs: [setup, build-base]
+    if: |
+      always() &&
+      (needs.build-base.result == 'success' || needs.build-base.result == 'skipped') &&
+      needs.setup.outputs.build_python == 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Download base image
+        if: needs.build-base.result == 'success'
+        uses: actions/download-artifact@v3
+        with:
+          name: dev8-base-image
+
+      - name: Load base image
+        if: needs.build-base.result == 'success'
+        run: |
+          docker load < dev8-base.tar.gz
+
+      - name: Cache Docker layers
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-python-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-python-
+
+      - name: Build Python image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./docker/python
+          file: ./docker/python/Dockerfile
+          push: false
+          load: true
+          tags: dev8-python:${{ needs.setup.outputs.version }},dev8-python:latest
+          build-args: |
+            BASE_IMAGE=dev8-base:${{ needs.setup.outputs.version }}
+            VERSION=${{ needs.setup.outputs.version }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+
+      - name: Test Python image
+        run: |
+          docker run --rm dev8-python:latest python --version
+          docker run --rm dev8-python:latest pip --version
+          docker run --rm dev8-python:latest poetry --version
+          docker run --rm dev8-python:latest black --version
+          docker run --rm dev8-python:latest pytest --version
+          docker run --rm dev8-python:latest code-server --version
+
+      - name: Scan for vulnerabilities
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: dev8-python:${{ needs.setup.outputs.version }}
+          format: 'sarif'
+          output: 'trivy-python-results.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload Trivy results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-python-results.sarif'
+          category: docker-python
+
+      - name: Move cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+
+  # Build and test Fullstack image
+  build-fullstack:
+    runs-on: ubuntu-latest
+    needs: [setup, build-base]
+    if: |
+      always() &&
+      (needs.build-base.result == 'success' || needs.build-base.result == 'skipped') &&
+      needs.setup.outputs.build_fullstack == 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Download base image
+        if: needs.build-base.result == 'success'
+        uses: actions/download-artifact@v3
+        with:
+          name: dev8-base-image
+
+      - name: Load base image
+        if: needs.build-base.result == 'success'
+        run: |
+          docker load < dev8-base.tar.gz
+
+      - name: Cache Docker layers
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-fullstack-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-fullstack-
+
+      - name: Build Fullstack image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./docker/fullstack
+          file: ./docker/fullstack/Dockerfile
+          push: false
+          load: true
+          tags: dev8-fullstack:${{ needs.setup.outputs.version }},dev8-fullstack:latest
+          build-args: |
+            BASE_IMAGE=dev8-base:${{ needs.setup.outputs.version }}
+            VERSION=${{ needs.setup.outputs.version }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+
+      - name: Test Fullstack image
+        run: |
+          docker run --rm dev8-fullstack:latest node --version
+          docker run --rm dev8-fullstack:latest python --version
+          docker run --rm dev8-fullstack:latest go version
+          docker run --rm dev8-fullstack:latest rustc --version
+          docker run --rm dev8-fullstack:latest code-server --version
+
+      - name: Scan for vulnerabilities
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: dev8-fullstack:${{ needs.setup.outputs.version }}
+          format: 'sarif'
+          output: 'trivy-fullstack-results.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload Trivy results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-fullstack-results.sarif'
+          category: docker-fullstack
+
+      - name: Move cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+
+  # Generate build summary
+  summary:
+    runs-on: ubuntu-latest
+    needs: [setup, build-base, build-nodejs, build-python, build-fullstack]
+    if: always()
+    steps:
+      - name: Generate summary
+        run: |
+          echo "# Docker Images Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Build Status" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Image | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| dev8-base | ${{ needs.build-base.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| dev8-nodejs | ${{ needs.build-nodejs.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| dev8-python | ${{ needs.build-python.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| dev8-fullstack | ${{ needs.build-fullstack.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Version" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: ${{ needs.setup.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY

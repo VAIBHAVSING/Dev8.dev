@@ -1,0 +1,103 @@
+version: '3.8'
+
+services:
+  # Node.js development environment
+  nodejs:
+    image: dev8-nodejs:latest
+    build:
+      context: .
+      dockerfile: nodejs/Dockerfile
+    container_name: dev8-nodejs-dev
+    ports:
+      - "8080:8080"  # code-server
+      - "2222:2222"  # SSH
+    environment:
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - GH_TOKEN=${GH_TOKEN}
+      - GIT_USER_NAME=${GIT_USER_NAME:-Dev8 User}
+      - GIT_USER_EMAIL=${GIT_USER_EMAIL:-user@dev8.dev}
+      - SSH_PUBLIC_KEY=${SSH_PUBLIC_KEY}
+      - CODE_SERVER_PASSWORD=${CODE_SERVER_PASSWORD:-dev8dev}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    volumes:
+      - ./workspace:/workspace
+      - nodejs-home:/home/dev8
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Python development environment
+  python:
+    image: dev8-python:latest
+    build:
+      context: .
+      dockerfile: python/Dockerfile
+    container_name: dev8-python-dev
+    ports:
+      - "8081:8080"  # code-server
+      - "2223:2222"  # SSH
+      - "8888:8888"  # Jupyter
+    environment:
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - GH_TOKEN=${GH_TOKEN}
+      - GIT_USER_NAME=${GIT_USER_NAME:-Dev8 User}
+      - GIT_USER_EMAIL=${GIT_USER_EMAIL:-user@dev8.dev}
+      - SSH_PUBLIC_KEY=${SSH_PUBLIC_KEY}
+      - CODE_SERVER_PASSWORD=${CODE_SERVER_PASSWORD:-dev8dev}
+    volumes:
+      - ./workspace:/workspace
+      - python-home:/home/dev8
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Fullstack development environment
+  fullstack:
+    image: dev8-fullstack:latest
+    build:
+      context: .
+      dockerfile: fullstack/Dockerfile
+    container_name: dev8-fullstack-dev
+    ports:
+      - "8082:8080"  # code-server
+      - "2224:2222"  # SSH
+    environment:
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - GH_TOKEN=${GH_TOKEN}
+      - GIT_USER_NAME=${GIT_USER_NAME:-Dev8 User}
+      - GIT_USER_EMAIL=${GIT_USER_EMAIL:-user@dev8.dev}
+      - SSH_PUBLIC_KEY=${SSH_PUBLIC_KEY}
+      - CODE_SERVER_PASSWORD=${CODE_SERVER_PASSWORD:-dev8dev}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    volumes:
+      - ./workspace:/workspace
+      - fullstack-home:/home/dev8
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  nodejs-home:
+    driver: local
+  python-home:
+    driver: local
+  fullstack-home:
+    driver: local
+
+networks:
+  default:
+    name: dev8-network
