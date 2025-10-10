@@ -1,6 +1,6 @@
-# Dev8.dev Fullstack Image - Complete Development Environment
-# All languages: Node.js, Python, Go, Rust, Bun
-# Perfect for polyglot developers and full-stack projects
+# Dev8.dev MVP Image - Complete Development Environment
+# Most popular languages: Node.js, Python, Go (MVP essentials)
+# With backup support for volume snapshots and object storage
 
 ARG BASE_IMAGE=dev8-base:latest
 FROM ${BASE_IMAGE}
@@ -38,14 +38,9 @@ RUN wget -q https://go.dev/dl/go1.21.12.linux-amd64.tar.gz && \
     tar -C /usr/local -xzf go1.21.12.linux-amd64.tar.gz && \
     rm go1.21.12.linux-amd64.tar.gz
 
-# Install Rust (stable)
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
-
 # Add language paths to system
-ENV PATH="/usr/local/go/bin:/root/.cargo/bin:$PATH" \
-    GOPATH="/home/dev8/go" \
-    CARGO_HOME="/home/dev8/.cargo" \
-    RUSTUP_HOME="/home/dev8/.rustup"
+ENV PATH="/usr/local/go/bin:$PATH" \
+    GOPATH="/home/dev8/go"
 
 # Install Python essentials
 RUN pip install --no-cache-dir \
@@ -54,6 +49,13 @@ RUN pip install --no-cache-dir \
     flake8 \
     pytest \
     requests
+
+# Install AWS CLI and Azure CLI for backup support
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    awscli \
+    && curl -sL https://aka.ms/InstallAzureCLIDeb | bash \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
 USER dev8
 
@@ -65,14 +67,13 @@ ENV PATH="/home/dev8/.bun/bin:$PATH"
 RUN mkdir -p "$GOPATH/bin" "$GOPATH/src" "$GOPATH/pkg"
 ENV PATH="$GOPATH/bin:$PATH"
 
-# Setup Rust for dev8 user
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
-ENV PATH="/home/dev8/.cargo/bin:$PATH"
+# Create backup directories
+RUN mkdir -p /home/dev8/.backups /home/dev8/.backup-scripts
 
 # Install code-server
 RUN curl -fsSL https://code-server.dev/install.sh | sh
 
-# Install comprehensive VS Code extensions
+# Install essential VS Code extensions (MVP)
 RUN code-server --install-extension dbaeumer.vscode-eslint && \
     code-server --install-extension esbenp.prettier-vscode && \
     code-server --install-extension GitHub.copilot && \
@@ -80,9 +81,7 @@ RUN code-server --install-extension dbaeumer.vscode-eslint && \
     code-server --install-extension ms-python.python && \
     code-server --install-extension ms-python.vscode-pylance && \
     code-server --install-extension golang.go && \
-    code-server --install-extension rust-lang.rust-analyzer && \
-    code-server --install-extension ms-vscode.vscode-typescript-next && \
-    code-server --install-extension bradlc.vscode-tailwindcss
+    code-server --install-extension ms-vscode.vscode-typescript-next
 
 # Configure VS Code settings for fullstack development
 RUN mkdir -p /home/dev8/.local/share/code-server/User && \
@@ -111,20 +110,14 @@ RUN mkdir -p /home/dev8/.local/share/code-server/User && \
     "editor.formatOnSave": true,
     "editor.tabSize": 4
   },
-  "[rust]": {
-    "editor.formatOnSave": true,
-    "editor.tabSize": 4
-  },
   "go.toolsManagement.autoUpdate": true,
-  "rust-analyzer.checkOnSave.command": "clippy",
   "python.defaultInterpreterPath": "/usr/bin/python3",
   "github.copilot.enable": {
     "*": true,
     "javascript": true,
     "typescript": true,
     "python": true,
-    "go": true,
-    "rust": true
+    "go": true
   },
   "files.exclude": {
     "**/node_modules": true,
@@ -135,8 +128,12 @@ RUN mkdir -p /home/dev8/.local/share/code-server/User && \
 }
 EOF
 
+# Copy backup script
+COPY --chown=dev8:dev8 backup.sh /home/dev8/.backup-scripts/backup.sh
+RUN chmod +x /home/dev8/.backup-scripts/backup.sh
+
 # Verify all installations
-RUN echo "=== Verifying Installations ===" && \
+RUN echo "=== Verifying MVP Installations ===" && \
     node --version && \
     npm --version && \
     pnpm --version && \
@@ -144,18 +141,19 @@ RUN echo "=== Verifying Installations ===" && \
     python --version && \
     pip --version && \
     go version && \
-    rustc --version && \
-    cargo --version && \
     code-server --version && \
-    echo "=== All languages installed successfully! ==="
+    aws --version && \
+    az version && \
+    echo "=== All MVP languages and tools installed successfully! ==="
 
 WORKDIR /workspace
 
 # Labels
 LABEL maintainer="Dev8.dev Team"
-LABEL description="Fullstack development environment with all languages and GitHub Copilot"
-LABEL version="1.0"
-LABEL languages="nodejs,python,go,rust,typescript,javascript"
+LABEL description="MVP development environment with popular languages, GitHub Copilot, and backup support"
+LABEL version="1.0-mvp"
+LABEL languages="nodejs,python,go,typescript,javascript"
+LABEL features="copilot,backup,aws-cli,azure-cli"
 
 # Expose ports
 EXPOSE 8080 2222

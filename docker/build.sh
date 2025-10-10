@@ -10,9 +10,7 @@ set -e
 REGISTRY="${DOCKER_REGISTRY:-dev8registry.azurecr.io}"
 VERSION="${VERSION:-latest}"
 BUILD_BASE="${BUILD_BASE:-true}"
-BUILD_NODEJS="${BUILD_NODEJS:-true}"
-BUILD_PYTHON="${BUILD_PYTHON:-true}"
-BUILD_FULLSTACK="${BUILD_FULLSTACK:-true}"
+BUILD_MVP="${BUILD_MVP:-true}"
 
 # Colors for output
 RED='\033[0;31m'
@@ -68,62 +66,22 @@ build_base() {
 }
 
 ###############################################################################
-# Build Node.js Image
+# Build MVP Image (Node.js + Python + Go)
 ###############################################################################
-build_nodejs() {
-    log_info "Building Node.js image..."
+build_mvp() {
+    log_info "Building MVP image (Node.js + Python + Go + Backup Support)..."
     
     docker build \
-        -t dev8-nodejs:${VERSION} \
-        -t ${REGISTRY}/dev8-nodejs:${VERSION} \
-        -t ${REGISTRY}/dev8-nodejs:latest \
-        -f nodejs/Dockerfile \
+        -t dev8-mvp:${VERSION} \
+        -t ${REGISTRY}/dev8-mvp:${VERSION} \
+        -t ${REGISTRY}/dev8-mvp:latest \
+        -f mvp/Dockerfile \
         --build-arg BASE_IMAGE=dev8-base:${VERSION} \
         --build-arg VERSION=${VERSION} \
-        ./nodejs/
+        ./mvp/
     
-    log_success "Node.js image built successfully"
-    log_info "Image size: $(docker images dev8-nodejs:${VERSION} --format "{{.Size}}")"
-    echo ""
-}
-
-###############################################################################
-# Build Python Image
-###############################################################################
-build_python() {
-    log_info "Building Python image..."
-    
-    docker build \
-        -t dev8-python:${VERSION} \
-        -t ${REGISTRY}/dev8-python:${VERSION} \
-        -t ${REGISTRY}/dev8-python:latest \
-        -f python/Dockerfile \
-        --build-arg BASE_IMAGE=dev8-base:${VERSION} \
-        --build-arg VERSION=${VERSION} \
-        ./python/
-    
-    log_success "Python image built successfully"
-    log_info "Image size: $(docker images dev8-python:${VERSION} --format "{{.Size}}")"
-    echo ""
-}
-
-###############################################################################
-# Build Fullstack Image
-###############################################################################
-build_fullstack() {
-    log_info "Building Fullstack image..."
-    
-    docker build \
-        -t dev8-fullstack:${VERSION} \
-        -t ${REGISTRY}/dev8-fullstack:${VERSION} \
-        -t ${REGISTRY}/dev8-fullstack:latest \
-        -f fullstack/Dockerfile \
-        --build-arg BASE_IMAGE=dev8-base:${VERSION} \
-        --build-arg VERSION=${VERSION} \
-        ./fullstack/
-    
-    log_success "Fullstack image built successfully"
-    log_info "Image size: $(docker images dev8-fullstack:${VERSION} --format "{{.Size}}")"
+    log_success "MVP image built successfully"
+    log_info "Image size: $(docker images dev8-mvp:${VERSION} --format "{{.Size}}")"
     echo ""
 }
 
@@ -142,22 +100,10 @@ main() {
         log_warning "Skipping base image build"
     fi
     
-    if [ "$BUILD_NODEJS" = "true" ]; then
-        build_nodejs
+    if [ "$BUILD_MVP" = "true" ]; then
+        build_mvp
     else
-        log_warning "Skipping Node.js image build"
-    fi
-    
-    if [ "$BUILD_PYTHON" = "true" ]; then
-        build_python
-    else
-        log_warning "Skipping Python image build"
-    fi
-    
-    if [ "$BUILD_FULLSTACK" = "true" ]; then
-        build_fullstack
-    else
-        log_warning "Skipping Fullstack image build"
+        log_warning "Skipping MVP image build"
     fi
     
     # Summary
@@ -166,19 +112,17 @@ main() {
     log_info "=================================================="
     echo ""
     log_info "Built images:"
-    docker images | grep -E "dev8-(base|nodejs|python|fullstack)" | grep -E "${VERSION}|latest"
+    docker images | grep -E "dev8-(base|mvp)" | grep -E "${VERSION}|latest"
     echo ""
     log_info "To test an image locally:"
     echo "  docker run -it --rm -p 8080:8080 -p 2222:2222 \\"
     echo "    -e GITHUB_TOKEN=your_token \\"
     echo "    -e SSH_PUBLIC_KEY=\"\$(cat ~/.ssh/id_rsa.pub)\" \\"
-    echo "    dev8-nodejs:${VERSION}"
+    echo "    dev8-mvp:${VERSION}"
     echo ""
     log_info "To push to registry:"
     echo "  docker push ${REGISTRY}/dev8-base:${VERSION}"
-    echo "  docker push ${REGISTRY}/dev8-nodejs:${VERSION}"
-    echo "  docker push ${REGISTRY}/dev8-python:${VERSION}"
-    echo "  docker push ${REGISTRY}/dev8-fullstack:${VERSION}"
+    echo "  docker push ${REGISTRY}/dev8-mvp:${VERSION}"
 }
 
 # Run main function
