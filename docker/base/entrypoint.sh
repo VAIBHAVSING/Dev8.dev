@@ -49,15 +49,20 @@ setup_github() {
     if [ -n "$GITHUB_TOKEN" ] || [ -n "$GH_TOKEN" ]; then
         local TOKEN="${GITHUB_TOKEN:-$GH_TOKEN}"
         
-        # Try to authenticate with token
-        echo "$TOKEN" | gh auth login --with-token 2>/dev/null
+        # Skip authentication if using test token
+        if [ "$TOKEN" = "test_token" ]; then
+            echo "⚠️  Test token detected - skipping GitHub authentication"
+            return 0
+        fi
         
-        if gh auth status >/dev/null 2>&1; then
+        # Try to authenticate with token
+        if echo "$TOKEN" | gh auth login --with-token 2>/dev/null; then
             echo "✅ GitHub CLI authenticated successfully"
             
             # Configure git with GitHub credentials
-            gh auth setup-git
-            echo "✅ Git configured to use GitHub CLI credentials"
+            if gh auth setup-git 2>/dev/null; then
+                echo "✅ Git configured to use GitHub CLI credentials"
+            fi
             
             # Set git user info if provided
             if [ -n "$GIT_USER_NAME" ]; then
@@ -70,8 +75,8 @@ setup_github() {
                 echo "✅ Git user.email: $GIT_USER_EMAIL"
             fi
         else
-            echo "⚠️  GitHub CLI authentication failed - falling back to manual auth"
-            # Fallback: set token as env var for git operations
+            echo "⚠️  GitHub CLI authentication failed - continuing without auth"
+            # Set token as env var for git operations
             export GH_TOKEN="$TOKEN"
         fi
     else
@@ -86,14 +91,22 @@ setup_github() {
 setup_copilot() {
     echo "🤖 Setting up GitHub Copilot CLI..."
     
+    # Skip if not authenticated to GitHub
+    if ! gh auth status >/dev/null 2>&1; then
+        echo "⚠️  GitHub CLI not authenticated - skipping Copilot setup"
+        return 0
+    fi
+    
     # Check if gh copilot is available
     if ! gh extension list 2>/dev/null | grep -q "github/gh-copilot"; then
         echo "📦 Installing GitHub Copilot CLI extension..."
-        gh extension install github/gh-copilot 2>/dev/null || {
+        if gh extension install github/gh-copilot 2>/dev/null; then
+            echo "✅ GitHub Copilot CLI extension installed"
+        else
             echo "⚠️  Failed to install Copilot CLI extension"
             echo "    You can install it manually: gh extension install github/gh-copilot"
-            return
-        }
+            return 0
+        fi
     fi
     
     # Verify Copilot CLI is working
