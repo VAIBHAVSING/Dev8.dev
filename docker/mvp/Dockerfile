@@ -80,6 +80,7 @@ RUN code-server --install-extension dbaeumer.vscode-eslint && \
     code-server --install-extension GitHub.copilot-chat && \
     code-server --install-extension ms-python.python && \
     code-server --install-extension ms-python.vscode-pylance && \
+    code-server --install-extension ms-python.black-formatter && \
     code-server --install-extension golang.go && \
     code-server --install-extension ms-vscode.vscode-typescript-next
 

@@ -12,6 +12,10 @@ echo "=================================================="
 # Configuration
 export HOME=/home/dev8
 export PATH="$HOME/.local/bin:$PATH"
+export WORKSPACE_DIR="${WORKSPACE_DIR:-/workspace}"
+
+# Ensure workspace directory exists
+mkdir -p "$WORKSPACE_DIR"
 
 ###############################################################################
 # 1. CHECK & INJECT SSH KEYS
@@ -19,8 +23,12 @@ export PATH="$HOME/.local/bin:$PATH"
 setup_ssh() {
     echo "🔐 Setting up SSH..."
     
+    # Create .ssh directory if it doesn't exist
+    mkdir -p "$HOME/.ssh"
+    chmod 700 "$HOME/.ssh"
+    
     if [ -n "$SSH_PUBLIC_KEY" ]; then
-        echo "$SSH_PUBLIC_KEY" > "$HOME/.ssh/authorized_keys"
+        printf '%s\n' "$SSH_PUBLIC_KEY" > "$HOME/.ssh/authorized_keys"
         chmod 600 "$HOME/.ssh/authorized_keys"
         echo "✅ SSH public key configured"
     else
@@ -28,7 +36,8 @@ setup_ssh() {
     fi
     
     if [ -n "$SSH_PRIVATE_KEY" ]; then
-        echo "$SSH_PRIVATE_KEY" > "$HOME/.ssh/id_rsa"
+        umask 077
+        printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/id_rsa"
         chmod 600 "$HOME/.ssh/id_rsa"
         ssh-keygen -y -f "$HOME/.ssh/id_rsa" > "$HOME/.ssh/id_rsa.pub" 2>/dev/null || true
         echo "✅ SSH private key configured"
@@ -129,6 +138,7 @@ setup_vscode_copilot() {
     
     mkdir -p "$HOME/.config/Code/User"
     mkdir -p "$HOME/.vscode-server/data/Machine"
+    mkdir -p "$HOME/.local/share/code-server/User"
     
     # Configure VS Code to use GitHub CLI for authentication
     cat > "$HOME/.config/Code/User/settings.json" <<EOF
@@ -158,6 +168,9 @@ setup_vscode_copilot() {
   "update.mode": "none"
 }
 EOF
+
+    # Copy settings to code-server user directory as well
+    cp -f "$HOME/.config/Code/User/settings.json" "$HOME/.local/share/code-server/User/settings.json"
     
     echo "✅ VS Code settings configured"
 }
