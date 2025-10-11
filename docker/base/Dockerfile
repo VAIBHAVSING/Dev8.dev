@@ -1,6 +1,16 @@
 # Dev8.dev Base Image - Ubuntu 22.04 with essential tools
 # Optimized for security, performance, and GitHub Copilot integration
 
+FROM golang:1.22-bullseye as supervisor-build
+WORKDIR /src
+
+COPY apps/supervisor/go.mod ./
+COPY apps/supervisor/go.sum ./
+RUN go mod download
+
+COPY apps/supervisor/ ./
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o workspace-supervisor ./cmd/supervisor
+
 FROM ubuntu:22.04 as base
 
 # Avoid interactive prompts during package installation
@@ -50,6 +60,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     # Process management
     procps \
     htop \
+    fuse3 \
     # Locale support
     locales \
     # Terminal multiplexer
@@ -92,8 +103,12 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | d
     apt-get clean
 
 # Copy entrypoint script
-COPY --chown=${DEV8_USER}:${DEV8_USER} entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY --chown=${DEV8_USER}:${DEV8_USER} docker/base/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
+
+# Copy workspace supervisor binary
+COPY --from=supervisor-build /src/workspace-supervisor /usr/local/bin/workspace-supervisor
+RUN chmod +x /usr/local/bin/workspace-supervisor
 
 # Switch to dev8 user
 USER ${DEV8_USER}

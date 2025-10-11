@@ -185,6 +185,10 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("AGENT_PORT is required")
 	}
 
+	if c.DatabaseURL == "" {
+		return fmt.Errorf("DATABASE_URL is required")
+	}
+
 	if c.Azure.SubscriptionID == "" {
 		return fmt.Errorf("AZURE_SUBSCRIPTION_ID is required")
 	}

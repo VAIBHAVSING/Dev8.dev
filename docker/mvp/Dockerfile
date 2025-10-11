@@ -129,7 +129,7 @@ RUN mkdir -p /home/dev8/.local/share/code-server/User && \
 EOF
 
 # Copy backup script
-COPY --chown=dev8:dev8 backup.sh /home/dev8/.backup-scripts/backup.sh
+COPY --chown=dev8:dev8 docker/mvp/backup.sh /home/dev8/.backup-scripts/backup.sh
 RUN chmod +x /home/dev8/.backup-scripts/backup.sh
 
 # Verify all installations

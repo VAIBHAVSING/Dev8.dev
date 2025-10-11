@@ -78,6 +78,46 @@ type EnvironmentListResponse struct {
 	PageSize     int           `json:"pageSize,omitempty"`
 }
 
+// ActivitySnapshot captures active connection counts and recency data.
+type ActivitySnapshot struct {
+	LastIDEActivity time.Time `json:"lastIDEActivity"`
+	LastSSHActivity time.Time `json:"lastSSHActivity"`
+	ActiveIDE       int       `json:"activeIDEConnections"`
+	ActiveSSH       int       `json:"activeSSHConnections"`
+}
+
+// ActivityReport represents a workspace supervisor activity update.
+type ActivityReport struct {
+	EnvironmentID string           `json:"environmentId"`
+	Snapshot      ActivitySnapshot `json:"snapshot"`
+	Timestamp     time.Time        `json:"timestamp"`
+}
+
+// Normalize ensures the report contains consistent identifiers and timestamps.
+func (r *ActivityReport) Normalize(pathEnvironmentID string) error {
+	if r == nil {
+		return ErrInvalidRequest("activity payload is required")
+	}
+
+	if r.EnvironmentID == "" {
+		r.EnvironmentID = pathEnvironmentID
+	}
+
+	if pathEnvironmentID != "" && r.EnvironmentID != pathEnvironmentID {
+		return ErrInvalidRequest("environmentId in payload does not match route parameter")
+	}
+
+	if r.EnvironmentID == "" {
+		return ErrInvalidRequest("environmentId is required")
+	}
+
+	if r.Timestamp.IsZero() {
+		r.Timestamp = time.Now().UTC()
+	}
+
+	return nil
+}
+
 // Validate validates the create environment request
 func (r *CreateEnvironmentRequest) Validate() error {
 	if r.Name == "" {

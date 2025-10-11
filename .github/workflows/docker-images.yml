@@ -86,7 +86,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Cache Docker layers
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: /tmp/.buildx-cache
           key: ${{ runner.os }}-buildx-base-${{ github.sha }}
@@ -96,7 +96,7 @@ jobs:
       - name: Build base image
         uses: docker/build-push-action@v5
         with:
-          context: ./docker/base
+          context: .
           file: ./docker/base/Dockerfile
           push: false
           load: true
@@ -128,7 +128,7 @@ jobs:
           docker save dev8-base:${{ needs.setup.outputs.version }} | gzip > dev8-base.tar.gz
 
       - name: Upload base image artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: dev8-base-image
           path: dev8-base.tar.gz
@@ -156,7 +156,7 @@ jobs:
 
       - name: Download base image
         if: needs.build-base.result == 'success'
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: dev8-base-image
 
@@ -166,7 +166,7 @@ jobs:
           docker load < dev8-base.tar.gz
 
       - name: Cache Docker layers
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: /tmp/.buildx-cache
           key: ${{ runner.os }}-buildx-mvp-${{ github.sha }}
@@ -176,7 +176,7 @@ jobs:
       - name: Build MVP image
         uses: docker/build-push-action@v5
         with:
-          context: ./docker/mvp
+          context: .
           file: ./docker/mvp/Dockerfile
           push: false
           load: true

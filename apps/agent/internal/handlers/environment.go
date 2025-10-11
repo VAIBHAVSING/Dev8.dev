@@ -115,6 +115,35 @@ func (h *EnvironmentHandler) StopEnvironment(w http.ResponseWriter, r *http.Requ
 	})
 }
 
+// ReportActivity handles POST /api/v1/environments/{id}/activity
+func (h *EnvironmentHandler) ReportActivity(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	envID := vars["id"]
+
+	var payload models.ActivityReport
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid request body", err)
+		return
+	}
+
+	if err := payload.Normalize(envID); err != nil {
+		handleServiceError(w, err)
+		return
+	}
+
+	if err := h.service.RecordActivity(r.Context(), &payload); err != nil {
+		handleServiceError(w, err)
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, map[string]interface{}{
+		"message":       "Activity recorded",
+		"environmentId": payload.EnvironmentID,
+		"snapshot":      payload.Snapshot,
+		"timestamp":     payload.Timestamp,
+	})
+}
+
 // DeleteEnvironment handles DELETE /api/v1/environments/{id}
 func (h *EnvironmentHandler) DeleteEnvironment(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)

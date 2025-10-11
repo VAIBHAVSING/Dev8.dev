@@ -3,12 +3,14 @@ package services
 import (
 	"context"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
 	"github.com/VAIBHAVSING/Dev8.dev/apps/agent/internal/azure"
 	"github.com/VAIBHAVSING/Dev8.dev/apps/agent/internal/config"
 	"github.com/VAIBHAVSING/Dev8.dev/apps/agent/internal/models"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // EnvironmentService handles environment lifecycle operations
@@ -16,14 +18,25 @@ type EnvironmentService struct {
 	config         *config.Config
 	azureClient    *azure.Client
 	storageClients map[string]*azure.StorageClient
+	db             *pgxpool.Pool
 }
 
 // NewEnvironmentService creates a new environment service
 func NewEnvironmentService(cfg *config.Config, azureClient *azure.Client) (*EnvironmentService, error) {
+	if cfg.DatabaseURL == "" {
+		return nil, fmt.Errorf("DATABASE_URL must be configured")
+	}
+
+	pool, err := pgxpool.New(context.Background(), cfg.DatabaseURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create database pool: %w", err)
+	}
+
 	service := &EnvironmentService{
 		config:         cfg,
 		azureClient:    azureClient,
 		storageClients: make(map[string]*azure.StorageClient),
+		db:             pool,
 	}
 
 	// Initialize storage clients for all regions
@@ -38,6 +51,13 @@ func NewEnvironmentService(cfg *config.Config, azureClient *azure.Client) (*Envi
 	}
 
 	return service, nil
+}
+
+// Close releases service resources.
+func (s *EnvironmentService) Close() {
+	if s.db != nil {
+		s.db.Close()
+	}
 }
 
 // CreateEnvironment creates a new cloud development environment
@@ -251,6 +271,36 @@ func (s *EnvironmentService) DeleteEnvironment(ctx context.Context, envID, userI
 	// Update status (in database in real implementation)
 	env.Status = models.StatusDeleting
 	env.UpdatedAt = time.Now()
+
+	return nil
+}
+
+// RecordActivity updates persistence with the latest activity snapshot.
+func (s *EnvironmentService) RecordActivity(ctx context.Context, report *models.ActivityReport) error {
+	if report == nil {
+		return models.ErrInvalidRequest("activity payload is required")
+	}
+
+	if s.db == nil {
+		return models.ErrInternalServer("database connection not configured")
+	}
+
+	cmdTag, err := s.db.Exec(ctx, `
+		UPDATE environments
+		SET last_accessed_at = $2,
+			updated_at = NOW()
+		WHERE id = $1
+	`, report.EnvironmentID, report.Timestamp)
+	if err != nil {
+		return fmt.Errorf("update environment activity: %w", err)
+	}
+
+	if cmdTag.RowsAffected() == 0 {
+		return models.ErrNotFound("environment not found")
+	}
+
+	// Optional: log metrics for observability
+	log.Printf("environment %s activity recorded: ide=%d ssh=%d", report.EnvironmentID, report.Snapshot.ActiveIDE, report.Snapshot.ActiveSSH)
 
 	return nil
 }

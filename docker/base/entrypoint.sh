@@ -235,6 +235,15 @@ main() {
     
     # Start background auth monitor
     monitor_auth &
+
+    # Launch workspace supervisor daemon if available
+    if command -v workspace-supervisor >/dev/null 2>&1; then
+        echo "🛡️  Starting workspace supervisor daemon..."
+        workspace-supervisor &
+        SUPERVISOR_PID=$!
+    else
+        echo "⚠️  workspace-supervisor binary not found in PATH; backup and monitoring daemon disabled"
+    fi
     
     echo "=================================================="
     echo "✅ DevCopilot Agent Ready!"
@@ -253,8 +262,12 @@ main() {
     
     # Keep container running and execute command if provided
     if [ $# -eq 0 ]; then
-        # No command provided, keep container running
-        tail -f /dev/null
+        # No command provided, wait on supervisor daemon to keep container alive
+        if [ -n "$SUPERVISOR_PID" ]; then
+            wait "$SUPERVISOR_PID"
+        else
+            tail -f /dev/null
+        fi
     else
         # Execute provided command
         exec "$@"
