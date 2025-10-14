@@ -42,20 +42,19 @@ RUN wget -q https://go.dev/dl/go1.21.12.linux-amd64.tar.gz && \
 ENV PATH="/usr/local/go/bin:$PATH" \
     GOPATH="/home/dev8/go"
 
-# Install Python essentials
+# Install Python essentials and AWS CLI v2 (via pip to avoid urllib3 conflicts)
 RUN pip install --no-cache-dir \
     poetry \
     black \
     flake8 \
     pytest \
-    requests
+    requests \
+    awscli
 
-# Install AWS CLI and Azure CLI for backup support
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    awscli \
-    && curl -sL https://aka.ms/InstallAzureCLIDeb | bash \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean
+# Install Azure CLI for backup support
+RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash && \
+    rm -rf /var/lib/apt/lists/* && \
+    apt-get clean
 
 USER dev8
 
