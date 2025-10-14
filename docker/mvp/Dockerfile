@@ -73,16 +73,17 @@ RUN mkdir -p /home/dev8/.backups /home/dev8/.backup-scripts
 # Install code-server
 RUN curl -fsSL https://code-server.dev/install.sh | sh
 
-# Install essential VS Code extensions (MVP)
-RUN code-server --install-extension dbaeumer.vscode-eslint && \
-    code-server --install-extension esbenp.prettier-vscode && \
-    code-server --install-extension GitHub.copilot && \
-    code-server --install-extension GitHub.copilot-chat && \
-    code-server --install-extension ms-python.python && \
-    code-server --install-extension ms-python.vscode-pylance && \
-    code-server --install-extension ms-python.black-formatter && \
-    code-server --install-extension golang.go && \
-    code-server --install-extension ms-vscode.vscode-typescript-next
+# Note: Extensions can be installed at runtime via code-server UI or CLI
+# Uncomment below to pre-install extensions (requires network during build)
+# RUN code-server --install-extension dbaeumer.vscode-eslint && \
+#     code-server --install-extension esbenp.prettier-vscode && \
+#     code-server --install-extension GitHub.copilot && \
+#     code-server --install-extension GitHub.copilot-chat && \
+#     code-server --install-extension ms-python.python && \
+#     code-server --install-extension ms-python.vscode-pylance && \
+#     code-server --install-extension ms-python.black-formatter && \
+#     code-server --install-extension golang.go && \
+#     code-server --install-extension ms-vscode.vscode-typescript-next
 
 # Configure VS Code settings for fullstack development
 RUN mkdir -p /home/dev8/.local/share/code-server/User && \
