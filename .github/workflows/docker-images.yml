@@ -176,6 +176,16 @@ jobs:
         run: |
           docker load < dev8-base.tar.gz
 
+      - name: Build base image if skipped
+        if: needs.build-base.result == 'skipped'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./docker/base/Dockerfile
+          push: false
+          load: true
+          tags: dev8-base:${{ needs.setup.outputs.version }},dev8-base:latest
+
       - name: Cache Docker layers
         uses: actions/cache@v4
         with:
