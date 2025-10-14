@@ -203,7 +203,7 @@ jobs:
           load: true
           tags: dev8-mvp:${{ needs.setup.outputs.version }},dev8-mvp:latest
           build-args: |
-            BASE_IMAGE=dev8-base:${{ needs.setup.outputs.version }}
+            BASE_IMAGE=dev8-base:latest
             VERSION=${{ needs.setup.outputs.version }}
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
