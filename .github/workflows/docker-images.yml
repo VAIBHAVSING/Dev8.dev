@@ -88,25 +88,16 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
-      - name: Cache Docker layers
-        uses: actions/cache@v4
         with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-base-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-base-
+          driver: docker
 
       - name: Build base image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./docker/base/Dockerfile
-          push: false
-          load: true
-          tags: dev8-base:${{ needs.setup.outputs.version }},dev8-base:latest
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+        run: |
+          docker build \
+            -t dev8-base:${{ needs.setup.outputs.version }} \
+            -t dev8-base:latest \
+            -f ./docker/base/Dockerfile \
+            .
 
       - name: Test base image
         run: |
@@ -145,11 +136,6 @@ jobs:
       #     path: dev8-base.tar.gz
       #     retention-days: 7
 
-      - name: Move cache
-        run: |
-          rm -rf /tmp/.buildx-cache
-          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
-
   # Build and test MVP image
   build-mvp:
     runs-on: ubuntu-latest
@@ -162,39 +148,26 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
-          driver-opts: network=host
+          driver: docker
 
       # Always build base image first for MVP
       - name: Build base image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./docker/base/Dockerfile
-          push: false
-          load: true
-          tags: dev8-base:${{ needs.setup.outputs.version }},dev8-base:latest
-
-      - name: Cache Docker layers
-        uses: actions/cache@v4
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-mvp-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-mvp-
+        run: |
+          docker build \
+            -t dev8-base:${{ needs.setup.outputs.version }} \
+            -t dev8-base:latest \
+            -f ./docker/base/Dockerfile \
+            .
 
       - name: Build MVP image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./docker/mvp/Dockerfile
-          push: false
-          load: true
-          tags: dev8-mvp:${{ needs.setup.outputs.version }},dev8-mvp:latest
-          build-args: |
-            BASE_IMAGE=dev8-base:latest
-            VERSION=${{ needs.setup.outputs.version }}
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+        run: |
+          docker build \
+            --build-arg BASE_IMAGE=dev8-base:latest \
+            --build-arg VERSION=${{ needs.setup.outputs.version }} \
+            -t dev8-mvp:${{ needs.setup.outputs.version }} \
+            -t dev8-mvp:latest \
+            -f ./docker/mvp/Dockerfile \
+            .
 
       - name: Test MVP image
         run: |
@@ -223,11 +196,6 @@ jobs:
         with:
           sarif_file: 'trivy-mvp-results.sarif'
           category: docker-mvp
-
-      - name: Move cache
-        run: |
-          rm -rf /tmp/.buildx-cache
-          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
   # Generate build summary
   summary:
