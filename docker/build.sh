@@ -1,7 +1,7 @@
 #!/bin/bash
 ###############################################################################
 # Dev8.dev Docker Images Build Script
-# Builds all Docker images with proper tagging and registry management
+# Builds production-ready workspace images with AI agents and supervisor
 ###############################################################################
 
 set -e
@@ -50,15 +50,16 @@ log_info ""
 # Build Base Image
 ###############################################################################
 build_base() {
-    log_info "Building base image..."
+    log_info "Building base image with AI agents and supervisor..."
     
+    # Build from project root to include supervisor code
     docker build \
         -t dev8-base:${VERSION} \
         -t ${REGISTRY}/dev8-base:${VERSION} \
         -t ${REGISTRY}/dev8-base:latest \
-        -f base/Dockerfile \
+        -f docker/base/Dockerfile \
         --build-arg VERSION=${VERSION} \
-        ./base/
+        .
     
     log_success "Base image built successfully"
     log_info "Image size: $(docker images dev8-base:${VERSION} --format "{{.Size}}")"
@@ -66,22 +67,29 @@ build_base() {
 }
 
 ###############################################################################
-# Build MVP Image (Node.js + Python + Go)
+# Build Production Workspace Image (Node.js + Python + Go + Rust + AI Agents)
 ###############################################################################
 build_mvp() {
-    log_info "Building MVP image (Node.js + Python + Go + Backup Support)..."
+    log_info "Building production workspace image..."
+    log_info "  Languages: Node.js, Python, Go, Rust, Bun"
+    log_info "  AI Agents: GitHub Copilot, Claude, Gemini, OpenAI"
+    log_info "  Features: code-server, SSH, supervisor, persistent storage"
     
+    # Build from project root
     docker build \
+        -t dev8-workspace:${VERSION} \
         -t dev8-mvp:${VERSION} \
+        -t ${REGISTRY}/dev8-workspace:${VERSION} \
+        -t ${REGISTRY}/dev8-workspace:latest \
         -t ${REGISTRY}/dev8-mvp:${VERSION} \
         -t ${REGISTRY}/dev8-mvp:latest \
-        -f mvp/Dockerfile \
+        -f docker/mvp/Dockerfile \
         --build-arg BASE_IMAGE=dev8-base:${VERSION} \
         --build-arg VERSION=${VERSION} \
-        ./mvp/
+        .
     
-    log_success "MVP image built successfully"
-    log_info "Image size: $(docker images dev8-mvp:${VERSION} --format "{{.Size}}")"
+    log_success "Production workspace image built successfully"
+    log_info "Image size: $(docker images dev8-workspace:${VERSION} --format "{{.Size}}")"
     echo ""
 }
 
@@ -93,6 +101,9 @@ main() {
     log_info "=================================================="
     echo ""
     
+    # Change to docker directory
+    cd "$(dirname "$0")"
+    
     # Build images in dependency order
     if [ "$BUILD_BASE" = "true" ]; then
         build_base
@@ -103,7 +114,7 @@ main() {
     if [ "$BUILD_MVP" = "true" ]; then
         build_mvp
     else
-        log_warning "Skipping MVP image build"
+        log_warning "Skipping production workspace image build"
     fi
     
     # Summary
@@ -112,17 +123,25 @@ main() {
     log_info "=================================================="
     echo ""
     log_info "Built images:"
-    docker images | grep -E "dev8-(base|mvp)" | grep -E "${VERSION}|latest"
+    docker images | grep -E "dev8-(base|workspace|mvp)" | grep -E "${VERSION}|latest"
     echo ""
-    log_info "To test an image locally:"
+    log_info "🚀 Quick Test:"
     echo "  docker run -it --rm -p 8080:8080 -p 2222:2222 \\"
-    echo "    -e GITHUB_TOKEN=your_token \\"
+    echo "    -e GITHUB_TOKEN=\$GITHUB_TOKEN \\"
+    echo "    -e ANTHROPIC_API_KEY=\$ANTHROPIC_API_KEY \\"
+    echo "    -e GOOGLE_API_KEY=\$GOOGLE_API_KEY \\"
+    echo "    -e OPENAI_API_KEY=\$OPENAI_API_KEY \\"
     echo "    -e SSH_PUBLIC_KEY=\"\$(cat ~/.ssh/id_rsa.pub)\" \\"
-    echo "    dev8-mvp:${VERSION}"
+    echo "    -v \$(pwd)/workspace:/workspace \\"
+    echo "    dev8-workspace:${VERSION}"
     echo ""
-    log_info "To push to registry:"
+    log_info "🌐 Access:"
+    echo "  VS Code: http://localhost:8080"
+    echo "  SSH: ssh -p 2222 dev8@localhost"
+    echo ""
+    log_info "📤 Push to registry:"
     echo "  docker push ${REGISTRY}/dev8-base:${VERSION}"
-    echo "  docker push ${REGISTRY}/dev8-mvp:${VERSION}"
+    echo "  docker push ${REGISTRY}/dev8-workspace:${VERSION}"
 }
 
 # Run main function

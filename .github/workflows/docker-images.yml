@@ -20,7 +20,7 @@ on:
         required: false
         default: 'true'
       build_mvp:
-        description: 'Build MVP image (Node.js + Python + Go)'
+        description: 'Build production workspace image (Node.js + Python + Go + Rust + AI Agents)'
         required: false
         default: 'true'
 
@@ -171,14 +171,18 @@ jobs:
 
       - name: Test MVP image
         run: |
-          echo "Testing MVP image components..."
+          echo "Testing production workspace image components..."
           docker run --rm dev8-mvp:latest node --version
           docker run --rm dev8-mvp:latest python --version
           docker run --rm dev8-mvp:latest go version
+          docker run --rm dev8-mvp:latest rustc --version
+          docker run --rm dev8-mvp:latest bun --version
           docker run --rm dev8-mvp:latest code-server --version || echo "code-server check skipped"
           docker run --rm dev8-mvp:latest aws --version || echo "aws check skipped"
+          docker run --rm dev8-mvp:latest az version --output tsv | head -n1 || echo "azure-cli check skipped"
           docker run --rm dev8-mvp:latest test -f /home/dev8/.backup-scripts/backup.sh && echo "Backup script exists" || echo "Backup script missing"
-          echo "MVP image tests completed!"
+          docker run --rm dev8-mvp:latest test -f /usr/local/bin/workspace-supervisor && echo "Supervisor binary exists" || echo "Supervisor binary missing"
+          echo "Production workspace image tests completed!"
 
       - name: Scan for vulnerabilities
         uses: aquasecurity/trivy-action@master
@@ -210,13 +214,19 @@ jobs:
             echo ""
             echo "## Build Status"
             echo ""
-            echo "| Image | Status |"
-            echo "|-------|--------|"
-            echo "| dev8-base | ${{ needs.build-base.result }} |"
-            echo "| dev8-mvp | ${{ needs.build-mvp.result }} |"
+            echo "| Image | Status | Description |"
+            echo "|-------|--------|-------------|"
+            echo "| dev8-base | ${{ needs.build-base.result }} | Base image with AI agent infrastructure |"
+            echo "| dev8-workspace (mvp) | ${{ needs.build-mvp.result }} | Production workspace with all languages & AI agents |"
             echo ""
             echo "## Version"
             echo "- **Version**: ${{ needs.setup.outputs.version }}"
             echo "- **Commit**: ${{ github.sha }}"
             echo "- **Branch**: ${{ github.ref_name }}"
+            echo ""
+            echo "## Features"
+            echo "- **Languages**: Node.js, Python, Go, Rust, Bun"
+            echo "- **AI Agents**: GitHub Copilot, Claude, Gemini, OpenAI/GPT"
+            echo "- **Tools**: code-server, SSH, supervisor, backup support"
+            echo "- **Cloud**: AWS CLI, Azure CLI"
           } >> "$GITHUB_STEP_SUMMARY"
