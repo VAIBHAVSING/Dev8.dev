@@ -8,12 +8,12 @@ This directory contains Docker images for Dev8.dev's cloud-based development env
 
 ## 📦 Available Images
 
-| Image | Size | Languages | Use Case |
-|-------|------|-----------|----------|
-| **dev8-base** | ~800MB | None | Foundation for all images |
-| **dev8-nodejs** | ~1.8GB | Node.js, Bun | JavaScript/TypeScript projects |
-| **dev8-python** | ~2.2GB | Python 3.11 | Python projects, data science |
-| **dev8-fullstack** | ~3.5GB | Node, Python, Go, Rust | Polyglot/full-stack projects |
+| Image              | Size   | Languages              | Use Case                       |
+| ------------------ | ------ | ---------------------- | ------------------------------ |
+| **dev8-base**      | ~800MB | None                   | Foundation for all images      |
+| **dev8-nodejs**    | ~1.8GB | Node.js, Bun           | JavaScript/TypeScript projects |
+| **dev8-python**    | ~2.2GB | Python 3.11            | Python projects, data science  |
+| **dev8-fullstack** | ~3.5GB | Node, Python, Go, Rust | Polyglot/full-stack projects   |
 
 ## 🚀 Quick Start
 
@@ -39,6 +39,7 @@ docker run -it --rm \
 ```
 
 Then access:
+
 - **VS Code**: http://localhost:8080
 - **SSH**: `ssh -p 2222 dev8@localhost`
 
@@ -57,19 +58,23 @@ Each image includes the **DevCopilot Agent** that automatically:
 ## 🔑 Environment Variables
 
 ### Required
+
 - `GITHUB_TOKEN` or `GH_TOKEN` - GitHub personal access token with Copilot scope
 
 ### Optional - Git Configuration
+
 - `GIT_USER_NAME` - Your Git commit name
 - `GIT_USER_EMAIL` - Your Git commit email
 - `SSH_PUBLIC_KEY` - Public SSH key for authentication
 - `SSH_PRIVATE_KEY` - Private SSH key for Git operations
 
 ### Optional - Code Server
+
 - `CODE_SERVER_PASSWORD` - Password for code-server (default: `dev8dev`)
 - `CODE_SERVER_AUTH` - Authentication method: `password` or `none`
 
 ### Optional - AI Tools
+
 - `ANTHROPIC_API_KEY` - Claude CLI API key
 - `OPENAI_API_KEY` - OpenAI API key
 
@@ -105,6 +110,7 @@ FROM ubuntu:22.04
 ```
 
 **Features:**
+
 - Non-root user (`dev8`)
 - Hardened SSH configuration
 - GitHub CLI pre-installed
@@ -120,6 +126,7 @@ FROM dev8-base:latest
 ```
 
 **Pre-installed:**
+
 - Node.js 20 LTS
 - pnpm, yarn, Bun
 - code-server with extensions:
@@ -129,6 +136,7 @@ FROM dev8-base:latest
   - Tailwind CSS IntelliSense
 
 **Perfect for:**
+
 - React, Next.js, Vue, Svelte projects
 - TypeScript development
 - Node.js backends
@@ -144,6 +152,7 @@ FROM dev8-base:latest
 ```
 
 **Pre-installed:**
+
 - Python 3.11
 - Poetry, pipenv
 - Black, flake8, pylint, mypy
@@ -156,6 +165,7 @@ FROM dev8-base:latest
   - Jupyter support
 
 **Perfect for:**
+
 - Python web apps (FastAPI, Django)
 - Data science & ML
 - Scripting & automation
@@ -171,6 +181,7 @@ FROM dev8-base:latest
 ```
 
 **Pre-installed:**
+
 - Node.js 20 + Bun
 - Python 3.11
 - Go 1.21
@@ -178,6 +189,7 @@ FROM dev8-base:latest
 - All language-specific extensions
 
 **Perfect for:**
+
 - Microservices (mixed languages)
 - Full-stack development
 - Learning multiple languages
@@ -201,6 +213,7 @@ DOCKER_REGISTRY=myregistry.azurecr.io ./build.sh
 ### CI/CD Integration
 
 Images are automatically built on:
+
 - Push to `main` branch
 - Pull requests
 - Release tags
@@ -247,6 +260,7 @@ docker run -it --rm \
 ### Token Scopes
 
 Your `GITHUB_TOKEN` needs these scopes:
+
 - `repo` - Full repository access
 - `read:org` - Read organization data
 - `copilot` - GitHub Copilot access (if using Copilot)
@@ -255,20 +269,20 @@ Your `GITHUB_TOKEN` needs these scopes:
 
 ### Startup Times
 
-| Image | Cold Start | Warm Start |
-|-------|------------|------------|
-| dev8-base | 10-15s | 3-5s |
-| dev8-nodejs | 20-30s | 5-10s |
-| dev8-python | 25-35s | 5-10s |
-| dev8-fullstack | 35-45s | 8-12s |
+| Image          | Cold Start | Warm Start |
+| -------------- | ---------- | ---------- |
+| dev8-base      | 10-15s     | 3-5s       |
+| dev8-nodejs    | 20-30s     | 5-10s      |
+| dev8-python    | 25-35s     | 5-10s      |
+| dev8-fullstack | 35-45s     | 8-12s      |
 
 ### Resource Usage
 
-| Image | Memory | CPU |
-|-------|--------|-----|
-| Idle | 300-500MB | <5% |
-| Light work | 800MB-1.5GB | 10-30% |
-| Heavy work | 2-4GB | 50-100% |
+| Image      | Memory      | CPU     |
+| ---------- | ----------- | ------- |
+| Idle       | 300-500MB   | <5%     |
+| Light work | 800MB-1.5GB | 10-30%  |
+| Heavy work | 2-4GB       | 50-100% |
 
 ## 🐛 Troubleshooting
 
@@ -321,6 +335,7 @@ docker port container_name 2222
 ## 🤝 Contributing
 
 Contributions welcome! Please:
+
 1. Test changes locally
 2. Update documentation
 3. Run security scans

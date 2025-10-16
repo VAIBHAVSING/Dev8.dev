@@ -60,6 +60,7 @@ Configure Gemini CLI to use AGENTS.md in `.gemini/settings.json`:
 Dev8.dev is a cloud-based IDE hosting platform that provides fully-configured VS Code environments in the browser. It allows developers to launch customizable development environments instantly with persistent storage and transparent pricing.
 
 **Key Features:**
+
 - Instant launch of VS Code environments (30 seconds)
 - Customizable container resource profiles (vCPU/RAM tiers)
 - Persistent file storage with Azure Blob Storage (per workspace container)
@@ -70,6 +71,7 @@ Dev8.dev is a cloud-based IDE hosting platform that provides fully-configured VS
 ## Current Implementation Status
 
 **Phase 1: MVP (Current Development)**
+
 - ✅ **Authentication System**: Complete with NextAuth.js, OAuth (Google, GitHub), and credentials
 - ✅ **Frontend**: Next.js 15 with TypeScript, Tailwind CSS, and protected routes
 - ✅ **Backend**: Go HTTP server with health/hello endpoints and comprehensive testing
@@ -92,6 +94,7 @@ Browser → Next.js Frontend → Go/TypeScript Backend → Ephemeral Containers 
 ## Technology Stack
 
 ### Frontend
+
 - **Framework:** Next.js 15 with TypeScript
 - **Styling:** Tailwind CSS with PostCSS
 - **Authentication:** NextAuth.js with OAuth providers (Google, GitHub) + Credentials
@@ -101,12 +104,14 @@ Browser → Next.js Frontend → Go/TypeScript Backend → Ephemeral Containers 
 - **Middleware:** Next.js middleware for route protection
 
 ### Backend
+
 - **Language:** Go 1.24
 - **Services:** REST API with JSON responses
 - **Infrastructure:** Azure (ACI for runtime containers, Blob Storage for persistence, Virtual Network planned)
 - **Containerization:** Docker (future: Azure Container Apps / Kubernetes evaluation)
 
 ### Development Tools
+
 - **Monorepo:** Turborepo for task orchestration
 - **Package Manager:** pnpm with workspace support
 - **Linting:** ESLint with custom configs
@@ -176,6 +181,7 @@ Dev8.dev/
 ### Critical Files for AI Context
 
 #### Root Configuration Files
+
 - `package.json` - Monorepo scripts, dependencies, and workspace configuration
 - `turbo.json` - Turborepo pipeline configuration with caching and environment variables
 - `pnpm-workspace.yaml` - Workspace package management and filtering
@@ -184,6 +190,7 @@ Dev8.dev/
 - `context.md` - This file - comprehensive project context for AI agents
 
 #### Web Application Architecture (`apps/web/`)
+
 ```
 apps/web/
 ├── app/                    # Next.js 13+ App Router
@@ -221,6 +228,7 @@ apps/web/
 ```
 
 #### Go Backend Service (`apps/agent/`)
+
 ```
 apps/agent/
 ├── main.go                # HTTP server with health/hello endpoints
@@ -233,6 +241,7 @@ apps/agent/
 ```
 
 #### Shared Packages
+
 ```
 packages/
 ├── ui/src/                # Shared React components
@@ -252,6 +261,7 @@ packages/
 ## Database Schema
 
 ### User Model
+
 ```prisma
 model User {
   id            String    @id @default(cuid())
@@ -268,6 +278,7 @@ model User {
 ```
 
 ### Authentication Models
+
 - **Account:** OAuth provider connections (Google, GitHub)
 - **Session:** User sessions with token management
 - **VerificationToken:** Email verification tokens
@@ -276,6 +287,7 @@ model User {
 ## Validation Schemas
 
 ### Sign In Schema
+
 ```typescript
 export const signInSchema = object({
   email: string().min(1, "Email is required").email("Invalid email"),
@@ -287,6 +299,7 @@ export const signInSchema = object({
 ```
 
 ### Sign Up Schema
+
 ```typescript
 export const signUpSchema = object({
   name: string()
@@ -308,6 +321,7 @@ export const signUpSchema = object({
 ## Development Commands Reference
 
 ### Quick Start Commands
+
 ```bash
 # Setup project
 git clone https://github.com/VAIBHAVSING/Dev8.dev.git
@@ -331,6 +345,7 @@ make dev  # Alternative using Makefile
 ```
 
 ### Development Workflow Commands
+
 ```bash
 # Individual service development
 pnpm dev --filter=web    # Next.js frontend only
@@ -355,6 +370,7 @@ make clean          # Clean build artifacts
 ```
 
 ### Database Operations
+
 ```bash
 # Prisma commands
 pnpm db:generate    # Generate Prisma client
@@ -365,6 +381,7 @@ pnpm db:deploy      # Deploy migrations (production)
 ```
 
 ### Go Development (Agent Service)
+
 ```bash
 # Go-specific commands
 cd apps/agent
@@ -388,6 +405,7 @@ air                 # Start with hot reload (requires setup-go-tools.sh)
 ### Required Environment Variables
 
 #### Web Application (`apps/web/.env.local`)
+
 ```bash
 # Authentication
 AUTH_SECRET="your-secret-key-here"
@@ -405,12 +423,14 @@ AUTH_GITHUB_SECRET="your-github-client-secret"
 ```
 
 #### Agent Service (`apps/agent/`)
+
 ```bash
 # Server Configuration
 AGENT_PORT="8080"  # Default: 8080
 ```
 
 ### Environment Setup
+
 1. Copy template: `cp apps/web/.env.example apps/web/.env.local`
 2. Edit `.env.local` with your actual values
 3. OAuth setup instructions available in `apps/web/README.md`
@@ -418,11 +438,13 @@ AGENT_PORT="8080"  # Default: 8080
 ## API Endpoints
 
 ### Agent Service
+
 - `GET /` - Service status information
 - `GET /health` - Health check endpoint
 - `GET /hello` - Test endpoint with client IP logging
 
 ### Web Application
+
 - `/api/auth/[...nextauth]` - NextAuth.js authentication routes
 - `/api/auth/register` - User registration endpoint (POST)
 - Authentication pages: `/signin`, `/signup`
@@ -431,16 +453,19 @@ AGENT_PORT="8080"  # Default: 8080
 ## Authentication Flow
 
 ### Supported Providers
+
 1. **Credentials** - Email/password authentication with bcrypt hashing
 2. **Google OAuth** - Google account integration
 3. **GitHub OAuth** - GitHub account integration
 
 ### Route Protection
+
 - **Public Routes:** `/`, `/signin`, `/signup`
 - **Protected Routes:** All other routes require authentication
 - **Middleware:** Automatic redirection based on auth status
 
 ### Session Management
+
 - JWT tokens for session management
 - Secure cookie-based sessions
 - Automatic session refresh and validation
@@ -448,11 +473,13 @@ AGENT_PORT="8080"  # Default: 8080
 ## UI Components
 
 ### Shared Components (`packages/ui/`)
+
 - **Button** - Customizable button with appName prop and alert functionality
 - **Card** - Link card component with title and children
 - **Code** - Simple code snippet wrapper
 
 ### Authentication Pages
+
 - **Sign In** - Form with email/password + OAuth buttons
 - **Sign Up** - Registration form with validation
 - **Dashboard** - Protected dashboard with navigation
@@ -462,11 +489,13 @@ AGENT_PORT="8080"  # Default: 8080
 ## Testing Strategy
 
 ### Go Backend
+
 - Unit tests for HTTP handlers (`main_test.go`)
 - Health check and hello endpoint testing
 - HTTP status code and response validation
 
 ### Frontend (Planned)
+
 - Component testing with React Testing Library
 - Integration tests for authentication flows
 - E2E tests with Playwright
@@ -474,11 +503,13 @@ AGENT_PORT="8080"  # Default: 8080
 ## Build and Deployment
 
 ### Build Pipeline
+
 1. **TypeScript Pipeline:** Lint → Type Check → Test → Build
 2. **Go Pipeline:** Lint → Format Check → Test → Build
 3. **Security Pipeline:** Vulnerability scanning
 
 ### Output Locations
+
 - Web app: `.next/` directory
 - Agent: `bin/agent` binary
 - Docs: `.next/` directory
@@ -486,6 +517,7 @@ AGENT_PORT="8080"  # Default: 8080
 ## Roadmap
 
 ### Phase 1: MVP (Current)
+
 - ✅ User authentication & dashboard
 - ✅ Azure ACI environment provisioning (initial prototype)
 - ✅ Basic code-server deployment
@@ -494,6 +526,7 @@ AGENT_PORT="8080"  # Default: 8080
 - 🔄 Basic monitoring & logs (Container diagnostics & Log Analytics integration)
 
 ### Phase 2: Scale
+
 - 🔄 Kubernetes orchestration
 - 🔄 Auto-scaling instances
 - 🔄 Team collaboration features
@@ -502,6 +535,7 @@ AGENT_PORT="8080"  # Default: 8080
 - 🔄 Billing & usage tracking
 
 ### Phase 3: Expand
+
 - 🔄 Multi-cloud support (GCP, Azure)
 - 🔄 Multiple IDE support (IntelliJ, Vim)
 - 🔄 Marketplace for extensions/templates
@@ -511,17 +545,20 @@ AGENT_PORT="8080"  # Default: 8080
 ## Development Guidelines
 
 ### Code Style
+
 - **TypeScript:** Strict mode enabled
 - **Go:** Standard Go formatting with goimports
 - **React:** Functional components with hooks
 - **CSS:** Tailwind utility classes
 
 ### Commit Convention
+
 - Follow conventional commits
 - Use descriptive commit messages
 - Reference issues when applicable
 
 ### Testing Strategy
+
 - Unit tests for utilities and components
 - Integration tests for API endpoints
 - E2E tests for critical user flows
@@ -549,6 +586,7 @@ AGENT_PORT="8080"  # Default: 8080
 ## Common Development Patterns
 
 ### Authentication Implementation Patterns
+
 ```typescript
 // Protected page pattern (apps/web/app/dashboard/page.tsx)
 "use client";
@@ -567,12 +605,13 @@ export default function ProtectedPage() {
 
   if (status === "loading") return <div>Loading...</div>;
   if (!session) return null;
-  
+
   return <div>Protected content</div>;
 }
 ```
 
 ### API Route Pattern
+
 ```typescript
 // API route pattern (apps/web/app/api/auth/register/route.ts)
 import { NextRequest, NextResponse } from "next/server";
@@ -592,16 +631,17 @@ export async function POST(request: NextRequest) {
 ```
 
 ### Go HTTP Handler Pattern
+
 ```go
 // HTTP handler pattern (apps/agent/main.go)
 func healthHandler(w http.ResponseWriter, r *http.Request) {
     w.Header().Set("Content-Type", "application/json")
-    
+
     response := Response{
         Message: "Agent is healthy",
         Status:  "ok",
     }
-    
+
     if err := json.NewEncoder(w).Encode(response); err != nil {
         http.Error(w, "Failed to encode response", http.StatusInternalServerError)
         return
@@ -610,6 +650,7 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 ```
 
 ### Component Export Pattern
+
 ```typescript
 // Shared component pattern (packages/ui/src/button.tsx)
 "use client";
@@ -636,24 +677,28 @@ export const Button = ({ children, className, appName }: ButtonProps) => {
 ## Common Issues and Solutions
 
 ### Database Connection Issues
+
 - Ensure PostgreSQL is running and accessible
 - Check `DATABASE_URL` format in `.env.local`
 - Run `pnpm db:generate` after schema changes
 - Use `pnpm db:reset` for development database reset
 
 ### Authentication Configuration
+
 - OAuth providers are optional - only configured if env vars present
 - `AUTH_SECRET` is required in production environments
 - Session management uses JWT strategy for better performance
 - Middleware automatically redirects unauthenticated users
 
 ### Build and Deployment
+
 - Turborepo caches build outputs for faster subsequent builds
 - Environment variables are defined in `turbo.json` for proper caching
 - Go binaries output to `apps/agent/bin/` directory
 - Next.js builds to `.next/` directories
 
 ### Development Workflow Issues
+
 - Use `make check-all` before committing to simulate CI
 - Go tools setup requires running `./setup-go-tools.sh` in `apps/agent/`
 - Hot reloading available with `air` for Go development
@@ -677,6 +722,7 @@ export const Button = ({ children, className, appName }: ButtonProps) => {
 ## AI Agent Guidelines
 
 ### For Code Generation
+
 - Use TypeScript strict mode for all new code
 - Follow existing authentication patterns for protected routes
 - Implement proper error handling with try/catch blocks
@@ -684,6 +730,7 @@ export const Button = ({ children, className, appName }: ButtonProps) => {
 - Follow the established file structure and naming conventions
 
 ### For Debugging
+
 - Check environment variables first for configuration issues
 - Verify database connection and Prisma client generation
 - Review middleware logs for authentication/routing issues
@@ -691,6 +738,7 @@ export const Button = ({ children, className, appName }: ButtonProps) => {
 - Check both TypeScript and Go build outputs for errors
 
 ### For Feature Development
+
 - Start with database schema changes in `prisma/schema.prisma`
 - Implement API routes before frontend components
 - Add proper TypeScript types and Zod validation
@@ -699,4 +747,4 @@ export const Button = ({ children, className, appName }: ButtonProps) => {
 
 ---
 
-*This context file provides comprehensive project understanding for AI assistants like Cursor, Gemini CLI, Claude, and GitHub Copilot. It includes current implementation status, development patterns, and troubleshooting guidance for effective code assistance.*
+_This context file provides comprehensive project understanding for AI assistants like Cursor, Gemini CLI, Claude, and GitHub Copilot. It includes current implementation status, development patterns, and troubleshooting guidance for effective code assistance._

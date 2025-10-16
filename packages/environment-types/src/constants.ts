@@ -1,41 +1,41 @@
-import type { HardwareConfig, InstanceType } from './types';
+import type { HardwareConfig, InstanceType } from "./types";
 
 /**
  * Hardware preset configurations
  */
 export const HARDWARE_PRESETS: Record<
-  'micro' | 'small' | 'medium' | 'large' | 'xlarge',
+  "micro" | "small" | "medium" | "large" | "xlarge",
   HardwareConfig
 > = {
   micro: {
     cpuCores: 1,
     memoryGB: 2,
     storageGB: 20,
-    instanceType: 'balanced',
+    instanceType: "balanced",
   },
   small: {
     cpuCores: 2,
     memoryGB: 4,
     storageGB: 30,
-    instanceType: 'balanced',
+    instanceType: "balanced",
   },
   medium: {
     cpuCores: 4,
     memoryGB: 8,
     storageGB: 50,
-    instanceType: 'balanced',
+    instanceType: "balanced",
   },
   large: {
     cpuCores: 8,
     memoryGB: 16,
     storageGB: 100,
-    instanceType: 'balanced',
+    instanceType: "balanced",
   },
   xlarge: {
     cpuCores: 16,
     memoryGB: 32,
     storageGB: 200,
-    instanceType: 'balanced',
+    instanceType: "balanced",
   },
 } as const;
 
@@ -47,19 +47,19 @@ export const COMPUTE_OPTIMIZED_PRESETS: Record<string, HardwareConfig> = {
     cpuCores: 2,
     memoryGB: 4,
     storageGB: 30,
-    instanceType: 'compute-optimized',
+    instanceType: "compute-optimized",
   },
   medium: {
     cpuCores: 4,
     memoryGB: 8,
     storageGB: 50,
-    instanceType: 'compute-optimized',
+    instanceType: "compute-optimized",
   },
   large: {
     cpuCores: 8,
     memoryGB: 16,
     storageGB: 100,
-    instanceType: 'compute-optimized',
+    instanceType: "compute-optimized",
   },
 } as const;
 
@@ -71,19 +71,19 @@ export const MEMORY_OPTIMIZED_PRESETS: Record<string, HardwareConfig> = {
     cpuCores: 2,
     memoryGB: 8,
     storageGB: 30,
-    instanceType: 'memory-optimized',
+    instanceType: "memory-optimized",
   },
   medium: {
     cpuCores: 4,
     memoryGB: 16,
     storageGB: 50,
-    instanceType: 'memory-optimized',
+    instanceType: "memory-optimized",
   },
   large: {
     cpuCores: 8,
     memoryGB: 32,
     storageGB: 100,
-    instanceType: 'memory-optimized',
+    instanceType: "memory-optimized",
   },
 } as const;
 
@@ -91,149 +91,153 @@ export const MEMORY_OPTIMIZED_PRESETS: Record<string, HardwareConfig> = {
  * Base image mappings to Azure Container Registry
  */
 export const BASE_IMAGES = {
-  node: 'dev8mvpregistry.azurecr.io/vscode-node:latest',
-  python: 'dev8mvpregistry.azurecr.io/vscode-python:latest',
-  golang: 'dev8mvpregistry.azurecr.io/vscode-go:latest',
-  rust: 'dev8mvpregistry.azurecr.io/vscode-rust:latest',
-  java: 'dev8mvpregistry.azurecr.io/vscode-java:latest',
-  dotnet: 'dev8mvpregistry.azurecr.io/vscode-dotnet:latest',
-  php: 'dev8mvpregistry.azurecr.io/vscode-php:latest',
-  'fullstack-react': 'dev8mvpregistry.azurecr.io/vscode-fullstack-react:latest',
-  docker: 'dev8mvpregistry.azurecr.io/vscode-docker:latest',
-  'data-science': 'dev8mvpregistry.azurecr.io/vscode-datascience:latest',
+  node: "dev8mvpregistry.azurecr.io/vscode-node:latest",
+  python: "dev8mvpregistry.azurecr.io/vscode-python:latest",
+  golang: "dev8mvpregistry.azurecr.io/vscode-go:latest",
+  rust: "dev8mvpregistry.azurecr.io/vscode-rust:latest",
+  java: "dev8mvpregistry.azurecr.io/vscode-java:latest",
+  dotnet: "dev8mvpregistry.azurecr.io/vscode-dotnet:latest",
+  php: "dev8mvpregistry.azurecr.io/vscode-php:latest",
+  "fullstack-react": "dev8mvpregistry.azurecr.io/vscode-fullstack-react:latest",
+  docker: "dev8mvpregistry.azurecr.io/vscode-docker:latest",
+  "data-science": "dev8mvpregistry.azurecr.io/vscode-datascience:latest",
 } as const;
 
 /**
  * Base image display names
  */
 export const BASE_IMAGE_LABELS = {
-  node: 'Node.js',
-  python: 'Python',
-  golang: 'Go',
-  rust: 'Rust',
-  java: 'Java',
-  dotnet: '.NET',
-  php: 'PHP',
-  'fullstack-react': 'Full Stack (React)',
-  docker: 'Docker Development',
-  'data-science': 'Data Science',
+  node: "Node.js",
+  python: "Python",
+  golang: "Go",
+  rust: "Rust",
+  java: "Java",
+  dotnet: ".NET",
+  php: "PHP",
+  "fullstack-react": "Full Stack (React)",
+  docker: "Docker Development",
+  "data-science": "Data Science",
 } as const;
 
 /**
  * Base image descriptions
  */
 export const BASE_IMAGE_DESCRIPTIONS = {
-  node: 'JavaScript and TypeScript development with Node.js LTS, npm, pnpm, and common tools',
-  python: 'Python 3.11 development environment with pip, poetry, and data science libraries',
-  golang: 'Go 1.21+ development environment with standard toolchain and popular tools',
-  rust: 'Rust development with cargo, rustup, and essential tools',
-  java: 'Java development with JDK 17, Maven, and Gradle',
-  dotnet: '.NET 8 development with C#, F#, and ASP.NET Core',
-  php: 'PHP 8.2 development with Composer and common frameworks',
-  'fullstack-react': 'React + Node.js full stack development environment',
-  docker: 'Docker and Kubernetes development with compose and kubectl',
-  'data-science': 'Python data science stack with Jupyter, pandas, numpy, and ML libraries',
+  node: "JavaScript and TypeScript development with Node.js LTS, npm, pnpm, and common tools",
+  python:
+    "Python 3.11 development environment with pip, poetry, and data science libraries",
+  golang:
+    "Go 1.21+ development environment with standard toolchain and popular tools",
+  rust: "Rust development with cargo, rustup, and essential tools",
+  java: "Java development with JDK 17, Maven, and Gradle",
+  dotnet: ".NET 8 development with C#, F#, and ASP.NET Core",
+  php: "PHP 8.2 development with Composer and common frameworks",
+  "fullstack-react": "React + Node.js full stack development environment",
+  docker: "Docker and Kubernetes development with compose and kubectl",
+  "data-science":
+    "Python data science stack with Jupyter, pandas, numpy, and ML libraries",
 } as const;
 
 /**
  * Base image categories
  */
 export const BASE_IMAGE_CATEGORIES = {
-  node: 'language',
-  python: 'language',
-  golang: 'language',
-  rust: 'language',
-  java: 'language',
-  dotnet: 'language',
-  php: 'language',
-  'fullstack-react': 'framework',
-  docker: 'devops',
-  'data-science': 'specialized',
+  node: "language",
+  python: "language",
+  golang: "language",
+  rust: "language",
+  java: "language",
+  dotnet: "language",
+  php: "language",
+  "fullstack-react": "framework",
+  docker: "devops",
+  "data-science": "specialized",
 } as const;
 
 /**
  * Environment status display labels
  */
 export const STATUS_LABELS = {
-  CREATING: 'Creating',
-  STARTING: 'Starting',
-  RUNNING: 'Running',
-  STOPPING: 'Stopping',
-  STOPPED: 'Stopped',
-  ERROR: 'Error',
-  DELETING: 'Deleting',
+  CREATING: "Creating",
+  STARTING: "Starting",
+  RUNNING: "Running",
+  STOPPING: "Stopping",
+  STOPPED: "Stopped",
+  ERROR: "Error",
+  DELETING: "Deleting",
 } as const;
 
 /**
  * Environment status colors for UI
  */
 export const STATUS_COLORS = {
-  CREATING: 'yellow',
-  STARTING: 'blue',
-  RUNNING: 'green',
-  STOPPING: 'orange',
-  STOPPED: 'gray',
-  ERROR: 'red',
-  DELETING: 'red',
+  CREATING: "yellow",
+  STARTING: "blue",
+  RUNNING: "green",
+  STOPPING: "orange",
+  STOPPED: "gray",
+  ERROR: "red",
+  DELETING: "red",
 } as const;
 
 /**
  * Instance type labels
  */
 export const INSTANCE_TYPE_LABELS: Record<InstanceType, string> = {
-  balanced: 'Balanced',
-  'compute-optimized': 'Compute Optimized',
-  'memory-optimized': 'Memory Optimized',
+  balanced: "Balanced",
+  "compute-optimized": "Compute Optimized",
+  "memory-optimized": "Memory Optimized",
 } as const;
 
 /**
  * Instance type descriptions
  */
 export const INSTANCE_TYPE_DESCRIPTIONS: Record<InstanceType, string> = {
-  balanced: 'Equal balance between CPU and memory for general workloads',
-  'compute-optimized': 'Higher CPU allocation for compute-intensive tasks',
-  'memory-optimized': 'Higher memory allocation for memory-intensive applications',
+  balanced: "Equal balance between CPU and memory for general workloads",
+  "compute-optimized": "Higher CPU allocation for compute-intensive tasks",
+  "memory-optimized":
+    "Higher memory allocation for memory-intensive applications",
 } as const;
 
 /**
  * Default cloud configuration
  */
 export const DEFAULT_CLOUD_CONFIG = {
-  provider: 'AZURE' as const,
-  region: 'eastus',
+  provider: "AZURE" as const,
+  region: "eastus",
 };
 
 /**
  * Azure regions
  */
 export const AZURE_REGIONS = {
-  eastus: 'East US',
-  westus: 'West US',
-  centralus: 'Central US',
-  northeurope: 'North Europe',
-  westeurope: 'West Europe',
-  eastasia: 'East Asia',
-  southeastasia: 'Southeast Asia',
+  eastus: "East US",
+  westus: "West US",
+  centralus: "Central US",
+  northeurope: "North Europe",
+  westeurope: "West Europe",
+  eastasia: "East Asia",
+  southeastasia: "Southeast Asia",
 } as const;
 
 /**
  * AWS regions
  */
 export const AWS_REGIONS = {
-  'us-east-1': 'US East (N. Virginia)',
-  'us-west-2': 'US West (Oregon)',
-  'eu-west-1': 'Europe (Ireland)',
-  'ap-southeast-1': 'Asia Pacific (Singapore)',
+  "us-east-1": "US East (N. Virginia)",
+  "us-west-2": "US West (Oregon)",
+  "eu-west-1": "Europe (Ireland)",
+  "ap-southeast-1": "Asia Pacific (Singapore)",
 } as const;
 
 /**
  * GCP regions
  */
 export const GCP_REGIONS = {
-  'us-central1': 'US Central (Iowa)',
-  'us-east1': 'US East (South Carolina)',
-  'europe-west1': 'Europe West (Belgium)',
-  'asia-east1': 'Asia East (Taiwan)',
+  "us-central1": "US Central (Iowa)",
+  "us-east1": "US East (South Carolina)",
+  "europe-west1": "Europe West (Belgium)",
+  "asia-east1": "Asia East (Taiwan)",
 } as const;
 
 /**
@@ -321,24 +325,23 @@ export const DEFAULT_PORTS = {
   java: [8080, 8081],
   dotnet: [5000, 5001],
   php: [8000, 3306],
-  'fullstack-react': [3000, 5000],
+  "fullstack-react": [3000, 5000],
   docker: [8080],
-  'data-science': [8888, 6006],
+  "data-science": [8888, 6006],
 } as const;
 
 /**
  * Template tags for filtering and search
  */
 export const TEMPLATE_TAGS = {
-  POPULAR: 'popular',
-  BACKEND: 'backend',
-  FRONTEND: 'frontend',
-  FULLSTACK: 'fullstack',
-  DATA_SCIENCE: 'data-science',
-  DEVOPS: 'devops',
-  MICROSERVICES: 'microservices',
-  WEB: 'web',
-  ML: 'ml',
-  AI: 'ai',
+  POPULAR: "popular",
+  BACKEND: "backend",
+  FRONTEND: "frontend",
+  FULLSTACK: "fullstack",
+  DATA_SCIENCE: "data-science",
+  DEVOPS: "devops",
+  MICROSERVICES: "microservices",
+  WEB: "web",
+  ML: "ml",
+  AI: "ai",
 } as const;
-

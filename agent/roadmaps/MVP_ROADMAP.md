@@ -7,6 +7,7 @@
 **Success Criteria:** Users can create, access, and code in browser-based VS Code environments
 
 **Key Metrics:**
+
 - Environment creation: < 2 minutes
 - VS Code load time: < 30 seconds
 - File persistence: 100% reliable
@@ -17,6 +18,7 @@
 ## 🎯 MVP Scope
 
 ### ✅ In Scope
+
 - User authentication (OAuth + Credentials)
 - Environment creation (Node.js, Python, Go)
 - Browser-based VS Code access
@@ -27,6 +29,7 @@
 - Basic monitoring and logs
 
 ### ❌ Out of Scope (Phase 2)
+
 - SSH access
 - Browser terminal
 - Custom hardware configs
@@ -56,6 +59,7 @@ Milestone: Infra Ready   Milestone: Env Mgmt     Milestone: Full Flow    Milesto
 ## 📆 Week 1: Foundation (March 29 - April 4)
 
 ### Goals
+
 - ✅ Infrastructure provisioned
 - ✅ Database schema ready
 - ✅ Shared types defined
@@ -66,6 +70,7 @@ Milestone: Infra Ready   Milestone: Env Mgmt     Milestone: Full Flow    Milesto
 **Issue:** [#27 - Azure Infrastructure Setup](https://github.com/VAIBHAVSING/Dev8.dev/issues/27)
 
 **Tasks:**
+
 ```bash
 □ Create Azure Resource Group
   az group create --name dev8-mvp-rg --location eastus
@@ -105,6 +110,7 @@ Milestone: Infra Ready   Milestone: Env Mgmt     Milestone: Full Flow    Milesto
 ```
 
 **Deliverables:**
+
 - Azure resources created
 - Service principal configured
 - Credentials documented
@@ -120,6 +126,7 @@ Milestone: Infra Ready   Milestone: Env Mgmt     Milestone: Full Flow    Milesto
 **Issue:** [#14 - Database Schema Setup](https://github.com/VAIBHAVSING/Dev8.dev/issues/14)
 
 **Tasks:**
+
 ```typescript
 // apps/web/prisma/schema.prisma
 
@@ -129,32 +136,32 @@ model Environment {
   userId              String
   name                String
   status              EnvironmentStatus @default(CREATING)
-  
+
   // Cloud Configuration
   cloudProvider       String   @default("azure")
   cloudRegion         String   @default("eastus")
   aciContainerGroupId String?
   aciPublicIp         String?
-  
+
   // Storage
   azureFileShareName  String?
   vsCodeUrl           String?
-  
+
   // Resources
   cpuCores            Int      @default(2)
   memoryGB            Int      @default(4)
   storageGB           Int      @default(20)
-  
+
   // Template
   baseImage           String   @default("node")
-  
+
   // Timestamps
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
   lastAccessedAt      DateTime @default(now())
-  
+
   user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   @@index([userId])
   @@index([status])
   @@map("environments")
@@ -180,10 +187,10 @@ model Template {
   baseImage    String
   defaultCPU   Int    @default(2)
   defaultMemory Int   @default(4)
-  
+
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
-  
+
   @@map("templates")
 }
 
@@ -194,7 +201,7 @@ model ResourceUsage {
   timestamp      DateTime @default(now())
   cpuUsagePercent Float?
   memoryUsageMB  Int?
-  
+
   @@index([environmentId, timestamp])
   @@map("resource_usage")
 }
@@ -225,6 +232,7 @@ model User {
 ```
 
 **Deliverables:**
+
 - Database schema extended
 - Migrations created and tested
 - Seed data populated
@@ -240,6 +248,7 @@ model User {
 **Issue:** [#13 - Environment Types Package](https://github.com/VAIBHAVSING/Dev8.dev/issues/13)
 
 **Tasks:**
+
 ```typescript
 □ Create package structure
   mkdir -p packages/environment-types/src
@@ -259,13 +268,13 @@ model User {
 □ Define core types (src/types.ts)
 export type CloudProvider = 'azure' | 'aws' | 'gcp';
 
-export type EnvironmentStatus = 
-  | 'creating' 
-  | 'starting' 
-  | 'running' 
+export type EnvironmentStatus =
+  | 'creating'
+  | 'starting'
+  | 'running'
   | 'stopping'
-  | 'stopped' 
-  | 'error' 
+  | 'stopped'
+  | 'error'
   | 'deleting';
 
 export interface Environment {
@@ -342,6 +351,7 @@ export * from './constants';
 ```
 
 **Deliverables:**
+
 - Shared types package created
 - Validation schemas defined
 - Used in web and agent
@@ -355,6 +365,7 @@ export * from './constants';
 ### Day 5: Development Environment Setup
 
 **Tasks:**
+
 ```bash
 □ Configure VSCode workspace settings
 □ Set up debugging configurations
@@ -371,6 +382,7 @@ export * from './constants';
 ```
 
 **Deliverables:**
+
 - Team can start development
 - Clear setup documentation
 - All services running locally
@@ -380,6 +392,7 @@ export * from './constants';
 ---
 
 **Week 1 Completion Criteria:**
+
 - [ ] Azure resources provisioned and accessible
 - [ ] Database schema includes Environment models
 - [ ] Shared types package building and used
@@ -387,6 +400,7 @@ export * from './constants';
 - [ ] Documentation updated in agent/ directory
 
 **Week 1 Review:** Friday, April 4, 2PM
+
 - Demo: Show Azure portal resources
 - Demo: Show database schema in Prisma Studio
 - Demo: Show types being used in code
@@ -398,6 +412,7 @@ export * from './constants';
 ## 📆 Week 2: Backend Core (April 5-11)
 
 ### Goals
+
 - ✅ Go agent can create ACI containers
 - ✅ Azure Files integration working
 - ✅ VS Code images built and tested
@@ -408,6 +423,7 @@ export * from './constants';
 **Issue:** [#15 - Go Backend Environment Manager](https://github.com/VAIBHAVSING/Dev8.dev/issues/15)
 
 **Architecture:**
+
 ```
 apps/agent/
 ├── cmd/server/main.go           # Entry point
@@ -432,6 +448,7 @@ apps/agent/
 **Tasks:**
 
 **Day 1: Project Structure & Azure Client**
+
 ```go
 □ Add Azure SDK dependencies
 require (
@@ -493,6 +510,7 @@ func (s *StorageClient) CreateFileShare(ctx context.Context, name string) error 
 ```
 
 **Day 2: Environment Service**
+
 ```go
 □ Create environment service (internal/environment/service.go)
 type Service struct {
@@ -523,7 +541,7 @@ type ServiceError struct {
 
 □ Add logging
   import "log/slog"
-  
+
   logger := slog.Default().With("service", "environment")
   logger.Info("Creating environment", "id", id)
 
@@ -534,6 +552,7 @@ type ServiceError struct {
 ```
 
 **Day 3: HTTP Server & Routes**
+
 ```go
 □ Create HTTP server (internal/server/server.go)
 type Server struct {
@@ -552,7 +571,7 @@ func (s *Server) Start() error {
 func (s *Server) setupRoutes() {
     // Health checks
     s.router.HandleFunc("/health", s.handleHealth).Methods("GET")
-    
+
     // Environment management
     s.router.HandleFunc("/environments", s.handleCreateEnvironment).Methods("POST")
     s.router.HandleFunc("/environments", s.handleListEnvironments).Methods("GET")
@@ -572,13 +591,13 @@ func AuthMiddleware(next http.Handler) http.Handler (basic for now)
 func (s *Server) handleCreateEnvironment(w http.ResponseWriter, r *http.Request) {
     var req CreateEnvironmentRequest
     json.NewDecoder(r.Body).Decode(&req)
-    
+
     env, err := s.envService.CreateEnvironment(r.Context(), req)
     if err != nil {
         respondError(w, err)
         return
     }
-    
+
     respondJSON(w, http.StatusCreated, env)
 }
 
@@ -592,6 +611,7 @@ func (s *Server) handleCreateEnvironment(w http.ResponseWriter, r *http.Request)
 ```
 
 **Deliverables:**
+
 - Go agent with Azure SDK integrated
 - Environment CRUD operations working
 - ACI containers can be created/deleted
@@ -610,6 +630,7 @@ func (s *Server) handleCreateEnvironment(w http.ResponseWriter, r *http.Request)
 **Tasks:**
 
 **Base Image**
+
 ```dockerfile
 □ Create base Dockerfile (docker/base/Dockerfile)
 FROM ubuntu:22.04
@@ -650,6 +671,7 @@ CMD ["/bin/sh", "-c", "if [ -z \"$CODE_SERVER_PASSWORD\" ] && [ -n \"$PASSWORD\"
 ```
 
 **Node.js Image**
+
 ```dockerfile
 □ Create Node.js Dockerfile (docker/nodejs/Dockerfile)
 FROM vscode-base:latest
@@ -673,6 +695,7 @@ RUN npm install
 ```
 
 **Python Image**
+
 ```dockerfile
 □ Create Python Dockerfile (docker/python/Dockerfile)
 FROM vscode-base:latest
@@ -695,6 +718,7 @@ RUN pip3 install -r requirements.txt
 ```
 
 **Go Image**
+
 ```dockerfile
 □ Create Go Dockerfile (docker/golang/Dockerfile)
 FROM vscode-base:latest
@@ -715,6 +739,7 @@ RUN go mod download
 ```
 
 **Push to Registry**
+
 ```bash
 □ Login to Azure Container Registry
   az acr login --name dev8mvpregistry
@@ -735,6 +760,7 @@ RUN go mod download
 ```
 
 **Deliverables:**
+
 - Base VS Code image created
 - Node.js, Python, Go images created
 - Images pushed to Azure Container Registry
@@ -747,6 +773,7 @@ RUN go mod download
 ---
 
 **Week 2 Completion Criteria:**
+
 - [ ] Go agent can create/delete ACI containers
 - [ ] Azure Files mounting works correctly
 - [ ] VS Code images load in < 30 seconds
@@ -755,6 +782,7 @@ RUN go mod download
 - [ ] Performance meets targets
 
 **Week 2 Review:** Friday, April 11, 2PM
+
 - Demo: Create environment via API
 - Demo: VS Code loads in browser
 - Demo: Files persist after container restart
@@ -766,6 +794,7 @@ RUN go mod download
 ## 📆 Week 3: Frontend Integration (April 12-18)
 
 ### Goals
+
 - ✅ API routes connecting to Go backend
 - ✅ Environment management UI working
 - ✅ Complete user flow functional
@@ -776,6 +805,7 @@ RUN go mod download
 **Issue:** [#9 - Next.js API Routes](https://github.com/VAIBHAVSING/Dev8.dev/issues/9)
 
 **Tasks:**
+
 ```typescript
 □ Create environment API routes
   apps/web/app/api/environments/route.ts
@@ -786,12 +816,12 @@ export async function GET() {
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  
+
   const environments = await prisma.environment.findMany({
     where: { userId: session.user.id },
     orderBy: { lastAccessedAt: 'desc' },
   });
-  
+
   return NextResponse.json({ environments });
 }
 
@@ -801,10 +831,10 @@ export async function POST(request: NextRequest) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  
+
   const body = await request.json();
   const validated = createEnvironmentSchema.parse(body);
-  
+
   // Call Go agent
   const response = await fetch('http://agent:8080/environments', {
     method: 'POST',
@@ -814,13 +844,13 @@ export async function POST(request: NextRequest) {
       ...validated,
     }),
   });
-  
+
   if (!response.ok) {
     return NextResponse.json({ error: 'Failed to create' }, { status: 500 });
   }
-  
+
   const agentData = await response.json();
-  
+
   // Save to database
   const environment = await prisma.environment.create({
     data: {
@@ -836,7 +866,7 @@ export async function POST(request: NextRequest) {
       cloudRegion: 'eastus',
     },
   });
-  
+
   return NextResponse.json({ environment }, { status: 201 });
 }
 
@@ -870,6 +900,7 @@ export async function DELETE(
 ```
 
 **Deliverables:**
+
 - API routes implement full CRUD
 - Proper authentication checks
 - Error handling and validation
@@ -884,6 +915,7 @@ export async function DELETE(
 **Issue:** [#8 - Frontend Components](https://github.com/VAIBHAVSING/Dev8.dev/issues/8)
 
 **Tasks:**
+
 ```typescript
 □ Create EnvironmentCard component
   apps/web/components/environment-card.tsx
@@ -903,7 +935,7 @@ export function EnvironmentCard({ environment, ...actions }: EnvironmentCardProp
     stopped: 'gray',
     error: 'red',
   }[environment.status];
-  
+
   return (
     <Card>
       <CardHeader>
@@ -949,13 +981,13 @@ export function CreateEnvironmentForm({ onSubmit }: Props) {
     baseImage: 'node',
     preset: 'medium',
   });
-  
+
   const presets = {
     small: { cpuCores: 1, memoryGB: 2, storageGB: 20 },
     medium: { cpuCores: 2, memoryGB: 4, storageGB: 50 },
     large: { cpuCores: 4, memoryGB: 8, storageGB: 100 },
   };
-  
+
   return (
     <form onSubmit={handleSubmit}>
       <Input
@@ -964,7 +996,7 @@ export function CreateEnvironmentForm({ onSubmit }: Props) {
         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
         required
       />
-      
+
       <Select
         label="Template"
         value={formData.baseImage}
@@ -974,7 +1006,7 @@ export function CreateEnvironmentForm({ onSubmit }: Props) {
         <Option value="python">Python</Option>
         <Option value="golang">Go</Option>
       </Select>
-      
+
       <RadioGroup
         label="Size"
         value={formData.preset}
@@ -984,7 +1016,7 @@ export function CreateEnvironmentForm({ onSubmit }: Props) {
         <Radio value="medium">Medium (2 CPU, 4GB RAM)</Radio>
         <Radio value="large">Large (4 CPU, 8GB RAM)</Radio>
       </RadioGroup>
-      
+
       <Button type="submit">Create Environment</Button>
     </form>
   );
@@ -1013,6 +1045,7 @@ export function VSCodeEmbed({ url }: { url: string }) {
 ```
 
 **Deliverables:**
+
 - Reusable UI components
 - Proper TypeScript types
 - Responsive design
@@ -1028,6 +1061,7 @@ export function VSCodeEmbed({ url }: { url: string }) {
 **Issue:** [#22 - Dashboard Pages](https://github.com/VAIBHAVSING/Dev8.dev/issues/22)
 
 **Tasks:**
+
 ```typescript
 □ Create environments list page
   apps/web/app/environments/page.tsx
@@ -1037,30 +1071,30 @@ export function VSCodeEmbed({ url }: { url: string }) {
 export default function EnvironmentsPage() {
   const { data, error, mutate } = useSWR('/api/environments');
   const [showCreateForm, setShowCreateForm] = useState(false);
-  
+
   const handleCreate = async (formData) => {
     const response = await fetch('/api/environments', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(formData),
     });
-    
+
     if (response.ok) {
       mutate(); // Refresh list
       setShowCreateForm(false);
     }
   };
-  
+
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this environment?')) return;
-    
+
     await fetch(`/api/environments/${id}`, { method: 'DELETE' });
     mutate();
   };
-  
+
   if (error) return <ErrorMessage error={error} />;
   if (!data) return <LoadingSpinner />;
-  
+
   return (
     <div>
       <Header>
@@ -1069,13 +1103,13 @@ export default function EnvironmentsPage() {
           New Environment
         </Button>
       </Header>
-      
+
       {showCreateForm && (
         <Modal onClose={() => setShowCreateForm(false)}>
           <CreateEnvironmentForm onSubmit={handleCreate} />
         </Modal>
       )}
-      
+
       {data.environments.length === 0 ? (
         <EmptyState>
           <p>No environments yet</p>
@@ -1109,10 +1143,10 @@ export default function EnvironmentsPage() {
 
 export default function IDEPage({ params }: { params: { id: string } }) {
   const { data, error } = useSWR(`/api/environments/${params.id}`);
-  
+
   if (error) return <ErrorMessage error={error} />;
   if (!data) return <LoadingSpinner />;
-  
+
   if (data.environment.status !== 'running') {
     return (
       <div>
@@ -1125,7 +1159,7 @@ export default function IDEPage({ params }: { params: { id: string } }) {
       </div>
     );
   }
-  
+
   return (
     <div className="h-screen w-screen">
       <VSCodeEmbed url={data.environment.vsCodeUrl} />
@@ -1141,6 +1175,7 @@ export default function IDEPage({ params }: { params: { id: string } }) {
 ```
 
 **Deliverables:**
+
 - Complete dashboard pages
 - Environment list view
 - Environment creation flow
@@ -1152,6 +1187,7 @@ export default function IDEPage({ params }: { params: { id: string } }) {
 ---
 
 **Week 3 Completion Criteria:**
+
 - [ ] API routes fully functional
 - [ ] Environment CRUD works from UI
 - [ ] VS Code loads in iframe
@@ -1160,6 +1196,7 @@ export default function IDEPage({ params }: { params: { id: string } }) {
 - [ ] Mobile responsive
 
 **Week 3 Review:** Friday, April 18, 2PM
+
 - Demo: Complete user flow
 - Demo: Mobile responsiveness
 - User testing session
@@ -1171,6 +1208,7 @@ export default function IDEPage({ params }: { params: { id: string } }) {
 ## 📆 Week 4: Polish & Launch (April 19-25)
 
 ### Goals
+
 - ✅ File persistence verified
 - ✅ Real-time status updates
 - ✅ Critical bugs fixed
@@ -1182,6 +1220,7 @@ export default function IDEPage({ params }: { params: { id: string } }) {
 **Issue:** [#18 - File Persistence](https://github.com/VAIBHAVSING/Dev8.dev/issues/18)
 
 **Tasks:**
+
 ```bash
 □ Test Azure Files mounting
   - Create environment
@@ -1215,6 +1254,7 @@ export default function IDEPage({ params }: { params: { id: string } }) {
 ```
 
 **Deliverables:**
+
 - File persistence 100% reliable
 - Edge cases handled
 - Monitoring in place
@@ -1229,16 +1269,17 @@ export default function IDEPage({ params }: { params: { id: string } }) {
 **Issue:** [#20 - Real-time Status](https://github.com/VAIBHAVSING/Dev8.dev/issues/20)
 
 **Tasks:**
+
 ```typescript
 □ Implement polling-based status updates
   // apps/web/hooks/use-environment-status.ts
-  
+
 export function useEnvironmentStatus(environmentId: string) {
   const { data, error } = useSWR(
     `/api/environments/${environmentId}/status`,
     { refreshInterval: 5000 } // Poll every 5 seconds
   );
-  
+
   return {
     status: data?.status,
     isLoading: !error && !data,
@@ -1268,6 +1309,7 @@ export function useEnvironmentStatus(environmentId: string) {
 ```
 
 **Deliverables:**
+
 - Real-time status updates working
 - Optimized polling
 - User notifications
@@ -1280,6 +1322,7 @@ export function useEnvironmentStatus(environmentId: string) {
 ### Day 4: Bug Fixes & Testing
 
 **Tasks:**
+
 ```bash
 □ Run comprehensive testing
   - Manual testing of all flows
@@ -1313,6 +1356,7 @@ export function useEnvironmentStatus(environmentId: string) {
 ```
 
 **Deliverables:**
+
 - All critical bugs fixed
 - Security reviewed
 - Performance optimized
@@ -1325,6 +1369,7 @@ export function useEnvironmentStatus(environmentId: string) {
 ### Day 5: Documentation & Deployment
 
 **Tasks:**
+
 ```bash
 □ Update documentation
   - README with screenshots
@@ -1364,6 +1409,7 @@ export function useEnvironmentStatus(environmentId: string) {
 ```
 
 **Deliverables:**
+
 - Documentation complete
 - Production deployment successful
 - Monitoring active
@@ -1374,6 +1420,7 @@ export function useEnvironmentStatus(environmentId: string) {
 ---
 
 **Week 4 Completion Criteria:**
+
 - [ ] File persistence 100% reliable
 - [ ] No critical bugs
 - [ ] Documentation complete
@@ -1382,6 +1429,7 @@ export function useEnvironmentStatus(environmentId: string) {
 - [ ] MVP LIVE! 🎉
 
 **Week 4 Review:** Friday, April 25, 4PM
+
 - Demo: Live production site
 - Metrics review: Performance, errors
 - User feedback review
@@ -1393,24 +1441,28 @@ export function useEnvironmentStatus(environmentId: string) {
 ## 🎯 Post-MVP Priorities
 
 ### Immediate (Week 5-6)
+
 1. Bug fixes from user feedback
 2. Performance optimization based on metrics
 3. Documentation improvements
 4. User onboarding flow refinement
 
 ### Short-term (Month 2)
+
 1. SSH access implementation
 2. Browser terminal
 3. Multiple hardware configurations
 4. Team collaboration features
 
 ### Medium-term (Month 3-4)
+
 1. GitHub Copilot integration
 2. Advanced monitoring and analytics
 3. Billing and usage tracking
 4. API for programmatic access
 
 ### Long-term (Month 5+)
+
 1. Kubernetes migration (if needed)
 2. Multi-region deployment
 3. Enterprise features
@@ -1421,6 +1473,7 @@ export function useEnvironmentStatus(environmentId: string) {
 ## 📊 Success Metrics
 
 ### Technical Metrics
+
 - Environment creation time: < 2 minutes
 - VS Code load time: < 30 seconds
 - File sync latency: < 5 seconds
@@ -1428,12 +1481,14 @@ export function useEnvironmentStatus(environmentId: string) {
 - Uptime: > 99%
 
 ### Business Metrics
+
 - New user signups: Target 100 in first month
 - Active environments: Target 50 concurrent
 - User retention: > 40% weekly retention
 - NPS score: > 50
 
 ### Quality Metrics
+
 - Test coverage: > 70%
 - Error rate: < 1%
 - Customer satisfaction: > 4.5/5
@@ -1444,26 +1499,29 @@ export function useEnvironmentStatus(environmentId: string) {
 ## 🚨 Risk Management
 
 ### Technical Risks
-| Risk | Probability | Impact | Mitigation |
-|------|------------|--------|------------|
-| Azure ACI quota limits | Medium | High | Request quota increase early |
-| File sync failures | Medium | High | Implement robust retry logic |
-| Container startup time | Low | Medium | Optimize images, consider warm pools |
-| Cost overruns | Medium | High | Set up billing alerts, resource limits |
+
+| Risk                   | Probability | Impact | Mitigation                             |
+| ---------------------- | ----------- | ------ | -------------------------------------- |
+| Azure ACI quota limits | Medium      | High   | Request quota increase early           |
+| File sync failures     | Medium      | High   | Implement robust retry logic           |
+| Container startup time | Low         | Medium | Optimize images, consider warm pools   |
+| Cost overruns          | Medium      | High   | Set up billing alerts, resource limits |
 
 ### Schedule Risks
-| Risk | Probability | Impact | Mitigation |
-|------|------------|--------|------------|
-| Azure SDK issues | Low | High | Have backup plan, vendor support |
-| Scope creep | High | High | Strict scope definition, say no |
-| Team availability | Medium | Medium | Clear responsibilities, buffer time |
-| Integration complexity | Medium | High | Early integration testing |
+
+| Risk                   | Probability | Impact | Mitigation                          |
+| ---------------------- | ----------- | ------ | ----------------------------------- |
+| Azure SDK issues       | Low         | High   | Have backup plan, vendor support    |
+| Scope creep            | High        | High   | Strict scope definition, say no     |
+| Team availability      | Medium      | Medium | Clear responsibilities, buffer time |
+| Integration complexity | Medium      | High   | Early integration testing           |
 
 ---
 
 ## 🎯 Team Structure
 
 ### Recommended Roles
+
 - **Tech Lead** (1): Architecture decisions, code review
 - **Backend Engineer** (1): Go agent, Azure integration
 - **Frontend Engineer** (1): Next.js UI, components
@@ -1471,12 +1529,14 @@ export function useEnvironmentStatus(environmentId: string) {
 - **Designer** (0.5): UI/UX, branding
 
 ### Communication
+
 - **Daily Standups**: 15 min, 9 AM
 - **Weekly Planning**: Monday, 10 AM
 - **Demo/Review**: Friday, 2 PM
 - **Retrospective**: Friday, 3 PM
 
 ### Tools
+
 - **Project Management**: GitHub Projects
 - **Communication**: Slack/Discord
 - **Code Review**: GitHub PR
@@ -1488,6 +1548,7 @@ export function useEnvironmentStatus(environmentId: string) {
 ## 📝 Definition of Done
 
 ### For Each Feature
+
 - [ ] Code written and reviewed
 - [ ] Tests written and passing
 - [ ] Documentation updated
@@ -1497,6 +1558,7 @@ export function useEnvironmentStatus(environmentId: string) {
 - [ ] Deployed to production
 
 ### For MVP Launch
+
 - [ ] All Week 1-4 tasks complete
 - [ ] Success metrics defined and tracked
 - [ ] Documentation complete

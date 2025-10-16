@@ -12,13 +12,15 @@
 The Docker Images CI/CD workflow was failing with the following issues:
 
 ### Primary Issue: Deprecated GitHub Actions
+
 ```
-Error: This request has been automatically failed because it uses a deprecated 
-version of `actions/upload-artifact: v3`. 
+Error: This request has been automatically failed because it uses a deprecated
+version of `actions/upload-artifact: v3`.
 Learn more: https://github.blog/changelog/2024-04-16-deprecation-notice-v3-of-the-artifact-actions/
 ```
 
 ### Secondary Issues:
+
 1. **Docker Build Context Error**: Dockerfiles referenced files using relative paths, but the build context was set to subdirectories
 2. **Missing Supervisor Integration**: The base Dockerfile referenced `apps/supervisor` but it wasn't being built
 
@@ -29,11 +31,13 @@ Learn more: https://github.blog/changelog/2024-04-16-deprecation-notice-v3-of-th
 ### 1. Upgraded GitHub Actions (v3 → v4)
 
 **Changed Actions:**
+
 - `actions/upload-artifact@v3` → `actions/upload-artifact@v4`
 - `actions/download-artifact@v3` → `actions/download-artifact@v4`
 - `actions/cache@v3` → `actions/cache@v4`
 
 **Files Modified:**
+
 - `.github/workflows/docker-images.yml` (4 occurrences)
 
 **Why:** GitHub deprecated v3 artifact actions as of April 16, 2024. The v4 actions provide better performance and reliability.
@@ -43,6 +47,7 @@ Learn more: https://github.blog/changelog/2024-04-16-deprecation-notice-v3-of-th
 ### 2. Fixed Docker Build Contexts
 
 #### Problem:
+
 ```yaml
 # BEFORE - Incorrect context
 context: ./docker/base
@@ -50,6 +55,7 @@ COPY entrypoint.sh /usr/local/bin/  # ❌ File not in context
 ```
 
 #### Solution:
+
 ```yaml
 # AFTER - Correct context
 context: .  # Root directory
@@ -59,13 +65,16 @@ COPY docker/base/entrypoint.sh /usr/local/bin/  # ✅ Full path from root
 **Changes Made:**
 
 **In `.github/workflows/docker-images.yml`:**
+
 - Base image build context: `./docker/base` → `.`
 - MVP image build context: `./docker/mvp` → `.`
 
 **In `docker/base/Dockerfile`:**
+
 - `COPY entrypoint.sh` → `COPY docker/base/entrypoint.sh`
 
 **In `docker/mvp/Dockerfile`:**
+
 - `COPY backup.sh` → `COPY docker/mvp/backup.sh`
 
 **Why:** Docker needs access to all files referenced in COPY commands. Using root context (`.`) allows access to all project files including `apps/supervisor`.
@@ -75,6 +84,7 @@ COPY docker/base/entrypoint.sh /usr/local/bin/  # ✅ Full path from root
 ### 3. Added Workspace Supervisor Integration
 
 **In `docker/base/Dockerfile`:**
+
 ```dockerfile
 # Multi-stage build for supervisor
 FROM golang:1.22-bullseye as supervisor-build
@@ -87,6 +97,7 @@ COPY --from=supervisor-build /src/workspace-supervisor /usr/local/bin/
 ```
 
 **In `docker/base/entrypoint.sh`:**
+
 ```bash
 # Launch workspace supervisor daemon
 if command -v workspace-supervisor >/dev/null 2>&1; then
@@ -102,12 +113,14 @@ fi
 ### 4. Enhanced Agent API with Activity Reporting
 
 **Added to `apps/agent`:**
+
 - **New Model**: `ActivityReport` struct with environment metrics
 - **New Handler**: `ReportActivity` endpoint for activity tracking
 - **New Route**: `POST /environments/{id}/activity`
 - **Database Integration**: PostgreSQL support with pgx/v5
 
 **Files Modified:**
+
 - `apps/agent/internal/models/environment.go`
 - `apps/agent/internal/handlers/environment.go`
 - `apps/agent/internal/services/environment.go`
@@ -143,6 +156,7 @@ apps/supervisor/
 ```
 
 **Features:**
+
 - ✅ Activity monitoring (IDE & SSH sessions)
 - ✅ Automatic backups to S3/Azure/Local
 - ✅ Volume snapshot management
@@ -154,6 +168,7 @@ apps/supervisor/
 ## 🔄 Complete Change Summary
 
 ### Modified Files (9):
+
 1. `.github/workflows/docker-images.yml` - Updated actions, fixed contexts
 2. `apps/agent/go.mod` - Added pgx/v5 dependency
 3. `apps/agent/go.sum` - Updated checksums
@@ -167,6 +182,7 @@ apps/supervisor/
 11. `docker/mvp/Dockerfile` - Fixed backup script path
 
 ### New Files (11):
+
 1. `apps/supervisor/cmd/supervisor/main.go`
 2. `apps/supervisor/go.mod`
 3. `apps/supervisor/go.sum`
@@ -184,6 +200,7 @@ apps/supervisor/
 ## 🚀 CI/CD Pipeline Status
 
 ### Before Fix:
+
 ```
 ❌ build-base    - FAILED (deprecated actions)
 ⚠️  build-mvp     - SKIPPED (dependency failed)
@@ -191,6 +208,7 @@ apps/supervisor/
 ```
 
 ### After Fix:
+
 ```
 🔄 build-base    - RUNNING (workflow #4)
 ⏳ build-mvp     - QUEUED
@@ -218,17 +236,20 @@ Once the workflow completes successfully:
 ## 🎯 Next Steps
 
 ### Immediate (After CI Passes):
+
 1. ✅ Verify workflow completes successfully
 2. ✅ Merge PR #39 to main
 3. ✅ Update roadmap documents
 
 ### Short-term:
+
 1. Push images to Azure Container Registry (Issue #43)
 2. Integrate with Go Agent for ACI deployment
 3. Build VSCodeProxy frontend component (Issue #42)
 4. End-to-end testing
 
 ### Long-term:
+
 1. Language-specific image variants (Issue #40)
 2. Automated backup scheduling (Issue #41)
 3. Advanced monitoring dashboard
@@ -239,6 +260,7 @@ Once the workflow completes successfully:
 ## 📖 Documentation Updated
 
 All changes align with existing documentation:
+
 - ✅ `DOCKER_MVP_STATUS.md` - MVP implementation status
 - ✅ `DOCKER_ARCHITECTURE_SOLUTION.md` - Architecture details
 - ✅ `MVP_DOCKER_PLAN.md` - MVP plan
@@ -249,6 +271,7 @@ All changes align with existing documentation:
 ## 🔐 Security Considerations
 
 ### What's Secure:
+
 - ✅ Non-root user execution
 - ✅ SSH hardening (key-only auth)
 - ✅ Environment variable-based secrets
@@ -256,6 +279,7 @@ All changes align with existing documentation:
 - ✅ Multi-stage builds (smaller attack surface)
 
 ### Future Enhancements:
+
 - ⏳ Azure Key Vault integration
 - ⏳ Network isolation (VNet)
 - ⏳ Image signing
@@ -266,12 +290,14 @@ All changes align with existing documentation:
 ## 💡 Key Insights
 
 ### What Worked Well:
+
 1. **Multi-stage Docker builds** - Clean separation of build and runtime
 2. **Root context strategy** - Allows access to all project files
 3. **Supervisor integration** - Clean daemon architecture
 4. **Activity reporting** - Simple yet effective monitoring
 
 ### Lessons Learned:
+
 1. **Always use latest GitHub Actions** - v3 was deprecated suddenly
 2. **Docker context matters** - Plan file structure for multi-stage builds
 3. **Test locally first** - Catches context issues before CI
@@ -282,14 +308,17 @@ All changes align with existing documentation:
 ## 📊 Impact Analysis
 
 ### Build Time Improvement:
+
 - **Before**: Failed immediately (deprecated action)
 - **After**: ~15-20 minutes (full build with caching)
 
 ### Image Sizes (Expected):
+
 - **dev8-base**: ~757MB (verified locally)
 - **dev8-mvp**: ~2.5GB (includes all languages)
 
 ### Cost Impact:
+
 - **Registry Storage**: ~$5/month for 10 images
 - **CI Minutes**: ~20 min/build × 10 builds/day = 200 min/day
 - **Total**: Within free tier for MVP
@@ -307,6 +336,7 @@ All changes align with existing documentation:
 ## 📞 Support
 
 For questions or issues:
+
 - **GitHub Issue**: #39 (Docker Images with DevCopilot Agent)
 - **Discord**: https://discord.gg/xE2u4b8S8g
 - **Email**: vpatil5212@gmail.com

@@ -31,10 +31,12 @@ agent/
 ## 📚 Documentation
 
 ### Active
+
 - ✅ [AGENT.md](./AGENT.md) - Project context and conventions
 - ✅ [roadmaps/ANALYSIS_SUMMARY.md](./roadmaps/ANALYSIS_SUMMARY.md) - Current priorities and recommendations
 
 ### Directories
+
 - 📁 [guides/](./guides/) - Technical implementation guides (add as needed)
 - 📁 [architecture/](./architecture/) - Architecture documentation now available (see [architecture/README.md](./architecture/README.md), SYSTEM_ARCHITECTURE.md, TECHNICAL_DECISIONS.md)
 
@@ -46,4 +48,4 @@ agent/
 
 ---
 
-*For detailed specifications, see `../.kiro/specs/`*
+_For detailed specifications, see `../.kiro/specs/`_

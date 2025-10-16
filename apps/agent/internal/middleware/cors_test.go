@@ -8,18 +8,18 @@ import (
 
 func TestCORSMiddleware(t *testing.T) {
 	allowedOrigins := []string{"https://dev8.dev", "http://localhost:3000"}
-	
+
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
-	
+
 	corsHandler := CORSMiddleware(allowedOrigins)(handler)
 
 	tests := []struct {
-		name           string
-		origin         string
-		method         string
-		wantAllowed    bool
+		name        string
+		origin      string
+		method      string
+		wantAllowed bool
 	}{
 		{
 			name:        "allowed origin",
@@ -51,7 +51,7 @@ func TestCORSMiddleware(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(tt.method, "/test", nil)
 			req.Header.Set("Origin", tt.origin)
-			
+
 			if tt.method == "OPTIONS" {
 				req.Header.Set("Access-Control-Request-Method", "POST")
 			}
@@ -60,7 +60,7 @@ func TestCORSMiddleware(t *testing.T) {
 			corsHandler.ServeHTTP(w, req)
 
 			allowOrigin := w.Header().Get("Access-Control-Allow-Origin")
-			
+
 			if tt.wantAllowed {
 				if allowOrigin != tt.origin && allowOrigin != "*" {
 					t.Errorf("CORS header not set for allowed origin %s", tt.origin)
@@ -76,11 +76,11 @@ func TestCORSMiddleware(t *testing.T) {
 
 func TestCORSMiddleware_NoOrigin(t *testing.T) {
 	allowedOrigins := []string{"https://dev8.dev"}
-	
+
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
-	
+
 	corsHandler := CORSMiddleware(allowedOrigins)(handler)
 
 	req := httptest.NewRequest("GET", "/test", nil)

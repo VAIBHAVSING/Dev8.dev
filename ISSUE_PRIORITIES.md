@@ -10,9 +10,11 @@
 ## 🚨 IMMEDIATE ACTION REQUIRED
 
 ### 1. Merge Infrastructure Work from Branch
+
 **Branch:** `copilot/fix-1836f2ed-8765-4421-814b-ad3b24f6cb10`
 
 **What's on the branch:**
+
 - ✅ BUSINESS_STRATEGY_CHANGES.md
 - ✅ CLI_INTEGRATION_GUIDE.md
 - ✅ DEMO_PRICING.md
@@ -24,6 +26,7 @@
 **Why:** Critical business strategy documents not on main
 
 **How:**
+
 ```bash
 git checkout main
 git merge copilot/fix-1836f2ed-8765-4421-814b-ad3b24f6cb10
@@ -34,7 +37,8 @@ git push origin main
 
 ## 🔴 PRIORITY 1 - START THIS WEEK
 
-### Issue #35: Multi-CLI Environment Support ⭐ NEW  
+### Issue #35: Multi-CLI Environment Support ⭐ NEW
+
 **Link:** https://github.com/VAIBHAVSING/Dev8.dev/issues/35  
 **Effort:** 3-4 weeks  
 **Impact:** 🔴 CRITICAL - Revenue & Differentiation
@@ -42,12 +46,14 @@ git push origin main
 **What:** Add Claude CLI, GitHub Copilot CLI, Gemini CLI support
 
 **Why Start Now:**
+
 - Core business differentiation
 - Professional+ tier revenue ($99/mo)
 - First-mover advantage
 - Comprehensive plan already created
 
 **This Week:**
+
 - [ ] Choose first CLI (recommend: Claude)
 - [ ] Create Docker image
 - [ ] Test locally
@@ -57,7 +63,8 @@ git push origin main
 
 ---
 
-### Issue #27: Azure Infrastructure Setup  
+### Issue #27: Azure Infrastructure Setup
+
 **Link:** https://github.com/VAIBHAVSING/Dev8.dev/issues/27  
 **Effort:** 2-3 days  
 **Impact:** 🔴 CRITICAL - Foundation
@@ -65,11 +72,13 @@ git push origin main
 **What:** Set up Azure Container Instances
 
 **Current Status:**
+
 - ✅ Code created (in private repo)
 - ✅ Documentation complete
 - ⚠️ Needs production testing
 
 **This Week:**
+
 - [ ] Test infrastructure deployment
 - [ ] Document any issues
 - [ ] Mark as complete
@@ -78,7 +87,8 @@ git push origin main
 
 ---
 
-### Issue #14: Database Schema  
+### Issue #14: Database Schema
+
 **Link:** https://github.com/VAIBHAVSING/Dev8.dev/issues/14  
 **Effort:** 1-2 days  
 **Impact:** 🟡 HIGH - Foundation
@@ -86,6 +96,7 @@ git push origin main
 **What:** PostgreSQL schema for environments
 
 **This Week:**
+
 - [ ] Design schema (users, environments, configs)
 - [ ] Create Prisma models
 - [ ] Write migrations
@@ -97,7 +108,8 @@ git push origin main
 
 ## 🟡 PRIORITY 2 - THIS MONTH
 
-### Issue #15: Go Backend Service  
+### Issue #15: Go Backend Service
+
 **Link:** https://github.com/VAIBHAVSING/Dev8.dev/issues/15  
 **Effort:** 3-4 days  
 **Impact:** 🔴 CRITICAL - Core Logic
@@ -105,6 +117,7 @@ git push origin main
 **What:** Build environment manager service in Go
 
 **Next 2 Weeks:**
+
 - [ ] Set up Go project structure
 - [ ] Integrate Azure SDK
 - [ ] Implement CRUD operations
@@ -115,7 +128,8 @@ git push origin main
 
 ---
 
-### Issue #13: Environment Types Package  
+### Issue #13: Environment Types Package
+
 **Link:** https://github.com/VAIBHAVSING/Dev8.dev/issues/13  
 **Effort:** 1 day  
 **Impact:** 🟡 HIGH - Type Safety
@@ -123,10 +137,12 @@ git push origin main
 **What:** Shared TypeScript types + Zod validation
 
 **Current Status:**
+
 - ✅ Basic types exist (PR #33)
 - ⚠️ Need CLI types
 
 **This Week:**
+
 - [ ] Add CLI types (vscode, claude, copilot, gemini)
 - [ ] Add Zod validation
 - [ ] Update docs
@@ -135,7 +151,8 @@ git push origin main
 
 ---
 
-### Issue #21: VS Code Base Docker Image  
+### Issue #21: VS Code Base Docker Image
+
 **Link:** https://github.com/VAIBHAVSING/Dev8.dev/issues/21  
 **Effort:** 1 day  
 **Impact:** 🟡 HIGH - Foundation
@@ -143,6 +160,7 @@ git push origin main
 **What:** Base code-server image with common tools
 
 **Next Week:**
+
 - [ ] Create Dockerfile
 - [ ] Add common tools (git, vim, curl)
 - [ ] Test locally
@@ -154,7 +172,8 @@ git push origin main
 
 ## 🟢 PRIORITY 3 - NEXT MONTH
 
-### Issue #30: Frontend Dashboard  
+### Issue #30: Frontend Dashboard
+
 **Link:** https://github.com/VAIBHAVSING/Dev8.dev/issues/30  
 **Effort:** 1 week  
 **Impact:** 🟡 MEDIUM - UX
@@ -162,6 +181,7 @@ git push origin main
 **What:** User-facing dashboard with real-time updates
 
 **Week 3-4:**
+
 - [ ] Design UI/UX
 - [ ] Build components
 - [ ] Integrate with backend
@@ -171,7 +191,8 @@ git push origin main
 
 ---
 
-### Issue #29: TypeScript SDK  
+### Issue #29: TypeScript SDK
+
 **Link:** https://github.com/VAIBHAVSING/Dev8.dev/issues/29  
 **Effort:** 2-3 days  
 **Impact:** 🟡 MEDIUM - DX
@@ -179,6 +200,7 @@ git push origin main
 **What:** Type-safe API client + React hooks
 
 **Week 3:**
+
 - [ ] Design SDK API
 - [ ] Implement HTTP client
 - [ ] Create React hooks
@@ -188,7 +210,8 @@ git push origin main
 
 ---
 
-### Issue #26: Design System  
+### Issue #26: Design System
+
 **Link:** https://github.com/VAIBHAVSING/Dev8.dev/issues/26  
 **Effort:** 1 week  
 **Impact:** 🟢 MEDIUM - Consistency
@@ -196,6 +219,7 @@ git push origin main
 **What:** UI component library
 
 **Week 4:**
+
 - [ ] Set up Storybook
 - [ ] Build base components
 - [ ] Add theme support
@@ -241,6 +265,7 @@ git push origin main
 ## 📅 4-WEEK ROADMAP
 
 ### Week 1 (Oct 2-8) - Foundation
+
 **Focus:** Infrastructure + Database + Types
 
 1. ✅ Fix README
@@ -254,6 +279,7 @@ git push origin main
 ---
 
 ### Week 2 (Oct 9-15) - Backend Core
+
 **Focus:** Go Service + CLI Docker Images
 
 1. ▶️ Issue #15: Go backend service
@@ -266,6 +292,7 @@ git push origin main
 ---
 
 ### Week 3 (Oct 16-22) - Integration
+
 **Focus:** Frontend + More CLIs
 
 1. ▶️ Issue #30: Frontend dashboard (basic)
@@ -278,6 +305,7 @@ git push origin main
 ---
 
 ### Week 4 (Oct 23-29) - Polish
+
 **Focus:** Testing + Documentation + Launch
 
 1. ▶️ Bug fixes
@@ -292,18 +320,21 @@ git push origin main
 ## 📊 METRICS TO TRACK
 
 ### This Week
+
 - [ ] Infrastructure deployed and tested
 - [ ] Database schema complete
 - [ ] CLI types added
 - [ ] 3 issues closed
 
 ### This Month
+
 - [ ] Backend service functional
 - [ ] 1 CLI working (Claude)
 - [ ] Basic frontend dashboard
 - [ ] 10+ issues closed
 
 ### Success Criteria
+
 - Users can create VS Code environments
 - Users can create Claude CLI environments
 - Environments persist data
@@ -315,18 +346,21 @@ git push origin main
 ## 🎯 RECOMMENDED FOCUS
 
 ### Today (Oct 2)
+
 1. ✅ Fix README (DONE)
 2. ▶️ Merge infrastructure branch
 3. ▶️ Review PR #6
 4. ▶️ Start Issue #14 (Database schema)
 
 ### This Week
+
 1. ▶️ Issue #14: Database schema
 2. ▶️ Issue #13: CLI types
 3. ▶️ Issue #27: Verify Azure
 4. ▶️ Issue #35: Plan Claude CLI
 
 ### Next Week
+
 1. ▶️ Issue #15: Go backend
 2. ▶️ Issue #35: Claude Docker image
 3. ▶️ Issue #21: VS Code image
@@ -337,10 +371,12 @@ git push origin main
 ## 🚧 BLOCKERS & RISKS
 
 ### Current Blockers
+
 - ❌ Infrastructure work not on main (FIX: merge branch)
 - ❌ Azure infrastructure not tested (FIX: deploy and test)
 
 ### Potential Risks
+
 - ⚠️ Azure costs during testing (MITIGATION: use dev tier, monitor costs)
 - ⚠️ CLI API key management (MITIGATION: Azure Key Vault)
 - ⚠️ Docker image sizes (MITIGATION: multi-stage builds)
@@ -367,4 +403,3 @@ git push origin main
 
 **Status:** ✅ Reviewed, prioritized, ready for action  
 **Next Step:** Merge infrastructure branch and start Issue #14 ▶️
-

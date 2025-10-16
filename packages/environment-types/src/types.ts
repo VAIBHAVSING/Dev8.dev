@@ -1,44 +1,51 @@
 /**
  * Cloud provider types (matching Prisma schema enum)
  */
-export type CloudProvider = 'AZURE' | 'AWS' | 'GCP';
+export type CloudProvider = "AZURE" | "AWS" | "GCP";
 
 /**
  * Environment status types (matching Prisma schema enum)
  */
 export type EnvironmentStatus =
-  | 'CREATING'
-  | 'STARTING'
-  | 'RUNNING'
-  | 'STOPPING'
-  | 'STOPPED'
-  | 'ERROR'
-  | 'DELETING';
+  | "CREATING"
+  | "STARTING"
+  | "RUNNING"
+  | "STOPPING"
+  | "STOPPED"
+  | "ERROR"
+  | "DELETING";
 
 /**
  * Instance types for resource optimization
  */
-export type InstanceType = 'balanced' | 'compute-optimized' | 'memory-optimized';
+export type InstanceType =
+  | "balanced"
+  | "compute-optimized"
+  | "memory-optimized";
 
 /**
  * Template categories
  */
-export type TemplateCategory = 'language' | 'framework' | 'devops' | 'specialized';
+export type TemplateCategory =
+  | "language"
+  | "framework"
+  | "devops"
+  | "specialized";
 
 /**
  * Base image templates (extended set)
  */
 export type BaseImage =
-  | 'node'
-  | 'python'
-  | 'golang'
-  | 'rust'
-  | 'java'
-  | 'dotnet'
-  | 'php'
-  | 'fullstack-react'
-  | 'docker'
-  | 'data-science';
+  | "node"
+  | "python"
+  | "golang"
+  | "rust"
+  | "java"
+  | "dotnet"
+  | "php"
+  | "fullstack-react"
+  | "docker"
+  | "data-science";
 
 /**
  * Hardware configuration interface
@@ -55,7 +62,7 @@ export interface HardwareConfig {
  */
 export interface PortConfig {
   port: number;
-  protocol: 'http' | 'https' | 'tcp' | 'udp';
+  protocol: "http" | "https" | "tcp" | "udp";
   description?: string;
 }
 
@@ -227,32 +234,41 @@ export interface ResourceUsageSummary {
 /**
  * Type guards for runtime type checking
  */
-export function isValidEnvironmentStatus(status: string): status is EnvironmentStatus {
-  return ['CREATING', 'STARTING', 'RUNNING', 'STOPPING', 'STOPPED', 'ERROR', 'DELETING'].includes(
-    status
-  );
+export function isValidEnvironmentStatus(
+  status: string,
+): status is EnvironmentStatus {
+  return [
+    "CREATING",
+    "STARTING",
+    "RUNNING",
+    "STOPPING",
+    "STOPPED",
+    "ERROR",
+    "DELETING",
+  ].includes(status);
 }
 
-export function isValidCloudProvider(provider: string): provider is CloudProvider {
-  return ['AZURE', 'AWS', 'GCP'].includes(provider);
+export function isValidCloudProvider(
+  provider: string,
+): provider is CloudProvider {
+  return ["AZURE", "AWS", "GCP"].includes(provider);
 }
 
 export function isValidInstanceType(type: string): type is InstanceType {
-  return ['balanced', 'compute-optimized', 'memory-optimized'].includes(type);
+  return ["balanced", "compute-optimized", "memory-optimized"].includes(type);
 }
 
 export function isValidBaseImage(image: string): image is BaseImage {
   return [
-    'node',
-    'python',
-    'golang',
-    'rust',
-    'java',
-    'dotnet',
-    'php',
-    'fullstack-react',
-    'docker',
-    'data-science',
+    "node",
+    "python",
+    "golang",
+    "rust",
+    "java",
+    "dotnet",
+    "php",
+    "fullstack-react",
+    "docker",
+    "data-science",
   ].includes(image);
 }
-

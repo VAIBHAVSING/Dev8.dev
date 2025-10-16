@@ -51,9 +51,9 @@ func TestNewStorageClient(t *testing.T) {
 
 func TestIsNotFoundError(t *testing.T) {
 	tests := []struct {
-		name    string
-		err     error
-		want    bool
+		name string
+		err  error
+		want bool
 	}{
 		{
 			name: "nil error",
@@ -100,7 +100,7 @@ func TestIsNotFoundError(t *testing.T) {
 func TestStorageClientMethods(t *testing.T) {
 	// Skip actual Azure calls in tests
 	t.Skip("Skipping Azure storage tests - requires Azure credentials")
-	
+
 	client := &StorageClient{
 		accountName: "test",
 		accountKey:  "key",

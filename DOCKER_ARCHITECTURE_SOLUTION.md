@@ -1,4 +1,5 @@
 # 🏗️ Docker Architecture Solution for Dev8.dev
+
 **Comprehensive Guide for Issue #21 - VS Code Server Docker Images**
 
 > **Status:** 📋 Architecture & Implementation Strategy  
@@ -11,6 +12,7 @@
 ## 🎯 Executive Summary
 
 ### Your Requirements Checklist
+
 - ✅ **Platforms**: code-server, VS Code Remote Desktop, web terminal, SSH
 - ✅ **Languages**: Node.js, Bun, Python, Go, Rust, and more
 - ✅ **Tools**: GitHub CLI, Copilot CLI, Claude CLI, Git, Vim, Neovim
@@ -51,17 +53,17 @@ Cold Start Time: ~25-30 seconds
 
 ### Why Multi-Layer > Monolithic?
 
-| Criterion | Multi-Layer ✅ | Monolithic ❌ |
-|-----------|---------------|---------------|
-| **Image Size** | 1.5-2.5GB | 4.5GB |
-| **Build Time (cached)** | 3-5 min | 25-30 min |
-| **Build Time (fresh)** | 15 min | 30 min |
-| **Cache Hit Rate** | 80-90% | 10-20% |
-| **Flexibility** | High (pick languages) | None |
-| **Maintenance** | Easy (update layers) | Hard (rebuild all) |
-| **Security** | Smaller surface | Larger surface |
-| **ACI Cost/1000 users** | $197/month | $450/month |
-| **Update Speed** | 3-8 min/layer | 30 min always |
+| Criterion               | Multi-Layer ✅        | Monolithic ❌      |
+| ----------------------- | --------------------- | ------------------ |
+| **Image Size**          | 1.5-2.5GB             | 4.5GB              |
+| **Build Time (cached)** | 3-5 min               | 25-30 min          |
+| **Build Time (fresh)**  | 15 min                | 30 min             |
+| **Cache Hit Rate**      | 80-90%                | 10-20%             |
+| **Flexibility**         | High (pick languages) | None               |
+| **Maintenance**         | Easy (update layers)  | Hard (rebuild all) |
+| **Security**            | Smaller surface       | Larger surface     |
+| **ACI Cost/1000 users** | $197/month            | $450/month         |
+| **Update Speed**        | 3-8 min/layer         | 30 min always      |
 
 **Result**: Multi-Layer approach saves **$253/month per 1000 users** (56% reduction) and is 5x faster to maintain.
 
@@ -124,6 +126,7 @@ USER dev8
 ```
 
 **Key Design Decisions**:
+
 1. ✅ **Ubuntu 22.04 LTS**: 5 years support, familiar, extensive package ecosystem
 2. ✅ **Non-root user**: Security best practice, prevents container escape exploitation
 3. ✅ **SSH hardening**: Key-only auth, custom port, root disabled
@@ -345,15 +348,15 @@ fi
 # 2. Configure Git - GitHub (if token provided)
 if [ -n "$GITHUB_TOKEN" ]; then
     echo "🔗 Configuring GitHub authentication..."
-    
+
     # Git credential helper
     git config --global credential.helper store
     echo "https://${GITHUB_TOKEN}@github.com" > ~/.git-credentials
     chmod 600 ~/.git-credentials
-    
+
     # GitHub CLI authentication
     echo "$GITHUB_TOKEN" | gh auth login --with-token 2>/dev/null || true
-    
+
     echo "✅ GitHub authenticated"
 fi
 
@@ -409,14 +412,14 @@ fi
 # 9. Initialize workspace (if first time)
 if [ ! -f /workspace/.dev8_initialized ]; then
     echo "📦 First-time workspace initialization..."
-    
+
     # Create common directories
     mkdir -p /workspace/{projects,tmp}
-    
+
     # Mark as initialized
     touch /workspace/.dev8_initialized
     echo "$(date)" > /workspace/.dev8_initialized
-    
+
     echo "✅ Workspace initialized"
 fi
 
@@ -539,6 +542,7 @@ trivy image --severity HIGH,CRITICAL --exit-code 1 dev8/fullstack:latest
 ### Strategy: External Polling from Go Agent
 
 **Why this approach for MVP?**
+
 - ✅ Simpler than in-container supervisor
 - ✅ Centralized policy management
 - ✅ No additional container complexity
@@ -596,9 +600,9 @@ type ActivityMonitorService struct {
 func (s *ActivityMonitorService) Start(ctx context.Context) {
     ticker := time.NewTicker(30 * time.Second)
     defer ticker.Stop()
-    
+
     log.Println("Activity Monitor started (checking every 30s)")
-    
+
     for {
         select {
         case <-ticker.C:
@@ -617,26 +621,26 @@ func (s *ActivityMonitorService) checkInactiveContainers(ctx context.Context) {
         log.Printf("Error fetching active containers: %v", err)
         return
     }
-    
+
     for _, container := range containers {
         // Check if container is idle
         idleDuration := time.Since(container.LastActivityAt)
-        
+
         if idleDuration > 2*time.Minute {
-            log.Printf("Container %s idle for %s, stopping...", 
+            log.Printf("Container %s idle for %s, stopping...",
                 container.ID, idleDuration)
-            
+
             // Stop container
             if err := s.azure.StopContainer(ctx, container.ID); err != nil {
                 log.Printf("Error stopping container %s: %v", container.ID, err)
                 continue
             }
-            
+
             // Update database
             if err := s.db.UpdateContainerStatus(ctx, container.ID, "stopped", "idle_timeout"); err != nil {
                 log.Printf("Error updating container status: %v", err)
             }
-            
+
             log.Printf("✅ Container %s stopped due to inactivity", container.ID)
         }
     }
@@ -645,13 +649,13 @@ func (s *ActivityMonitorService) checkInactiveContainers(ctx context.Context) {
 // Activity tracker API endpoint
 func (h *Handler) TrackActivity(c *gin.Context) {
     environmentID := c.Param("id")
-    
+
     // Update last activity timestamp
     if err := h.db.UpdateActivityTimestamp(c.Request.Context(), environmentID); err != nil {
         c.JSON(500, gin.H{"error": "Failed to update activity"})
         return
     }
-    
+
     c.JSON(200, gin.H{"status": "ok"})
 }
 ```
@@ -667,13 +671,13 @@ export function useActivityTracker(environmentId: string) {
     // Track activity on user interaction
     const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
     let lastTracked = Date.now();
-    
+
     const trackActivity = async () => {
       // Throttle to max once per 30 seconds
       if (Date.now() - lastTracked < 30000) return;
-      
+
       lastTracked = Date.now();
-      
+
       try {
         await fetch(`/api/environments/${environmentId}/activity`, {
           method: 'POST',
@@ -682,11 +686,11 @@ export function useActivityTracker(environmentId: string) {
         console.error('Failed to track activity:', error);
       }
     };
-    
+
     events.forEach(event => {
       document.addEventListener(event, trackActivity);
     });
-    
+
     return () => {
       events.forEach(event => {
         document.removeEventListener(event, trackActivity);
@@ -698,7 +702,7 @@ export function useActivityTracker(environmentId: string) {
 // Usage in VSCodeProxy component
 export function VSCodeProxy({ environmentId, url }: Props) {
   useActivityTracker(environmentId);
-  
+
   return (
     <iframe src={url} className="w-full h-full" />
   );
@@ -783,10 +787,9 @@ ipAddress:
 # Production (Virtual Network)
 networkProfile:
   id: /subscriptions/{sub}/resourceGroups/{rg}/providers/Microsoft.Network/networkProfiles/dev8-profile
-  
+
 subnetIds:
   - /subscriptions/{sub}/resourceGroups/{rg}/providers/Microsoft.Network/virtualNetworks/dev8-vnet/subnets/containers
-
 # Then use Azure Application Gateway or Load Balancer for ingress
 ```
 
@@ -800,12 +803,11 @@ volumes:
       shareName: workspace-${userId}
       storageAccountName: dev8storage
       storageAccountKey: ${keyVault.storageKey}
-      
+
 # Mounted in container
 volumeMounts:
   - name: workspace
     mountPath: /workspace
-    
 # What persists:
 # ✅ /workspace/projects (user code)
 # ✅ /workspace/.vscode (settings)
@@ -819,7 +821,6 @@ volumeMounts:
 ```yaml
 # Use burstable tier for cost savings
 sku: Standard
-
 # Stop containers when idle (auto-shutdown)
 # User pays only for running time
 
@@ -897,6 +898,7 @@ COPY entrypoint.sh /usr/local/bin/
 **Goal**: Get code-server + SSH working with basic images
 
 **Day 1-2: Base Image**
+
 - [ ] Create `docker/base/Dockerfile`
 - [ ] Add SSH server configuration
 - [ ] Test locally with `docker run`
@@ -904,6 +906,7 @@ COPY entrypoint.sh /usr/local/bin/
 - [ ] Document build process
 
 **Day 3-4: Language Variants**
+
 - [ ] Create `docker/nodejs/Dockerfile`
 - [ ] Create `docker/python/Dockerfile`
 - [ ] Add code-server to both
@@ -911,6 +914,7 @@ COPY entrypoint.sh /usr/local/bin/
 - [ ] Test locally with sample projects
 
 **Day 5: Go Agent Integration**
+
 - [ ] Update Go agent to deploy containers
 - [ ] Add environment variables for secrets
 - [ ] Test end-to-end: create → start → connect
@@ -918,6 +922,7 @@ COPY entrypoint.sh /usr/local/bin/
 - [ ] Test SSH and code-server access
 
 **Day 6-7: Frontend Integration**
+
 - [ ] Build environment creation form
 - [ ] Add secret input fields (GitHub token, SSH key)
 - [ ] Create VSCodeProxy component
@@ -925,6 +930,7 @@ COPY entrypoint.sh /usr/local/bin/
 - [ ] Write user documentation
 
 **Success Criteria**:
+
 - ✅ Container starts in < 30 seconds
 - ✅ SSH works from local terminal
 - ✅ code-server accessible via browser
@@ -938,18 +944,21 @@ COPY entrypoint.sh /usr/local/bin/
 **Goal**: Add activity monitoring and auto-shutdown
 
 **Day 1-2: Activity Monitoring**
+
 - [ ] Implement ActivityMonitorService in Go agent
 - [ ] Add database schema for last_activity_at
 - [ ] Create API endpoint POST /environments/:id/activity
 - [ ] Test activity tracking
 
 **Day 3-4: Auto-Shutdown**
+
 - [ ] Implement container stop logic
 - [ ] Add frontend activity tracker
 - [ ] Test 2-minute idle timeout
 - [ ] Add grace period for save operations
 
 **Day 5: Polish & Testing**
+
 - [ ] Add user notifications (container stopping soon)
 - [ ] Test edge cases (network disconnect, browser close)
 - [ ] Load testing (10+ concurrent users)
@@ -962,18 +971,21 @@ COPY entrypoint.sh /usr/local/bin/
 **Goal**: Security, monitoring, documentation
 
 **Day 1-2: Security Hardening**
+
 - [ ] Add image vulnerability scanning to CI/CD
 - [ ] Implement Azure Key Vault integration
 - [ ] Add audit logging for container access
 - [ ] Security review and penetration testing
 
 **Day 3-4: Monitoring & Alerting**
+
 - [ ] Add Azure Monitor integration
 - [ ] Create dashboards (container health, user activity)
 - [ ] Set up alerts (high memory, CPU, failures)
 - [ ] Add error tracking (Sentry or similar)
 
 **Day 5: Documentation**
+
 - [ ] User guide (how to use workspaces)
 - [ ] Developer guide (how to build images)
 - [ ] Operations guide (troubleshooting)
@@ -984,6 +996,7 @@ COPY entrypoint.sh /usr/local/bin/
 ### Week 4+: Advanced Features (Post-MVP)
 
 **Optional enhancements**:
+
 - [ ] Golang supervisor (replace bash entrypoint)
 - [ ] Additional language variants (Go, Rust, Java, PHP)
 - [ ] Web terminal (xterm.js + WebSocket bridge)
@@ -1000,6 +1013,7 @@ COPY entrypoint.sh /usr/local/bin/
 ### For Implementation Team
 
 **Phase 1: Setup (1 hour)**
+
 ```bash
 # 1. Create directory structure
 mkdir -p docker/{base,nodejs,python,fullstack,scripts}
@@ -1012,6 +1026,7 @@ az acr login --name dev8registry
 ```
 
 **Phase 2: Build Images (2-3 hours)**
+
 ```bash
 # 1. Build base image
 cd docker/base
@@ -1030,6 +1045,7 @@ docker push dev8registry.azurecr.io/python:latest
 ```
 
 **Phase 3: Test Locally (1 hour)**
+
 ```bash
 # Run Node.js variant locally
 docker run -it --rm \
@@ -1048,6 +1064,7 @@ docker run -it --rm \
 ```
 
 **Phase 4: Go Agent Integration (2-3 hours)**
+
 ```go
 // Update apps/agent/internal/services/environment.go
 imageTag := "dev8registry.azurecr.io/nodejs:latest"
@@ -1055,6 +1072,7 @@ imageTag := "dev8registry.azurecr.io/nodejs:latest"
 ```
 
 **Phase 5: Frontend Integration (2-3 hours)**
+
 ```typescript
 // Create environment creation form
 // Add secret input fields
@@ -1066,6 +1084,7 @@ imageTag := "dev8registry.azurecr.io/nodejs:latest"
 ## ✅ Success Metrics
 
 ### Performance Targets
+
 - ✅ Container startup: < 30 seconds
 - ✅ Image size: < 2.5GB per variant
 - ✅ Memory usage: < 4GB per container
@@ -1074,12 +1093,14 @@ imageTag := "dev8registry.azurecr.io/nodejs:latest"
 - ✅ code-server load time: < 3 seconds
 
 ### Reliability Targets
+
 - ✅ Container uptime: 99.9%
 - ✅ Auto-shutdown accuracy: 100%
 - ✅ Secret injection success: 100%
 - ✅ File persistence: 100%
 
 ### Cost Targets
+
 - ✅ Image storage cost: < $200/month (1000 users)
 - ✅ Container runtime cost: ~$60/user/month (8h/day)
 
@@ -1090,6 +1111,7 @@ imageTag := "dev8registry.azurecr.io/nodejs:latest"
 ### Common Issues
 
 **Issue 1: Image build fails**
+
 ```bash
 # Check Docker daemon
 docker info
@@ -1102,6 +1124,7 @@ docker build --no-cache --progress=plain .
 ```
 
 **Issue 2: SSH connection refused**
+
 ```bash
 # Check SSH server is running
 docker exec -it container_name ps aux | grep sshd
@@ -1114,6 +1137,7 @@ docker exec -it container_name cat /home/dev8/.ssh/authorized_keys
 ```
 
 **Issue 3: code-server not accessible**
+
 ```bash
 # Check code-server is running
 docker exec -it container_name ps aux | grep code-server
@@ -1130,6 +1154,7 @@ docker port container_name 8080
 ## 📚 Additional Resources
 
 ### References
+
 - **code-server**: https://github.com/coder/code-server
 - **Azure Container Instances**: https://docs.microsoft.com/azure/container-instances/
 - **Docker Multi-Stage Builds**: https://docs.docker.com/build/building/multi-stage/
@@ -1137,6 +1162,7 @@ docker port container_name 8080
 - **Gitpod Workspaces**: https://www.gitpod.io/docs/configure/workspaces
 
 ### Related Documentation
+
 - [MVP_DOCKER_PLAN.md](./MVP_DOCKER_PLAN.md) - Original MVP plan
 - [WORKSPACE_MANAGER_PLAN.md](./WORKSPACE_MANAGER_PLAN.md) - Detailed supervisor design
 - Issue #21 - GitHub issue tracking this work

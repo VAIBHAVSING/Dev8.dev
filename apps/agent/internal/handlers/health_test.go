@@ -8,7 +8,7 @@ import (
 
 func TestHealthHandler_HealthCheck(t *testing.T) {
 	handler := NewHealthHandler()
-	
+
 	req := httptest.NewRequest("GET", "/health", nil)
 	w := httptest.NewRecorder()
 
@@ -26,7 +26,7 @@ func TestHealthHandler_HealthCheck(t *testing.T) {
 
 func TestHealthHandler_ReadinessCheck(t *testing.T) {
 	handler := NewHealthHandler()
-	
+
 	req := httptest.NewRequest("GET", "/ready", nil)
 	w := httptest.NewRecorder()
 
@@ -39,7 +39,7 @@ func TestHealthHandler_ReadinessCheck(t *testing.T) {
 
 func TestHealthHandler_LivenessCheck(t *testing.T) {
 	handler := NewHealthHandler()
-	
+
 	req := httptest.NewRequest("GET", "/live", nil)
 	w := httptest.NewRecorder()
 

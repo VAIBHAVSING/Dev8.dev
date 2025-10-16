@@ -30,13 +30,17 @@ This is a workspace package and is automatically available to other packages in 
 ### Import Types
 
 ```typescript
-import type { Environment, EnvironmentStatus, CreateEnvironmentRequest } from '@repo/environment-types';
+import type {
+  Environment,
+  EnvironmentStatus,
+  CreateEnvironmentRequest,
+} from "@repo/environment-types";
 
 const environment: Environment = {
-  id: 'cuid',
-  userId: 'user123',
-  name: 'my-dev-env',
-  status: 'running',
+  id: "cuid",
+  userId: "user123",
+  name: "my-dev-env",
+  status: "running",
   // ...
 };
 ```
@@ -44,12 +48,12 @@ const environment: Environment = {
 ### Use Validation Schemas
 
 ```typescript
-import { createEnvironmentSchema } from '@repo/environment-types';
+import { createEnvironmentSchema } from "@repo/environment-types";
 
 // Validate user input
 const result = createEnvironmentSchema.safeParse({
-  name: 'my-environment',
-  baseImage: 'node',
+  name: "my-environment",
+  baseImage: "node",
   cpuCores: 2,
   memoryGB: 4,
   storageGB: 50,
@@ -63,7 +67,11 @@ if (!result.success) {
 ### Use Constants
 
 ```typescript
-import { HARDWARE_PRESETS, BASE_IMAGE_LABELS, STATUS_COLORS } from '@repo/environment-types';
+import {
+  HARDWARE_PRESETS,
+  BASE_IMAGE_LABELS,
+  STATUS_COLORS,
+} from "@repo/environment-types";
 
 // Get preset configuration
 const mediumConfig = HARDWARE_PRESETS.medium; // { cpuCores: 2, memoryGB: 4, storageGB: 50 }

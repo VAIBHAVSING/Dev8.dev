@@ -125,11 +125,11 @@ Dev8.dev provides pre-configured Docker images with **DevCopilot Agent** for aut
 
 ### Available Images
 
-| Image | Languages | Size | Features |
-|-------|-----------|------|----------|
-| **dev8-nodejs** | Node.js, Bun | ~1.8GB | code-server, GitHub Copilot, pnpm, yarn |
-| **dev8-python** | Python 3.11 | ~2.2GB | code-server, Jupyter, poetry, black, pytest |
-| **dev8-fullstack** | Node, Python, Go, Rust | ~3.5GB | All languages + code-server + Copilot |
+| Image              | Languages              | Size   | Features                                    |
+| ------------------ | ---------------------- | ------ | ------------------------------------------- |
+| **dev8-nodejs**    | Node.js, Bun           | ~1.8GB | code-server, GitHub Copilot, pnpm, yarn     |
+| **dev8-python**    | Python 3.11            | ~2.2GB | code-server, Jupyter, poetry, black, pytest |
+| **dev8-fullstack** | Node, Python, Go, Rust | ~3.5GB | All languages + code-server + Copilot       |
 
 ### Quick Test
 
@@ -148,6 +148,7 @@ docker run -it --rm \
 ```
 
 **DevCopilot Agent** automatically:
+
 - ✅ Authenticates GitHub CLI & installs Copilot
 - ✅ Configures Git credentials
 - ✅ Sets up SSH keys

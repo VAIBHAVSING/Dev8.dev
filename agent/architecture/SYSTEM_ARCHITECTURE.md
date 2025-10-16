@@ -13,6 +13,7 @@ Dev8.dev is a cloud-based IDE platform built as a **Codespace alternative** usin
 ## 🎯 Architecture Goals
 
 ### Primary Goals
+
 1. **Fast Time-to-Market**: Launch MVP in 4 weeks
 2. **Scalability**: Support from 10 to 10,000+ users
 3. **Cost-Efficiency**: Pay-per-use Azure ACI model
@@ -20,6 +21,7 @@ Dev8.dev is a cloud-based IDE platform built as a **Codespace alternative** usin
 5. **Data Persistence**: Never lose user work
 
 ### Non-Goals (MVP)
+
 - ❌ Multi-cloud support (Azure only initially)
 - ❌ Kubernetes orchestration (use ACI serverless)
 - ❌ Custom IDE (use proven code-server)
@@ -35,34 +37,34 @@ graph TB
         A[Web Browser]
         A1[Mobile Browser]
     end
-    
+
     subgraph "Frontend - Next.js 15"
         B[Next.js App Router]
         B1[Dashboard Pages]
         B2[Authentication]
         B3[VS Code Proxy]
     end
-    
+
     subgraph "API Layer"
         C[Next.js API Routes]
         C1["/api/environments"]
         C2["/api/auth"]
     end
-    
+
     subgraph "Backend - Go Agent"
         D[HTTP Server]
         D1[Environment Manager]
         D2[Azure ACI Client]
         D3[Storage Manager]
     end
-    
+
     subgraph "Data Layer"
         E[PostgreSQL]
         E1[Users & Auth]
         E2[Environments]
         E3[Resource Usage]
     end
-    
+
     subgraph "Azure Cloud"
         F[Azure Container Instances]
         F1[VS Code Container]
@@ -72,7 +74,7 @@ graph TB
         H[Azure Container Registry]
         H1[Custom Images]
     end
-    
+
     A --> B
     A1 --> B
     B --> C
@@ -92,6 +94,7 @@ graph TB
 ### 1. Frontend Layer (apps/web)
 
 #### Technology Stack
+
 - **Framework:** Next.js 15 (App Router)
 - **Language:** TypeScript 5.x (strict mode)
 - **Styling:** Tailwind CSS 3.x
@@ -100,6 +103,7 @@ graph TB
 - **UI Components:** Custom components in packages/ui
 
 #### Structure
+
 ```
 apps/web/
 ├── app/                          # Next.js App Router
@@ -132,6 +136,7 @@ apps/web/
 ```
 
 #### Key Features
+
 - ✅ **Authentication**: OAuth (Google, GitHub) + Credentials
 - ✅ **Protected Routes**: Middleware-based route protection
 - ✅ **Type Safety**: End-to-end TypeScript types
@@ -143,6 +148,7 @@ apps/web/
 ### 2. Backend Layer (apps/agent)
 
 #### Technology Stack
+
 - **Language:** Go 1.24
 - **HTTP Server:** net/http (standard library)
 - **Database:** PostgreSQL via Go driver (future)
@@ -150,6 +156,7 @@ apps/web/
 - **Testing:** Go testing + testify
 
 #### Current Structure
+
 ```
 apps/agent/
 ├── main.go                       # HTTP server with /health, /hello
@@ -159,6 +166,7 @@ apps/agent/
 ```
 
 #### Planned Structure (MVP)
+
 ```
 apps/agent/
 ├── cmd/
@@ -186,6 +194,7 @@ apps/agent/
 ```
 
 #### Planned Dependencies
+
 ```go
 require (
     github.com/Azure/azure-sdk-for-go/sdk/azcore v1.9.0
@@ -203,6 +212,7 @@ require (
 ### 3. Shared Packages (packages/)
 
 #### Current Packages
+
 ```
 packages/
 ├── ui/                           # Shared React components
@@ -220,6 +230,7 @@ packages/
 ```
 
 #### Planned Packages (MVP)
+
 ```
 packages/
 ├── environment-types/            # Shared types (NEW)
@@ -244,6 +255,7 @@ packages/
 #### Database: PostgreSQL 15+
 
 **Current Schema (apps/web/prisma/schema.prisma)**
+
 ```prisma
 ✅ User              # User accounts
 ✅ Account           # OAuth provider accounts
@@ -253,6 +265,7 @@ packages/
 ```
 
 **Planned Schema Extensions (MVP)**
+
 ```prisma
 🔄 Environment       # Cloud environments
    - id, userId, name, status
@@ -285,6 +298,7 @@ packages/
 #### Components
 
 **Azure Container Instances (ACI)**
+
 - Purpose: Run VS Code server containers
 - Configuration: Serverless, pay-per-use
 - Resources: Configurable CPU/Memory per container
@@ -292,6 +306,7 @@ packages/
 - Lifecycle: Create → Start → Stop → Delete
 
 **Azure Files**
+
 - Purpose: Persistent workspace storage
 - Configuration: Standard LRS storage
 - Mounting: CIFS/SMB mount to ACI containers
@@ -299,12 +314,14 @@ packages/
 - Lifecycle: Survives container restarts
 
 **Azure Container Registry**
+
 - Purpose: Store custom VS Code images
 - Images: Node.js, Python, Go development environments
 - Authentication: Admin credentials or RBAC
 - Updates: Automated builds via GitHub Actions (future)
 
 **Resource Organization**
+
 ```
 Azure Subscription
 └── Resource Group: dev8-mvp-rg
@@ -338,7 +355,7 @@ sequenceDiagram
     User->>Browser: Access protected page
     Browser->>NextJS: GET /dashboard
     NextJS->>NextAuth: Check session
-    
+
     alt No Session
         NextAuth-->>Browser: Redirect to /signin
         Browser->>NextAuth: Login (OAuth/Credentials)
@@ -401,7 +418,7 @@ sequenceDiagram
     GoAgent-->>NextAPI: Environment ID + Status
     NextAPI-->>Frontend: Environment created
     Frontend->>Frontend: Poll for ready status
-    
+
     loop Every 5 seconds
         Frontend->>NextAPI: GET /api/environments/{id}
         NextAPI->>GoAgent: GET /environments/{id}/status
@@ -410,7 +427,7 @@ sequenceDiagram
         GoAgent-->>NextAPI: Status: Running
         NextAPI-->>Frontend: Environment ready
     end
-    
+
     Frontend->>Frontend: Show VS Code iframe
 ```
 
@@ -448,6 +465,7 @@ Creating → Starting → Running ⇄ Stopped → Deleting → Deleted
 ```
 
 **State Descriptions:**
+
 - **Creating**: Provisioning Azure resources
 - **Starting**: Container is starting up
 - **Running**: VS Code accessible, user can work
@@ -457,6 +475,7 @@ Creating → Starting → Running ⇄ Stopped → Deleting → Deleted
 - **Deleted**: All resources removed
 
 ### State Transitions
+
 ```typescript
 interface StateTransition {
   from: EnvironmentStatus;
@@ -466,11 +485,31 @@ interface StateTransition {
 }
 
 const transitions: StateTransition[] = [
-  { from: 'creating', to: 'running', action: 'complete', validations: ['container_ready'] },
-  { from: 'creating', to: 'error', action: 'fail', validations: [] },
-  { from: 'running', to: 'stopped', action: 'stop', validations: ['user_owns'] },
-  { from: 'stopped', to: 'starting', action: 'start', validations: ['user_owns'] },
-  { from: 'stopped', to: 'deleting', action: 'delete', validations: ['user_owns'] },
+  {
+    from: "creating",
+    to: "running",
+    action: "complete",
+    validations: ["container_ready"],
+  },
+  { from: "creating", to: "error", action: "fail", validations: [] },
+  {
+    from: "running",
+    to: "stopped",
+    action: "stop",
+    validations: ["user_owns"],
+  },
+  {
+    from: "stopped",
+    to: "starting",
+    action: "start",
+    validations: ["user_owns"],
+  },
+  {
+    from: "stopped",
+    to: "deleting",
+    action: "delete",
+    validations: ["user_owns"],
+  },
   // ... etc
 ];
 ```
@@ -482,6 +521,7 @@ const transitions: StateTransition[] = [
 ### Optimization Strategies
 
 #### Frontend Performance
+
 - **Code Splitting**: Lazy load environment management pages
 - **Image Optimization**: Next.js Image component
 - **Static Generation**: Landing pages pre-rendered
@@ -489,6 +529,7 @@ const transitions: StateTransition[] = [
 - **Bundle Size**: Tree shaking, dynamic imports
 
 #### Backend Performance
+
 - **Connection Pooling**: Reuse Azure client connections
 - **Concurrent Operations**: Go goroutines for parallel tasks
 - **Caching**: In-memory cache for frequently accessed data
@@ -496,12 +537,14 @@ const transitions: StateTransition[] = [
 - **Compression**: Gzip/Brotli response compression
 
 #### Database Performance
+
 - **Indexes**: Strategic indexes on user_id, status
 - **Query Optimization**: Efficient joins and filters
 - **Connection Pooling**: PgBouncer for connection management
 - **Read Replicas**: Separate read/write (Phase 2)
 
 #### Azure Performance
+
 - **Regional Deployment**: Deploy close to users
 - **Container Warm-up**: Keep containers warm (future)
 - **Storage Tiers**: Use appropriate storage tiers
@@ -514,18 +557,21 @@ const transitions: StateTransition[] = [
 ### Horizontal Scalability
 
 **Current Limits (MVP)**
+
 - Frontend: Vercel auto-scaling
 - Backend: Single Go instance (Docker/Cloud Run)
 - Database: Single PostgreSQL instance
 - Azure ACI: Per-user containers (naturally isolated)
 
 **Phase 2 Scaling**
+
 - Multiple Go agent instances behind load balancer
 - Database connection pooling
 - Redis for session storage
 - Prometheus + Grafana monitoring
 
 **Phase 3 Scaling**
+
 - Kubernetes for Go agents
 - Database read replicas
 - Multi-region deployment
@@ -534,6 +580,7 @@ const transitions: StateTransition[] = [
 ### Vertical Scalability
 
 **Container Resources**
+
 - Small: 1 CPU, 2GB RAM ($0.10/hour)
 - Medium: 2 CPU, 4GB RAM ($0.20/hour)
 - Large: 4 CPU, 8GB RAM ($0.40/hour)
@@ -545,20 +592,21 @@ const transitions: StateTransition[] = [
 
 ### Key Architectural Decisions
 
-| Decision | Choice | Rationale | Alternatives Considered |
-|----------|--------|-----------|------------------------|
-| **Monorepo** | Turborepo | Shared code, unified tooling | Polyrepo, Nx |
-| **Frontend** | Next.js 15 | App Router, React 19, RSC | Remix, SvelteKit |
-| **Backend** | Go | Performance, Azure SDK support | Node.js, Python |
-| **Database** | PostgreSQL | Proven, scalable, Prisma support | MySQL, MongoDB |
-| **Container Platform** | Azure ACI | Serverless, simple, pay-per-use | Kubernetes, Docker |
-| **Storage** | Azure Files | Native ACI integration | S3, NFS |
-| **IDE** | code-server | Proven, VS Code compatible | Theia, Cloud9 |
-| **Auth** | NextAuth.js | Easy OAuth, session management | Auth0, Clerk |
+| Decision               | Choice      | Rationale                        | Alternatives Considered |
+| ---------------------- | ----------- | -------------------------------- | ----------------------- |
+| **Monorepo**           | Turborepo   | Shared code, unified tooling     | Polyrepo, Nx            |
+| **Frontend**           | Next.js 15  | App Router, React 19, RSC        | Remix, SvelteKit        |
+| **Backend**            | Go          | Performance, Azure SDK support   | Node.js, Python         |
+| **Database**           | PostgreSQL  | Proven, scalable, Prisma support | MySQL, MongoDB          |
+| **Container Platform** | Azure ACI   | Serverless, simple, pay-per-use  | Kubernetes, Docker      |
+| **Storage**            | Azure Files | Native ACI integration           | S3, NFS                 |
+| **IDE**                | code-server | Proven, VS Code compatible       | Theia, Cloud9           |
+| **Auth**               | NextAuth.js | Easy OAuth, session management   | Auth0, Clerk            |
 
 ### Why Azure ACI (Not Kubernetes)?
 
 **Pros:**
+
 - ✅ Serverless (no cluster management)
 - ✅ Fast provisioning (< 60s)
 - ✅ Pay-per-use (no idle costs)
@@ -566,6 +614,7 @@ const transitions: StateTransition[] = [
 - ✅ Perfect for MVP validation
 
 **Cons:**
+
 - ❌ Less control than Kubernetes
 - ❌ Fewer advanced features
 - ❌ May need migration for huge scale
@@ -577,6 +626,7 @@ const transitions: StateTransition[] = [
 ## 🎯 Architecture Roadmap
 
 ### Phase 1: MVP (Current - 4 weeks)
+
 ```
 Week 1: Foundation
 ├── Azure infrastructure setup
@@ -600,6 +650,7 @@ Week 4: Polish
 ```
 
 ### Phase 2: Feature Expansion (Months 2-3)
+
 - SSH access to environments
 - Browser terminal integration
 - Multiple hardware configurations
@@ -608,6 +659,7 @@ Week 4: Polish
 - Usage analytics and billing
 
 ### Phase 3: Enterprise Scale (Months 4-6)
+
 - Kubernetes migration (optional)
 - Multi-region deployment
 - Advanced monitoring and alerting
@@ -622,6 +674,7 @@ Week 4: Polish
 ### Metrics to Track
 
 **Application Metrics**
+
 - Environment creation time
 - Environment start/stop latency
 - API response times
@@ -629,6 +682,7 @@ Week 4: Polish
 - Active user count
 
 **Infrastructure Metrics**
+
 - ACI container health
 - Azure Files usage
 - Database query performance
@@ -636,6 +690,7 @@ Week 4: Polish
 - Cost per user
 
 **Business Metrics**
+
 - New user signups
 - Active environments
 - Average session duration
@@ -661,7 +716,9 @@ Log aggregation (ELK / Datadog)
 ## 🔮 Future Architecture Considerations
 
 ### When to Migrate to Kubernetes?
+
 **Signals:**
+
 - > 1000 concurrent environments
 - Need for complex orchestration
 - Advanced networking requirements
@@ -669,7 +726,9 @@ Log aggregation (ELK / Datadog)
 - Fine-grained resource control required
 
 ### When to Add Multi-Cloud?
+
 **Signals:**
+
 - Customer demand for specific providers
 - Better pricing on other clouds
 - Geographic expansion needs
@@ -677,7 +736,9 @@ Log aggregation (ELK / Datadog)
 - Vendor diversification strategy
 
 ### When to Build Custom IDE?
+
 **Signals:**
+
 - code-server limitations blocking features
 - Need for proprietary extensions
 - Significant differentiation opportunity

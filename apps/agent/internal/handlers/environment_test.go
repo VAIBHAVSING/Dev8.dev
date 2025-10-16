@@ -7,8 +7,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gorilla/mux"
 	"github.com/VAIBHAVSING/Dev8.dev/apps/agent/internal/models"
+	"github.com/gorilla/mux"
 )
 
 func TestRespondWithJSON(t *testing.T) {
@@ -124,11 +124,11 @@ func TestEnvironmentHandler_Routes(t *testing.T) {
 	handler := &EnvironmentHandler{}
 
 	tests := []struct {
-		name       string
-		method     string
-		path       string
-		body       interface{}
-		setupVars  func(*http.Request) *http.Request
+		name      string
+		method    string
+		path      string
+		body      interface{}
+		setupVars func(*http.Request) *http.Request
 	}{
 		{
 			name:   "list environments",

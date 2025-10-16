@@ -195,6 +195,7 @@ func (s *EnvironmentService) GetEnvironment(ctx context.Context, envID, userID s
 #### 1. Create Environment Flow
 
 **Client → Next.js:**
+
 ```http
 POST https://dev8.dev/api/environments
 Authorization: Bearer <JWT>
@@ -211,6 +212,7 @@ Content-Type: application/json
 ```
 
 **Next.js → Go Agent:**
+
 ```http
 POST http://localhost:8080/api/v1/environments
 Content-Type: application/json
@@ -227,6 +229,7 @@ Content-Type: application/json
 ```
 
 **Go Agent → Azure SDK:**
+
 ```go
 // Creates Azure Container Instance
 azureClient.CreateContainerGroup(ctx, "eastus", "rg-eastus", "container-name", spec)
@@ -236,6 +239,7 @@ storageClient.CreateFileShare(ctx, "workspace-abc123-env456", 20)
 ```
 
 **Go Agent → Next.js Response:**
+
 ```json
 {
   "id": "env-1234567890",
@@ -255,6 +259,7 @@ storageClient.CreateFileShare(ctx, "workspace-abc123-env456", 20)
 ```
 
 **Next.js → PostgreSQL:**
+
 ```sql
 INSERT INTO environments (
   id, user_id, name, status, cloud_provider, cloud_region,
@@ -276,6 +281,7 @@ INSERT INTO environments (
 ### Next.js Backend Responsibilities
 
 ✅ **Data Management**
+
 - User authentication & authorization
 - Environment CRUD operations in database
 - User profiles and preferences
@@ -283,6 +289,7 @@ INSERT INTO environments (
 - Resource quotas and limits
 
 ✅ **Business Logic**
+
 - Validate user requests
 - Enforce resource limits
 - Calculate pricing
@@ -290,6 +297,7 @@ INSERT INTO environments (
 - Audit logging
 
 ✅ **API Gateway**
+
 - Authenticate requests
 - Rate limiting
 - Request transformation
@@ -299,6 +307,7 @@ INSERT INTO environments (
 ### Go Agent Responsibilities
 
 ✅ **Infrastructure Orchestration**
+
 - Azure Container Instance provisioning
 - Azure File Share creation/deletion
 - Container lifecycle (start/stop)
@@ -306,18 +315,21 @@ INSERT INTO environments (
 - Multi-region deployment
 
 ✅ **Cloud Integration**
+
 - Azure SDK operations
 - Retry logic for cloud operations
 - Timeout management
 - Error handling for cloud failures
 
 ✅ **Stateless Operations**
+
 - No database access
 - No session management
 - Pure infrastructure API
 - Idempotent operations
 
 ❌ **NOT Responsible For**
+
 - User authentication
 - Data persistence
 - Business logic
@@ -357,11 +369,12 @@ export async function POST(request: NextRequest) {
   const userEnvCount = await prisma.environment.count({
     where: { userId: session.user.id, status: { in: ["RUNNING", "STOPPED"] } },
   });
-  
-  if (userEnvCount >= 5) { // Max 5 environments per user
+
+  if (userEnvCount >= 5) {
+    // Max 5 environments per user
     return NextResponse.json(
       { error: "Environment limit reached" },
-      { status: 429 }
+      { status: 429 },
     );
   }
 
@@ -426,7 +439,7 @@ export async function POST(request: NextRequest) {
     console.error("Failed to create environment:", error);
     return NextResponse.json(
       { error: "Failed to provision environment" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -599,6 +612,7 @@ type StartEnvironmentRequest struct {
 ### Q: Why isn't the Go Agent directly connected to PostgreSQL?
 
 **A:** Separation of concerns. The Go Agent is purely for infrastructure orchestration. Connecting it to PostgreSQL would:
+
 - Create tight coupling
 - Complicate deployment
 - Require database schema sync across services
@@ -607,11 +621,13 @@ type StartEnvironmentRequest struct {
 ### Q: Should we switch to gRPC?
 
 **A:** Not now. REST/HTTP is:
+
 - Simpler to implement and debug
 - Works seamlessly with Next.js
 - Sufficient for MVP performance
 
 Consider gRPC in Phase 3 if:
+
 - Latency becomes critical
 - Need bidirectional streaming
 - Want type-safe contracts
@@ -656,6 +672,7 @@ The Dev8 architecture intentionally separates concerns:
 - **REST/HTTP**: Simple, reliable communication protocol
 
 This design provides:
+
 - ✅ Clear separation of concerns
 - ✅ Independent scalability
 - ✅ Simple deployment

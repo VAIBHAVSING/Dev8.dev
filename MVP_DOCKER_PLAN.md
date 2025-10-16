@@ -1,4 +1,5 @@
 # 🚀 Dev8.dev MVP Implementation Plan
+
 **Complete Docker Images + Secret Management for Production**
 
 > **Based on:** Complete codebase review + All requirements  
@@ -46,6 +47,7 @@ User → Browser/SSH → ACI Container
 ```
 
 **Secrets Flow:**
+
 ```
 User creates environment with secrets
     ↓
@@ -65,6 +67,7 @@ User connects (everything works!)
 ## 📦 Implementation: Single Fullstack Image
 
 ### Why One Image for MVP?
+
 - ✅ Faster to build and maintain
 - ✅ Users get ALL languages without switching
 - ✅ Simpler deployment
@@ -73,6 +76,7 @@ User connects (everything works!)
 ### Image: `dev8-fullstack` (~4-5GB)
 
 **Includes:**
+
 - ✅ All languages: Node.js, Bun, Python, Go, Rust
 - ✅ All AI CLIs: Copilot, Claude, Gemini
 - ✅ Git providers: GitHub CLI, GitLab CLI
@@ -110,6 +114,7 @@ User connects (everything works!)
 ## 📋 4-Day Implementation Plan
 
 ### Day 1: Docker Image (6-8 hours)
+
 - [ ] Create `docker/fullstack/Dockerfile`
 - [ ] Create `docker/fullstack/entrypoint.sh`
 - [ ] Build and test locally
@@ -118,6 +123,7 @@ User connects (everything works!)
 - [ ] Push to Azure Container Registry
 
 ### Day 2: Go Agent Updates (4-6 hours)
+
 - [ ] Update models with secret fields
 - [ ] Update Azure client for env vars
 - [ ] Update service to use new image
@@ -125,6 +131,7 @@ User connects (everything works!)
 - [ ] Verify secret injection works
 
 ### Day 3: Frontend Integration (4-6 hours)
+
 - [ ] Build environment creation form
 - [ ] Add secret input fields
 - [ ] Integrate with Go Agent API
@@ -132,6 +139,7 @@ User connects (everything works!)
 - [ ] Handle errors gracefully
 
 ### Day 4: Testing & Polish (2-4 hours)
+
 - [ ] E2E test: create → connect → code
 - [ ] Test all Git providers
 - [ ] Test all AI CLIs
@@ -144,6 +152,7 @@ User connects (everything works!)
 ## 🎯 Success Metrics
 
 After implementation, verify:
+
 - ✅ Environment creates in < 60 seconds
 - ✅ Git works (push/pull) without manual setup
 - ✅ SSH works from local terminal
@@ -157,12 +166,14 @@ After implementation, verify:
 ## 🔐 Security Approach
 
 **Secrets Management:**
+
 - Secrets passed as environment variables (SecureValue in ACI)
 - Not baked into Docker images
 - Can be stored in database (encrypted)
 - Can upgrade to Azure Key Vault in Phase 2
 
 **Network Security:**
+
 - SSH: Key-based auth only
 - VS Code: Can add auth layer via proxy
 - All traffic over HTTPS/SSH
@@ -211,6 +222,7 @@ export AZURE_CONTAINER_REGISTRY="yourregistry.azurecr.io"
 ## 🔄 Phase 2 Enhancements (After MVP)
 
 Once you have users and feedback:
+
 - Split into specialized images (optimize size)
 - Add Golang supervisor (advanced monitoring)
 - Add Azure Key Vault integration

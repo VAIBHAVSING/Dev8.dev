@@ -20,12 +20,12 @@ Total: 1.2GB - 2.5GB per variant
 
 ### Why Not Monolithic (One Big Image)?
 
-| Multi-Layer | Monolithic |
-|-------------|------------|
+| Multi-Layer          | Monolithic         |
+| -------------------- | ------------------ |
 | 1.8GB (Node.js only) | 4.5GB (everything) |
-| 5-min rebuild | 30-min rebuild |
-| $197/month storage | $450/month storage |
-| Pick your stack | Get everything |
+| 5-min rebuild        | 30-min rebuild     |
+| $197/month storage   | $450/month storage |
+| Pick your stack      | Get everything     |
 
 **Savings**: 56% cost reduction + 5x faster updates
 
@@ -34,6 +34,7 @@ Total: 1.2GB - 2.5GB per variant
 ## Implementation Plan (3 Weeks)
 
 ### Week 1: Core Images (MVP)
+
 - **Day 1-2**: Build base image + Node.js variant
 - **Day 3-4**: Add Python variant + code-server
 - **Day 5**: Integrate with Go agent + test on ACI
@@ -44,6 +45,7 @@ Total: 1.2GB - 2.5GB per variant
 ---
 
 ### Week 2: Auto-Shutdown
+
 - **Day 1-2**: Implement activity monitoring in Go agent
 - **Day 3-4**: Add auto-shutdown logic (2-min timeout)
 - **Day 5**: Testing + edge cases
@@ -53,6 +55,7 @@ Total: 1.2GB - 2.5GB per variant
 ---
 
 ### Week 3: Production Ready
+
 - **Day 1-2**: Security hardening + vulnerability scanning
 - **Day 3-4**: Monitoring + alerting setup
 - **Day 5**: Documentation + user guide
@@ -78,6 +81,7 @@ func checkInactiveContainers() {
 ```
 
 **Why this approach?**
+
 - ✅ No supervisor needed (simpler)
 - ✅ Centralized control in Go agent
 - ✅ Easy to change timeout
@@ -223,17 +227,20 @@ docker push dev8registry.azurecr.io/nodejs:latest
 ## Connection Methods Supported
 
 ### 1. Browser VS Code (code-server)
+
 ```
 URL: http://{container}.azurecontainer.io:8080
 No installation required
 ```
 
 ### 2. SSH Terminal
+
 ```bash
 ssh -p 2222 -i ~/.ssh/dev8_key dev8@{container}.azurecontainer.io
 ```
 
 ### 3. VS Code Remote-SSH Extension
+
 ```
 Install Remote-SSH extension
 Connect to host via SSH
@@ -241,6 +248,7 @@ Full VS Code experience
 ```
 
 ### 4. Web Terminal (Future)
+
 ```
 Frontend component using xterm.js
 WebSocket bridge to SSH
@@ -251,16 +259,19 @@ WebSocket bridge to SSH
 ## Success Metrics
 
 ### Performance
+
 - ✅ Startup: < 30 seconds
 - ✅ Image size: < 2.5GB
 - ✅ Memory: < 4GB per container
 - ✅ Build time: < 5 minutes (cached)
 
 ### Cost
+
 - ✅ Storage: < $200/month (1000 users)
 - ✅ Runtime: ~$60/user/month (8h/day usage)
 
 ### Reliability
+
 - ✅ Uptime: 99.9%
 - ✅ Auto-shutdown accuracy: 100%
 - ✅ File persistence: 100%
@@ -296,6 +307,7 @@ WebSocket bridge to SSH
 ## 🆚 Detailed Comparison: Your Initial Ideas vs. Recommended Solution
 
 ### Your Original Idea
+
 ```
 Step 1: Ubuntu + Supervisor (Golang)
 Step 2: Languages (Node, Python, npm, pip)
@@ -308,13 +320,13 @@ Supervisor: Optional for MVP, auto-shutdown feature
 
 We **agree** with your layered approach! Here's how we refined it:
 
-| Your Idea | Our Refinement | Why |
-|-----------|----------------|-----|
-| Step 1: Ubuntu + Supervisor | **Layer 1: Ubuntu + SSH** (supervisor optional) | Start simple, add supervisor in Phase 2 |
-| Step 2: Languages | **Layer 2: Create VARIANTS** (Node OR Python OR Full-stack) | Users pick their stack = smaller images |
-| Step 3: Dev tools | **Layer 3: code-server + Vim/Neovim** | Same, optimized build order |
-| Step 4: CLI tools + credentials | **Layer 4: CLI tools + Runtime secrets via env vars** | Credentials at runtime (secure) |
-| Auto-shutdown (supervisor) | **External polling for MVP, supervisor Phase 2** | Faster to ship, add supervisor later |
+| Your Idea                       | Our Refinement                                              | Why                                     |
+| ------------------------------- | ----------------------------------------------------------- | --------------------------------------- |
+| Step 1: Ubuntu + Supervisor     | **Layer 1: Ubuntu + SSH** (supervisor optional)             | Start simple, add supervisor in Phase 2 |
+| Step 2: Languages               | **Layer 2: Create VARIANTS** (Node OR Python OR Full-stack) | Users pick their stack = smaller images |
+| Step 3: Dev tools               | **Layer 3: code-server + Vim/Neovim**                       | Same, optimized build order             |
+| Step 4: CLI tools + credentials | **Layer 4: CLI tools + Runtime secrets via env vars**       | Credentials at runtime (secure)         |
+| Auto-shutdown (supervisor)      | **External polling for MVP, supervisor Phase 2**            | Faster to ship, add supervisor later    |
 
 ### Key Differences (Improvements)
 
@@ -364,18 +376,19 @@ We **agree** with your layered approach! Here's how we refined it:
 
 ### 1. Battle-Tested by Industry Leaders
 
-| Company | Similar Approach | What They Use |
-|---------|-----------------|---------------|
-| **GitHub Codespaces** | Multi-container + dev container spec | Kubernetes pods |
-| **Gitpod** | Workspace images + Go supervisor | Custom workspace images |
-| **Coder** | code-server in Docker | Single-container workspaces |
-| **JupyterHub** | User-specific containers | Spawner pattern |
+| Company               | Similar Approach                     | What They Use               |
+| --------------------- | ------------------------------------ | --------------------------- |
+| **GitHub Codespaces** | Multi-container + dev container spec | Kubernetes pods             |
+| **Gitpod**            | Workspace images + Go supervisor     | Custom workspace images     |
+| **Coder**             | code-server in Docker                | Single-container workspaces |
+| **JupyterHub**        | User-specific containers             | Spawner pattern             |
 
 **Your approach is aligned with industry best practices!** ✅
 
 ### 2. Optimized for Your Use Case
 
 You mentioned:
+
 - ✅ **Azure Container Instances**: Our architecture is optimized for ACI
 - ✅ **Multiple connection methods**: code-server, SSH, VS Code Remote-SSH all supported
 - ✅ **Multiple languages**: Variants allow users to choose their stack
@@ -421,10 +434,10 @@ Scale (Month 6):
 Your instincts were correct! You already had the right architecture in mind.
 
 We just:
+
 - Added implementation details
 - Optimized for cost and performance
 - Provided security best practices
 - Created a realistic timeline
 
 **Start building today with confidence!** 💪
-

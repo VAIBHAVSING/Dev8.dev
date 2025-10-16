@@ -14,17 +14,17 @@ func TestLoad(t *testing.T) {
 		{
 			name: "valid configuration",
 			envVars: map[string]string{
-				"AGENT_PORT":           "8080",
-				"DATABASE_URL":         "postgres://localhost/test",
+				"AGENT_PORT":            "8080",
+				"DATABASE_URL":          "postgres://localhost/test",
 				"AZURE_SUBSCRIPTION_ID": "test-sub-id",
-				"AZURE_DEFAULT_REGION": "eastus",
+				"AZURE_DEFAULT_REGION":  "eastus",
 			},
 			wantErr: false,
 		},
 		{
 			name: "missing database URL",
 			envVars: map[string]string{
-				"AGENT_PORT":           "8080",
+				"AGENT_PORT":            "8080",
 				"AZURE_SUBSCRIPTION_ID": "test-sub-id",
 			},
 			wantErr: true,
@@ -123,10 +123,10 @@ func TestGetEnabledRegions(t *testing.T) {
 
 func TestLoadRegions(t *testing.T) {
 	tests := []struct {
-		name        string
-		regionsEnv  string
-		wantCount   int
-		wantErr     bool
+		name       string
+		regionsEnv string
+		wantCount  int
+		wantErr    bool
 	}{
 		{
 			name:       "valid multi-region config",

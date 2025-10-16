@@ -51,7 +51,7 @@ func TestNewClient_InitializesACIClients(t *testing.T) {
 	// Note: This will fail without valid Azure credentials
 	// In a real test environment, you'd use mocks or Azure SDK test helpers
 	_, err := NewClient(cfg)
-	
+
 	// We expect an error in test environment without credentials
 	if err == nil {
 		t.Log("NewClient() succeeded - must be running with Azure credentials")

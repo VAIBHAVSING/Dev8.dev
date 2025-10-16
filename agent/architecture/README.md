@@ -5,11 +5,13 @@ Comprehensive architecture documentation for Dev8.dev cloud IDE platform.
 ## 📚 Documents
 
 ### [SYSTEM_ARCHITECTURE.md](./SYSTEM_ARCHITECTURE.md)
+
 **Status:** ✅ Complete
 
 Complete system architecture covering all components, layers, and technical specifications.
 
 **Key Sections:**
+
 - 🏛️ High-level architecture
 - 📦 Component architecture
 - 🔐 Security and authentication
@@ -20,11 +22,13 @@ Complete system architecture covering all components, layers, and technical spec
 ---
 
 ### [TECHNICAL_DECISIONS.md](./TECHNICAL_DECISIONS.md)
+
 **Status:** ✅ Complete
 
 Architecture Decision Records (ADRs) for all major technical decisions with context, rationale, and trade-offs.
 
 **ADRs Documented:**
+
 - ADR-001 through ADR-010 (10 decisions)
 - Context and rationale for each
 - Alternatives considered

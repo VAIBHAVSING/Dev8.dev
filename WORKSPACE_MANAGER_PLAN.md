@@ -1,4 +1,5 @@
 # 🚀 Workspace/Supervisor Manager Implementation Plan
+
 **Comprehensive Plan for Issue #21 Enhancement**
 
 > **Status:** 📝 Planning Complete  
@@ -159,6 +160,7 @@ dev8-base (800MB)
 **File:** `docker/base/Dockerfile`
 
 **Contents:**
+
 - Ubuntu 22.04 LTS (slim variant)
 - code-server 4.19.1
 - OpenSSH server configured for key-based auth
@@ -170,6 +172,7 @@ dev8-base (800MB)
 **Size Target:** ~800MB
 
 **Key Optimizations:**
+
 - Multi-stage build (build supervisor separately)
 - Remove apt cache after installation
 - Use --no-install-recommends
@@ -233,6 +236,7 @@ CMD ["--config", "/etc/dev8/supervisor.yaml"]
 **File:** `docker/nodejs/Dockerfile`
 
 **Additional Tools:**
+
 - Node.js 20 LTS (via NodeSource)
 - npm, pnpm, yarn package managers
 - TypeScript, tsx (for TypeScript execution)
@@ -242,6 +246,7 @@ CMD ["--config", "/etc/dev8/supervisor.yaml"]
 **Size Target:** ~1.2GB
 
 **Pre-installed VS Code Extensions:**
+
 - `dbaeumer.vscode-eslint` - ESLint
 - `esbenp.prettier-vscode` - Prettier
 - `bradlc.vscode-tailwindcss` - Tailwind CSS IntelliSense
@@ -251,6 +256,7 @@ CMD ["--config", "/etc/dev8/supervisor.yaml"]
 **File:** `docker/python/Dockerfile`
 
 **Additional Tools:**
+
 - Python 3.11
 - pip, pipenv, poetry (package managers)
 - Black, flake8, pytest (code quality & testing)
@@ -260,6 +266,7 @@ CMD ["--config", "/etc/dev8/supervisor.yaml"]
 **Size Target:** ~1.5GB
 
 **Pre-installed VS Code Extensions:**
+
 - `ms-python.python` - Python
 - `ms-python.vscode-pylance` - Pylance
 
@@ -268,6 +275,7 @@ CMD ["--config", "/etc/dev8/supervisor.yaml"]
 **File:** `docker/golang/Dockerfile`
 
 **Additional Tools:**
+
 - Go 1.21
 - gopls (language server)
 - delve (debugger)
@@ -276,6 +284,7 @@ CMD ["--config", "/etc/dev8/supervisor.yaml"]
 **Size Target:** ~1.3GB
 
 **Pre-installed VS Code Extensions:**
+
 - `golang.go` - Go
 
 ### 5. Rust Image: dev8-rust
@@ -283,6 +292,7 @@ CMD ["--config", "/etc/dev8/supervisor.yaml"]
 **File:** `docker/rust/Dockerfile`
 
 **Additional Tools:**
+
 - Rust stable toolchain
 - rustfmt, clippy (formatting & linting)
 - rust-analyzer (language server)
@@ -291,6 +301,7 @@ CMD ["--config", "/etc/dev8/supervisor.yaml"]
 **Size Target:** ~2.5GB (Rust toolchain is large)
 
 **Pre-installed VS Code Extensions:**
+
 - `rust-lang.rust-analyzer` - Rust Analyzer
 
 ---
@@ -303,14 +314,14 @@ The Workspace Manager (internally called "supervisor") is a **Golang-based orche
 
 ### Why Golang?
 
-| Criterion | Golang | TypeScript/Node.js |
-|-----------|--------|-------------------|
-| Binary size | ~10MB | ~50MB (with runtime) |
-| Startup time | <100ms | 1-2 seconds |
-| Memory usage | 5-10MB | 30-50MB |
-| Azure SDK | Excellent | Good |
-| Process management | Native | Via child_process |
-| Deployment | Single binary | Runtime required |
+| Criterion          | Golang        | TypeScript/Node.js   |
+| ------------------ | ------------- | -------------------- |
+| Binary size        | ~10MB         | ~50MB (with runtime) |
+| Startup time       | <100ms        | 1-2 seconds          |
+| Memory usage       | 5-10MB        | 30-50MB              |
+| Azure SDK          | Excellent     | Good                 |
+| Process management | Native        | Via child_process    |
+| Deployment         | Single binary | Runtime required     |
 
 **Decision:** ✅ Golang
 
@@ -358,10 +369,12 @@ apps/supervisor/
 #### 1. Process Management
 
 **Manages:**
+
 - code-server (VS Code in browser)
 - SSH server (OpenSSH daemon)
 
 **Features:**
+
 - Start/stop/restart services
 - Monitor process health
 - Auto-restart on failure (with max retry limit)
@@ -383,14 +396,14 @@ func (pm *ProcessManager) StartCodeServer(ctx context.Context) error {
         "--auth", "none",  // Auth handled by supervisor/proxy
         "--disable-telemetry",
         "/workspace")
-    
+
     if err := cmd.Start(); err != nil {
         return err
     }
-    
+
     pm.registerProcess("code-server", cmd)
     go pm.monitorProcess("code-server", cmd)
-    
+
     return nil
 }
 ```
@@ -398,12 +411,14 @@ func (pm *ProcessManager) StartCodeServer(ctx context.Context) error {
 #### 2. Secret Injection
 
 **Secrets Managed:**
+
 - GitHub personal access token
 - GitHub Copilot authentication token
 - User SSH keys (private & public)
 - Custom environment variables
 
 **Injection Targets:**
+
 - `~/.gitconfig` - Git user configuration
 - `~/.git-credentials` - Git credential helper
 - `~/.config/gh/hosts.yml` - GitHub CLI configuration
@@ -440,6 +455,7 @@ Secrets ready for code-server and SSH
 ```
 
 **Security Features:**
+
 - Secrets fetched once at startup (with periodic refresh option)
 - Secrets never logged
 - Secrets written with correct permissions (600 for private keys)
@@ -448,6 +464,7 @@ Secrets ready for code-server and SSH
 #### 3. Health Monitoring
 
 **Health Checks:**
+
 - Process status (running/stopped/failed)
 - code-server HTTP endpoint (`/healthz`)
 - SSH server socket availability
@@ -456,6 +473,7 @@ Secrets ready for code-server and SSH
 **Monitoring Interval:** 30 seconds (configurable)
 
 **Auto-Recovery:**
+
 - Restart failed processes automatically
 - Max restarts: 5 (configurable)
 - Backoff strategy: 5 seconds between restarts
@@ -482,13 +500,13 @@ curl http://localhost:9000/health
 
 **Endpoints:**
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/health` | Health status & service states |
-| GET | `/status` | Detailed environment status |
-| GET | `/connections` | Active connection count |
-| POST | `/restart/:service` | Restart specific service |
-| GET | `/metrics` | Prometheus-compatible metrics |
+| Method | Path                | Description                    |
+| ------ | ------------------- | ------------------------------ |
+| GET    | `/health`           | Health status & service states |
+| GET    | `/status`           | Detailed environment status    |
+| GET    | `/connections`      | Active connection count        |
+| POST   | `/restart/:service` | Restart specific service       |
+| GET    | `/metrics`          | Prometheus-compatible metrics  |
 
 **Port:** 9000 (internal only, not exposed publicly)
 
@@ -501,6 +519,7 @@ curl http://localhost:9000/health
 ### Secret Storage: Azure Key Vault
 
 **Why Azure Key Vault?**
+
 - ✅ Native Azure integration
 - ✅ Managed Identity support (no credentials needed)
 - ✅ Automatic encryption at rest
@@ -554,9 +573,9 @@ https://{token}:x-oauth-basic@github.com
 ```yaml
 # ~/.config/gh/hosts.yml
 github.com:
-    oauth_token: {token}
-    user: johndoe
-    git_protocol: https
+  oauth_token: { token }
+  user: johndoe
+  git_protocol: https
 ```
 
 **GitHub Copilot:**
@@ -600,6 +619,7 @@ Continue monitoring
 ```
 
 **No Restart Required:**
+
 - Git operations pick up new credentials automatically
 - SSH keys loaded on connection (not at startup)
 - VS Code extensions check tokens dynamically
@@ -634,7 +654,7 @@ func (c *Client) CreateEnvironmentContainer(ctx context.Context, req Environment
                     Name: to.Ptr("workspace"),
                     Properties: &armcontainerinstance.ContainerProperties{
                         Image: to.Ptr(imageMap[req.BaseImage]),
-                        
+
                         // Environment variables for supervisor
                         EnvironmentVariables: []*armcontainerinstance.EnvironmentVariable{
                             {
@@ -662,13 +682,13 @@ func (c *Client) CreateEnvironmentContainer(ctx context.Context, req Environment
                                 SecureValue: to.Ptr(c.config.ClientSecret),
                             },
                         },
-                        
+
                         // Exposed ports
                         Ports: []*armcontainerinstance.ContainerPort{
                             {Port: to.Ptr[int32](8080)}, // code-server
                             {Port: to.Ptr[int32](2222)}, // SSH
                         },
-                        
+
                         // Azure Files volume mount
                         VolumeMounts: []*armcontainerinstance.VolumeMount{
                             {
@@ -676,7 +696,7 @@ func (c *Client) CreateEnvironmentContainer(ctx context.Context, req Environment
                                 MountPath: to.Ptr("/workspace"),
                             },
                         },
-                        
+
                         // Resource limits
                         Resources: &armcontainerinstance.ResourceRequirements{
                             Requests: &armcontainerinstance.ResourceRequests{
@@ -687,7 +707,7 @@ func (c *Client) CreateEnvironmentContainer(ctx context.Context, req Environment
                     },
                 },
             },
-            
+
             // Public IP configuration
             IPAddress: &armcontainerinstance.IPAddress{
                 Type: to.Ptr(armcontainerinstance.ContainerGroupIPAddressTypePublic),
@@ -697,7 +717,7 @@ func (c *Client) CreateEnvironmentContainer(ctx context.Context, req Environment
                 },
                 DNSNameLabel: to.Ptr(fmt.Sprintf("dev8-%s", req.EnvironmentID)),
             },
-            
+
             // Azure Files volume
             Volumes: []*armcontainerinstance.Volume{
                 {
@@ -710,7 +730,7 @@ func (c *Client) CreateEnvironmentContainer(ctx context.Context, req Environment
                 },
             },
         },
-        
+
         // Tags for resource management
         Tags: map[string]*string{
             "environment-id": to.Ptr(req.EnvironmentID),
@@ -719,7 +739,7 @@ func (c *Client) CreateEnvironmentContainer(ctx context.Context, req Environment
             "managed-by":     to.Ptr("dev8-agent"),
         },
     }
-    
+
     // Create container group
     poller, err := c.aciClient.BeginCreateOrUpdate(
         ctx,
@@ -731,7 +751,7 @@ func (c *Client) CreateEnvironmentContainer(ctx context.Context, req Environment
     if err != nil {
         return fmt.Errorf("failed to create container: %w", err)
     }
-    
+
     // Wait for completion
     _, err = poller.PollUntilDone(ctx, nil)
     return err
@@ -751,7 +771,7 @@ func (s *EnvironmentService) CheckEnvironmentHealth(ctx context.Context, envID s
 
     // Call supervisor health endpoint (internal network)
     healthURL := fmt.Sprintf("http://%s:9000/health", env.ACIPublicIP)
-    
+
     resp, err := http.Get(healthURL)
     if err != nil {
         return &HealthStatus{
@@ -779,6 +799,7 @@ func (s *EnvironmentService) CheckEnvironmentHealth(ctx context.Context, envID s
 **Goal:** Set up project structure and base image
 
 **Tasks:**
+
 - [ ] Create supervisor project structure
   - Create Go module: `apps/supervisor`
   - Set up directory layout
@@ -804,6 +825,7 @@ func (s *EnvironmentService) CheckEnvironmentHealth(ctx context.Context, envID s
 **Goal:** Implement process management and secret injection
 
 **Tasks:**
+
 - [ ] Implement process manager
   - Start/stop/restart logic
   - Process monitoring
@@ -835,6 +857,7 @@ func (s *EnvironmentService) CheckEnvironmentHealth(ctx context.Context, envID s
 **Goal:** Build language-specific images
 
 **Tasks:**
+
 - [ ] Build Node.js image
   - Install Node.js 20 LTS
   - Install npm, pnpm, yarn
@@ -865,6 +888,7 @@ func (s *EnvironmentService) CheckEnvironmentHealth(ctx context.Context, envID s
 **Goal:** Integrate with Go agent and test end-to-end
 
 **Tasks:**
+
 - [ ] Update Go agent
   - Add image map configuration
   - Update container creation logic
@@ -895,6 +919,7 @@ func (s *EnvironmentService) CheckEnvironmentHealth(ctx context.Context, envID s
 **Goal:** Comprehensive testing and documentation
 
 **Tasks:**
+
 - [ ] Unit tests
   - Process manager tests
   - Secret injector tests (with mocks)
@@ -926,6 +951,7 @@ func (s *EnvironmentService) CheckEnvironmentHealth(ctx context.Context, envID s
 **Goal:** Comprehensive documentation for users and developers
 
 **Tasks:**
+
 - [ ] User documentation
   - How to connect via browser
   - How to connect via SSH
@@ -952,6 +978,7 @@ func (s *EnvironmentService) CheckEnvironmentHealth(ctx context.Context, envID s
 **Goal:** Deploy to production and monitor
 
 **Tasks:**
+
 - [ ] Push images to Azure Container Registry
   - Tag with version numbers
   - Update latest tags
@@ -983,6 +1010,7 @@ func (s *EnvironmentService) CheckEnvironmentHealth(ctx context.Context, envID s
 **Coverage Target:** 80%+
 
 **Key Areas:**
+
 - Configuration parsing and validation
 - Process lifecycle management
 - Secret injection logic
@@ -990,6 +1018,7 @@ func (s *EnvironmentService) CheckEnvironmentHealth(ctx context.Context, envID s
 - API handlers
 
 **Tools:**
+
 - Go testing package (`testing`)
 - testify for assertions
 - Mock Azure Key Vault client
@@ -999,10 +1028,10 @@ func (s *EnvironmentService) CheckEnvironmentHealth(ctx context.Context, envID s
 ```go
 func TestProcessManager_StartCodeServer(t *testing.T) {
     pm := process.NewManager(mockConfig)
-    
+
     err := pm.StartCodeServer(context.Background())
     assert.NoError(t, err)
-    
+
     status := pm.GetStatus()
     assert.Equal(t, process.StatusRunning, status["code-server"])
 }
@@ -1011,12 +1040,14 @@ func TestProcessManager_StartCodeServer(t *testing.T) {
 ### Integration Tests
 
 **Key Scenarios:**
+
 - Supervisor + Azure Key Vault (test environment)
 - Supervisor + mock services
 - Full container lifecycle
 - Secret rotation
 
 **Environment:**
+
 - Azure test subscription
 - Test Key Vault with sample secrets
 - Docker test containers
@@ -1024,6 +1055,7 @@ func TestProcessManager_StartCodeServer(t *testing.T) {
 ### E2E Tests
 
 **Critical Flows:**
+
 1. Create environment → inject secrets → connect via SSH → run commands
 2. Create environment → connect via browser → edit code → save
 3. Create environment → stop → start → verify persistence
@@ -1031,6 +1063,7 @@ func TestProcessManager_StartCodeServer(t *testing.T) {
 5. Process failure → verify auto-restart
 
 **Tools:**
+
 - Playwright for browser automation
 - SSH client library for SSH tests
 - Custom test scripts
@@ -1038,6 +1071,7 @@ func TestProcessManager_StartCodeServer(t *testing.T) {
 ### Load Testing
 
 **Metrics:**
+
 - Container startup time
 - Health check latency
 - Secret injection time
@@ -1047,6 +1081,7 @@ func TestProcessManager_StartCodeServer(t *testing.T) {
 **Tool:** Go-based load testing script
 
 **Target:**
+
 - Support 1000+ concurrent environments
 - < 30s startup time
 - < 100ms health check response
@@ -1073,27 +1108,32 @@ Process auto-restart time       < 30s       TBD
 ### Security Features
 
 #### 1. Non-Root Execution
+
 - All processes run as `dev8` user (UID 1000)
 - No root login via SSH
 - Sudo access only for specific commands
 
 #### 2. Authentication
+
 - SSH: Key-based only, no passwords
 - code-server: Authentication handled by proxy/supervisor
 - Secrets: Fetched from Azure Key Vault with Managed Identity
 
 #### 3. Network Security
+
 - Supervisor API (port 9000): Internal only, not exposed publicly
 - code-server (port 8080): Public, but requires authentication
 - SSH (port 2222): Public, key-based auth only
 
 #### 4. Secret Management
+
 - Secrets never logged or printed
 - Secrets stored in Azure Key Vault (encrypted at rest)
 - Secret rotation support
 - Least privilege access (RBAC)
 
 #### 5. Container Isolation
+
 - Each environment runs in separate container
 - Resource limits enforced (CPU, memory)
 - Network isolation between environments
@@ -1103,23 +1143,27 @@ Process auto-restart time       < 30s       TBD
 #### Metrics to Collect
 
 **Process Metrics:**
+
 - Process uptime
 - Restart count
 - Memory usage
 - CPU usage
 
 **Connection Metrics:**
+
 - Active SSH connections
 - Active VS Code sessions
 - Connection duration
 - Failed connection attempts
 
 **Secret Metrics:**
+
 - Secret injection success/failure rate
 - Secret rotation events
 - Time since last secret update
 
 **Health Metrics:**
+
 - Health check pass/fail rate
 - Health check latency
 - Service availability percentage
@@ -1129,6 +1173,7 @@ Process auto-restart time       < 30s       TBD
 **Log Format:** Structured JSON
 
 **Log Levels:**
+
 - DEBUG: Detailed execution trace
 - INFO: Normal operations
 - WARN: Recoverable issues
@@ -1150,6 +1195,7 @@ Process auto-restart time       < 30s       TBD
 ```
 
 **Log Destinations:**
+
 - stdout/stderr (captured by Azure)
 - Azure Log Analytics (optional)
 - Custom logging service (optional)
@@ -1157,6 +1203,7 @@ Process auto-restart time       < 30s       TBD
 #### Alerting
 
 **Critical Alerts:**
+
 - Process restart exceeded max retries
 - Health check failures > 3 consecutive
 - Secret injection failed
@@ -1164,6 +1211,7 @@ Process auto-restart time       < 30s       TBD
 - CPU throttling
 
 **Warning Alerts:**
+
 - Process restarted
 - High memory usage (> 80%)
 - High CPU usage (> 80%)
@@ -1172,6 +1220,7 @@ Process auto-restart time       < 30s       TBD
 #### Dashboards
 
 **Supervisor Dashboard:**
+
 - Environment count
 - Active processes
 - Health status
@@ -1179,6 +1228,7 @@ Process auto-restart time       < 30s       TBD
 - Error rate
 
 **User Dashboard:**
+
 - My environments
 - Connection status
 - Resource usage
@@ -1327,6 +1377,7 @@ Process auto-restart time       < 30s       TBD
 ### Contributing
 
 We welcome contributions! See:
+
 - `CONTRIBUTING.md` for guidelines
 - `CODE_OF_CONDUCT.md` for community standards
 - Open issues labeled `good first issue`
