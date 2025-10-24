@@ -126,12 +126,12 @@ Creates a new development environment.
 **Request Fields:**
 - `userId` (string, optional): User identifier. Defaults to "default-user" if not provided
 - `name` (string, required): Human-readable name for the environment
-- `cloudProvider` (string, required): Cloud provider. Currently supports: `AZURE`, `AWS`, `GCP`
+- `cloudProvider` (string, required): Cloud provider. Must be one of: `AZURE`, `AWS`, or `GCP`
 - `cloudRegion` (string, required): Cloud region for deployment (e.g., "eastus", "westus2")
 - `cpuCores` (integer, required): Number of CPU cores (1-4)
 - `memoryGB` (integer, required): Memory in GB (1-16)
 - `storageGB` (integer, required): Storage size in GB (10-100)
-- `baseImage` (string, required): Docker base image to use
+- `baseImage` (string, required): Docker base image to use. Should be a valid container registry image (e.g., from Docker Hub or Microsoft Container Registry)
 
 **Response:**
 ```json
@@ -298,7 +298,6 @@ Reports activity for an environment (used by the workspace supervisor).
 **Request Body:**
 ```json
 {
-  "environmentId": "env-abc123",
   "snapshot": {
     "lastIDEActivity": "2025-10-24T11:00:00Z",
     "lastSSHActivity": "2025-10-24T10:55:00Z",
@@ -310,13 +309,14 @@ Reports activity for an environment (used by the workspace supervisor).
 ```
 
 **Request Fields:**
-- `environmentId` (string, optional): Environment ID (can be provided in path or body)
 - `snapshot` (object, required): Activity snapshot data
   - `lastIDEActivity` (timestamp): Last IDE activity timestamp
   - `lastSSHActivity` (timestamp): Last SSH activity timestamp
   - `activeIDEConnections` (integer): Number of active IDE connections
   - `activeSSHConnections` (integer): Number of active SSH connections
 - `timestamp` (timestamp, required): Report timestamp
+
+**Note:** The environment ID is taken from the path parameter `{id}` and does not need to be included in the request body.
 
 **Response:**
 ```json
@@ -373,14 +373,36 @@ All errors follow a consistent format:
 }
 ```
 
-### Error Codes
+### HTTP Status Codes
 
 | Status Code | Description |
 |-------------|-------------|
+| 200 | OK - Request successful |
+| 201 | Created - Resource created successfully |
 | 400 | Bad Request - Invalid input parameters |
 | 401 | Unauthorized - Authentication required or failed |
 | 404 | Not Found - Resource not found |
 | 500 | Internal Server Error - Server-side error |
+
+### Application Error Codes
+
+In addition to HTTP status codes, the API returns specific application error codes in the response body to provide more granular error identification:
+
+| Error Code | HTTP Status | Description | Common Causes |
+|------------|-------------|-------------|---------------|
+| `INVALID_REQUEST` | 400 | Request validation failed | Missing required fields, invalid data types, values out of range |
+| `NOT_FOUND` | 404 | Resource not found | Invalid environment ID, resource deleted |
+| `UNAUTHORIZED` | 401 | User not authorized | Missing authentication, invalid permissions |
+| `ENVIRONMENT_ERROR` | 500 | Environment operation failed | Azure API errors, resource creation failures |
+| `SERVICE_ERROR` | 500 | Internal service error | Database errors, unexpected exceptions |
+
+**Example Error Response with Code:**
+```json
+{
+  "error": "INVALID_REQUEST",
+  "message": "cpuCores must be between 1 and 4"
+}
+```
 
 ### Error Response Examples
 
