@@ -105,8 +105,7 @@ jobs:
 
       - name: Test base image
         run: |
-          docker run --rm -e GITHUB_TOKEN=test_token dev8-base:latest sh -c "echo 'Testing base image...' && gh --version && echo 'Base image works!'"
-          docker run --rm dev8-base:latest which gh
+          docker run --rm dev8-base:latest sh -c "echo 'Testing base image...' && workspace-supervisor --version && echo 'Base image works!'"
           docker run --rm dev8-base:latest which git
           docker run --rm dev8-base:latest which ssh
 
