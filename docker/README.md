@@ -1,428 +1,538 @@
-# Dev8.dev Docker Images - Layered Architecture
+# Dev8.dev Docker Development Environment# Dev8.dev Docker Workspace
 
-Production-ready Docker infrastructure for Dev8.dev cloud workspaces with VS Code Server and AI CLI tools.
 
-## 🏗️ Layered Architecture
+
+> Complete containerized development environment with VS Code Server, AI tools, and language support.Cloud development container with VS Code Server, multiple languages, and AI coding tools.
+
+
+
+## Quick Start## 🏗️ Architecture
+
+
+
+```bash```
+
+# 1. Configure environment00-base → 10-languages → 20-vscode → 30-ai-tools (FINAL)
+
+cp .env.example .env```
+
+# Edit .env and set your GITHUB_TOKEN
+
+**Layers:**
+
+# 2. Build and start (one command)1. **00-base** - Ubuntu 22.04, SSH, system packages, SDKMAN, Homebrew
+
+make up2. **10-languages** - Node.js, Python, Go, Rust
+
+3. **20-vscode** - VS Code Server (code-server)
+
+# 3. Access VS Code4. **30-ai-tools** - GitHub Copilot CLI, AI tool setup scripts
+
+# Open browser: http://localhost:8080
+
+# No password required by default## 🚀 Quick Start
 
 ```
-supervisor-builder → 00-base → 10-languages → 20-vscode → 30-ai-tools
-   (Go binary)      (1.5GB)      (2.5GB)        (3.0GB)    (3.5GB FINAL)
-```
 
-### Layer Structure
+### Build All Layers
 
-1. **00-base** - Foundation
-   - Ubuntu 22.04 + system packages
-   - SSH server (hardened, port 2222)
-   - dev8 user + workspace directory
-   - workspace-supervisor binary
-
-2. **10-languages** - Runtimes
-   - Node.js 20 LTS (npm, pnpm, yarn, bun)
-   - Python 3.11 (pip, poetry, black)
-   - Go 1.21
-   - Rust (stable)
-
-3. **20-vscode** - IDE
-   - code-server (VS Code in browser)
-   - Pre-configured settings
-   - SSH + code-server entrypoint
-
-4. **30-ai-tools** - AI CLIs (Final)
-   - GitHub CLI + Copilot extension
-   - Azure CLI (backup)
-   - AI tool wrappers (Claude, Gemini)
-   - Complete entrypoint
-
-## 🚀 Quick Start
-
-### Build
+**That's it!** You now have a complete development environment.
 
 ```bash
-cd docker
+
+---cd docker
+
+
+
+## Contents# Build all layers in correct order (REQUIRED)
+
 make build-all
+
+- [Architecture](#architecture)```
+
+- [Configuration](#configuration)
+
+- [Usage](#usage)**Note:** You must use `make build-all` because the layers must be built sequentially. Plain `docker compose build` won't work due to layer dependencies.
+
+- [Production Deployment](#production-deployment)
+
+- [Advanced Topics](#advanced-topics)### Run Locally
+
+
+
+---```bash
+
+# Start the workspace
+
+## Architecturemake up
+
+
+
+### Layer Structure# Or use docker compose directly
+
+docker compose up -d workspace
+
 ```
 
-Or build individually:
+00-base       → Ubuntu + essential tools + dev8 user# Access:
+
+10-languages  → Go, Python, Node.js, Rust# - VS Code: http://localhost:8080 (password: dev8dev)
+
+20-vscode     → code-server (VS Code in browser)# - SSH: ssh -p 2222 dev8@localhost
+
+30-ai-tools   → GitHub Copilot, AI CLI tools
+
+```# View logs
+
+make logs
+
+Each layer builds on the previous, allowing efficient caching.
+
+# Stop
+
+### Servicesmake down
+
+```
+
+- **VS Code Server** (port 8080): Browser-based VS Code
+
+- **SSH** (port 2222): Optional shell access### Environment Variables
+
+- **Supervisor API** (port 9000): Workspace monitoring
+
+Create a `.env` file in the `docker/` directory:
+
+### Volumes
+
 ```bash
-make build-base        # Layer 1
-make build-languages   # Layer 2
-make build-vscode      # Layer 3
-make build-ai-tools    # Layer 4 (final)
+
+- `dev8-home`: User home directory (~/.config, packages, etc.)# Required
+
+- `dev8-workspace`: Your code and projectsGITHUB_TOKEN=ghp_xxx...
+
+
+
+---# Optional
+
+CODE_SERVER_PASSWORD=your_password
+
+## ConfigurationANTHROPIC_API_KEY=sk-ant-xxx...
+
+OPENAI_API_KEY=sk-xxx...
+
+### Environment VariablesGEMINI_API_KEY=xxx...
+
 ```
-
-### Run Locally
-
-```bash
-make run-vscode
-# Access at http://localhost:8080 (password: dev8dev)
-```
-
-## 📁 Directory Structure
-
-```
-docker/
-├── images/                    # Layered image definitions
-│   ├── 00-base/              # Base system
-│   ├── 10-languages/         # Language runtimes
-│   ├── 20-vscode/            # VS Code Server
-│   │   ├── config/
-│   │   │   └── settings.json
-│   │   └── entrypoint.sh
-│   └── 30-ai-tools/          # AI CLI tools (final)
-│       ├── scripts/
-│       │   ├── setup-copilot.sh
-│       │   ├── setup-claude.sh
-│       │   └── setup-gemini.sh
-│       └── entrypoint.sh
-├── shared/                    # Shared resources
-│   └── scripts/
-│       └── common.sh         # Shared bash functions
-├── scripts/
-│   └── build.sh              # Build orchestrator
-├── Makefile                   # Build automation
-├── .dockerignore             # Build context optimization
-└── README.md                 # This file
-```
-
-## 🔑 Environment Variables
 
 **Required:**
-- `GITHUB_TOKEN` - GitHub personal access token
 
-**Optional:**
-- `CODE_SERVER_PASSWORD` - VS Code password (default: `dev8dev`)
-- `SSH_PUBLIC_KEY` - SSH public key for access
-- `GIT_USER_NAME` / `GIT_USER_EMAIL` - Git configuration
-- `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `GEMINI_API_KEY` - AI APIs
+```bash## 📦 Persistent User Packages
 
-## 🧪 Testing
+GITHUB_TOKEN=ghp_xxxxx  # GitHub token for Copilot
 
-```bash
-make test              # Test all layers
-make test-base         # Test base only
-make test-languages    # Test languages only
-make test-vscode       # Test VS Code only
+```Everything in `/home/dev8` persists across container restarts:
+
+
+
+**Optional:**```
+
+```bash/home/dev8/
+
+# Authentication (default: none)├── .sdkman/           # Java, Kotlin, Scala (sdk install ...)
+
+CODE_SERVER_AUTH=none           # or 'password'├── .linuxbrew/        # Ruby, PostgreSQL (brew install ...)
+
+CODE_SERVER_PASSWORD=           # set if auth=password├── .npm/              # Node packages (npm install -g ...)
+
+├── .local/            # Python packages (pip install --user ...)
+
+# SSH (optional)├── .cargo/            # Rust packages (cargo install ...)
+
+SSH_PASSWORD=                   # simple password auth└── .vscode-server/    # VS Code extensions
+
+SSH_PUBLIC_KEY=                 # or public key auth```
+
+
+
+# Git identity**Examples:**
+
+GIT_USER_NAME=Your Name```bash
+
+GIT_USER_EMAIL=you@example.com# Install Java
+
+sdk install java 17.0.8-amzn
+
+# AI API keys (optional)
+
+ANTHROPIC_API_KEY=# Install Ruby
+
+OPENAI_API_KEY=brew install ruby
+
+GEMINI_API_KEY=
+
+```# Install Node package
+
+npm install -g typescript
+
+### Security Notes
+
+# Install Python package
+
+- **Default**: No authentication (suitable for local development)pip install --user pytest
+
+- **Production**: Set `CODE_SERVER_AUTH=password` and strong password
+
+- **SSH**: Not required for VS Code access; only enable if needed# All persist in /home/dev8 volume!
+
 ```
 
-## ⚡ Performance
+---
 
-| Layer | Fresh Build | Incremental | Size |
-|-------|-------------|-------------|------|
-| 00-base | ~3 min | - | ~1.5GB |
-| 10-languages | ~5 min | ~2 min | ~2.5GB |
-| 20-vscode | ~2 min | ~1 min | ~3.0GB |
-| 30-ai-tools | ~2 min | ~1 min | ~3.5GB |
-| **Total** | **~12 min** | **~3 min** | **3.5GB** |
+## 🤖 AI Coding Tools
 
-## 🎯 Available Images
-
-- `dev8-base:latest` - Base system only
-- `dev8-languages:latest` - With language runtimes
-- `dev8-vscode:latest` - With VS Code Server
-- `dev8-workspace:latest` - Complete (recommended)
-
-## 🔧 Makefile Commands
-
-```bash
-make help              # Show all commands
-make build-all         # Build all 4 layers
-make build-base        # Build base only
-make build-languages   # Build languages only
-make build-vscode      # Build VS Code only
-make build-ai-tools    # Build AI tools only
-make test              # Run all tests
-make run-vscode        # Run locally
-make clean             # Clean up images
-```
-
-## 🤖 Using AI Tools
+## Usage
 
 ### GitHub Copilot CLI
-```bash
+
+### Development (Local)```bash
+
 gh copilot suggest "create a REST API in Node.js"
-gh copilot explain "docker run -d nginx"
+
+```bashgh copilot explain "docker run -d nginx"
+
+# Start workspace```
+
+make up
+
+### AI APIs (if configured)
+
+# View logs- Anthropic Claude API
+
+make logs- OpenAI API  
+
+- Google Gemini API
+
+# Stop workspace
+
+make downSetup scripts in `/usr/local/share/ai-tools/`
+
+
+
+# Rebuild after changes## � Services
+
+make rebuild
+
+```| Service | Port | Purpose |
+
+|---------|------|---------|
+
+### Accessing the Workspace| VS Code Server | 8080 | Web-based VS Code |
+
+| SSH Server | 2222 | Terminal access |
+
+**VS Code (Primary):**| Workspace Supervisor | 9000 | Monitoring |
+
+- URL: http://localhost:8080
+
+- No password required (default)## � Directory Structure
+
+
+
+**SSH (Optional):**```
+
+```bashdocker/
+
+# If SSH_PASSWORD is set├── images/
+
+ssh -p 2222 dev8@localhost│   ├── 00-base/              # Base system + SDKMAN + Homebrew
+
+│   ├── 10-languages/         # Node, Python, Go, Rust
+
+# If SSH_PUBLIC_KEY is set│   ├── 20-vscode/            # VS Code Server
+
+ssh -p 2222 -i ~/.ssh/your_key dev8@localhost│   └── 30-ai-tools/          # AI CLI tools
+
+```├── shared/
+
+│   ├── config/               # Shared configs
+
+### Common Tasks│   └── scripts/              # Helper scripts
+
+├── docker-compose.yml        # Local development
+
+**View running containers:**├── Makefile                  # Build shortcuts
+
+```bash└── README.md                 # This file
+
+docker compose ps```
+
 ```
 
-### Claude API (if configured)
+## 🛠️ Development
+
+**Execute command in container:**
+
+```bash### Build Individual Layers
+
+docker exec -it dev8-workspace bash
+
+``````bash
+
+make build-base
+
+**Check container health:**make build-languages  
+
+```bashmake build-vscode
+
+docker compose logs workspace | tail -50make build-ai-tools
+
+``````
+
+
+
+---### Test
+
+
+
+## Production Deployment```bash
+
+# Start container
+
+### Azure Container Instances (ACI)docker compose up -d workspace
+
+
+
+**Quick Deploy:**# Check services
+
+```bashdocker compose exec workspace supervisorctl status
+
+# 1. Configure production environment
+
+cp .env.prod.example .env.prod# View logs
+
+# Edit .env.prod with your Azure settingsdocker compose logs -f workspace
+
+```
+
+# 2. Build and push image
+
+make prod-build### Clean Up
+
+make prod-push
+
 ```bash
-source /usr/local/share/ai-tools/setup-claude.sh
-claude "Explain Docker layers"
+
+# 3. Deploy to ACIdocker compose down -v  # Remove containers and volumes
+
+make prod-deploymake clean              # Remove images
+
 ```
 
-## 📖 Documentation
+# 4. Check status
 
-- [ARCHITECTURE.md](./ARCHITECTURE.md) - Architecture decisions
-- [CHANGELOG.md](./CHANGELOG.md) - Version history  
-- [MIGRATION.md](./MIGRATION.md) - Migration from old structure
+make prod-status## � Documentation
 
-## 📊 Key Improvements
+```
 
-| Aspect | Before | After |
-|--------|--------|-------|
-| Build time (fresh) | ~20 min | **~12 min** |
-| Build time (incremental) | ~15 min | **~3 min** |
-| Code duplication | High | **None** |
-| Testing | Manual | **Automated** |
-| Layers | Mixed | **4 clean layers** |
+- **ARCHITECTURE.md** - Architecture decisions and design
 
-## 📄 License
+### Production Configuration- **CONTAINER_CAPABILITIES.md** - What the container can do
 
-Part of Dev8.dev - See [LICENSE](../LICENSE)
+- **CHANGELOG.md** - Version history
+
+**Key differences from development:**
+
+- Use pre-built images (no build context)## 📄 License
+
+- Azure Files for persistence
+
+- Resource limits enforcedPart of Dev8.dev - See [LICENSE](../LICENSE)
+
+- Authentication recommended
+
+**Environment setup:**
+```bash
+# Required
+ENVIRONMENT_ID=dev8-prod-001
+GITHUB_TOKEN=ghp_xxxxx
+CONTAINER_REGISTRY=yourregistry.azurecr.io
+AZURE_STORAGE_ACCOUNT=youraccount
+AZURE_STORAGE_KEY=xxxxx
+
+# Recommended
+CODE_SERVER_AUTH=password
+CODE_SERVER_PASSWORD=$(openssl rand -base64 32)
+```
+
+**Deploy script:**
+```bash
+./deploy-to-aci.sh
+```
+
+See [Production Deployment Details](#production-deployment-details) below.
 
 ---
 
-**Built for cloud development workspaces** 🚀
+## Advanced Topics
 
-## 📝 Image Details
-
-### dev8-base
-
-**Base image** with Ubuntu 22.04, essential tools, and DevCopilot Agent.
-
-```dockerfile
-FROM ubuntu:22.04
-# Includes: git, ssh, gh cli, vim, neovim, tmux
-```
-
-**Features:**
-
-- Non-root user (`dev8`)
-- Hardened SSH configuration
-- GitHub CLI pre-installed
-- DevCopilot Agent entrypoint
-
-### dev8-nodejs
-
-**Node.js development** with modern JavaScript tooling.
-
-```dockerfile
-FROM dev8-base:latest
-# Adds: Node.js 20, pnpm, yarn, Bun, code-server
-```
-
-**Pre-installed:**
-
-- Node.js 20 LTS
-- pnpm, yarn, Bun
-- code-server with extensions:
-  - GitHub Copilot & Copilot Chat
-  - ESLint, Prettier
-  - TypeScript support
-  - Tailwind CSS IntelliSense
-
-**Perfect for:**
-
-- React, Next.js, Vue, Svelte projects
-- TypeScript development
-- Node.js backends
-- Full-stack JavaScript
-
-### dev8-python
-
-**Python development** with data science tools.
-
-```dockerfile
-FROM dev8-base:latest
-# Adds: Python 3.11, pip, poetry, code-server
-```
-
-**Pre-installed:**
-
-- Python 3.11
-- Poetry, pipenv
-- Black, flake8, pylint, mypy
-- pytest
-- JupyterLab
-- numpy, pandas (essentials)
-- code-server with extensions:
-  - GitHub Copilot & Copilot Chat
-  - Python, Pylance
-  - Jupyter support
-
-**Perfect for:**
-
-- Python web apps (FastAPI, Django)
-- Data science & ML
-- Scripting & automation
-- Jupyter notebooks
-
-### dev8-fullstack
-
-**Polyglot development** with all languages.
-
-```dockerfile
-FROM dev8-base:latest
-# Adds: Node.js, Python, Go, Rust, Bun, code-server
-```
-
-**Pre-installed:**
-
-- Node.js 20 + Bun
-- Python 3.11
-- Go 1.21
-- Rust (stable)
-- All language-specific extensions
-
-**Perfect for:**
-
-- Microservices (mixed languages)
-- Full-stack development
-- Learning multiple languages
-- Polyglot projects
-
-## 🔧 Build Configuration
-
-### Build Specific Image
+### Manual Layer Building
 
 ```bash
-# Build only Node.js image
-BUILD_NODEJS=true BUILD_PYTHON=false BUILD_FULLSTACK=false ./build.sh
-
-# Build with custom version
-VERSION=v1.2.3 ./build.sh
-
-# Build with custom registry
-DOCKER_REGISTRY=myregistry.azurecr.io ./build.sh
+# Build individual layers (in order)
+docker compose build base
+docker compose build languages
+docker compose build vscode
+docker compose build workspace
 ```
 
-### CI/CD Integration
+### Custom Configuration
 
-Images are automatically built on:
-
-- Push to `main` branch
-- Pull requests
-- Release tags
-
-See `.github/workflows/docker-images.yml` for details.
-
-## 🧪 Testing
-
-### Test Locally
-
+**Disable authentication:**
 ```bash
-# Test Node.js image
-docker run -it --rm \
-  -p 8080:8080 -p 2222:2222 \
-  -e GITHUB_TOKEN="$GITHUB_TOKEN" \
-  dev8-nodejs:latest
-
-# Test with workspace mount
-docker run -it --rm \
-  -p 8080:8080 -p 2222:2222 \
-  -e GITHUB_TOKEN="$GITHUB_TOKEN" \
-  -v $(pwd)/test-workspace:/workspace \
-  dev8-nodejs:latest
+CODE_SERVER_AUTH=none
 ```
 
-### Verify Features
-
-1. **GitHub CLI**: `gh auth status`
-2. **Copilot CLI**: `gh copilot suggest "list files"`
-3. **Git**: `git config --list`
-4. **Code Server**: Open http://localhost:8080
-5. **SSH**: `ssh -p 2222 dev8@localhost`
-
-## 🔒 Security
-
-### Best Practices
-
-1. **Non-root execution**: All processes run as `dev8` user
-2. **SSH hardening**: Key-only auth, no passwords, custom port
-3. **Secret management**: Tokens via environment variables (never in image)
-4. **Minimal attack surface**: Only essential packages installed
-5. **Regular updates**: Base images rebuilt weekly
-
-### Token Scopes
-
-Your `GITHUB_TOKEN` needs these scopes:
-
-- `repo` - Full repository access
-- `read:org` - Read organization data
-- `copilot` - GitHub Copilot access (if using Copilot)
-
-## 📊 Performance
-
-### Startup Times
-
-| Image          | Cold Start | Warm Start |
-| -------------- | ---------- | ---------- |
-| dev8-base      | 10-15s     | 3-5s       |
-| dev8-nodejs    | 20-30s     | 5-10s      |
-| dev8-python    | 25-35s     | 5-10s      |
-| dev8-fullstack | 35-45s     | 8-12s      |
-
-### Resource Usage
-
-| Image      | Memory      | CPU     |
-| ---------- | ----------- | ------- |
-| Idle       | 300-500MB   | <5%     |
-| Light work | 800MB-1.5GB | 10-30%  |
-| Heavy work | 2-4GB       | 50-100% |
-
-## 🐛 Troubleshooting
-
-### GitHub CLI Not Authenticated
-
+**Enable password protection:**
 ```bash
-# Check auth status
-docker exec -it container_name gh auth status
-
-# Re-authenticate
-docker exec -it container_name bash
-echo "$GITHUB_TOKEN" | gh auth login --with-token
+CODE_SERVER_AUTH=password
+CODE_SERVER_PASSWORD=your_secure_password
 ```
 
-### Code Server Not Starting
+**SSH with password:**
+```bash
+SSH_PASSWORD=your_ssh_password
+```
 
+**SSH with public key:**
+```bash
+SSH_PUBLIC_KEY="ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA..."
+```
+
+### Troubleshooting
+
+**Container won't start:**
 ```bash
 # Check logs
-docker exec -it container_name cat /home/dev8/.code-server.log
+docker compose logs workspace
 
-# Restart code-server
-docker exec -it container_name pkill code-server
-# Container will auto-restart it via entrypoint
+# Check environment
+docker exec dev8-workspace env
+
+# Restart
+make rebuild
 ```
 
-### SSH Connection Refused
-
+**Port conflicts:**
 ```bash
-# Check SSH server
-docker exec -it container_name sudo service ssh status
-
-# Verify port mapping
-docker port container_name 2222
+# Change ports in docker-compose.yml
+ports:
+  - "8081:8080"  # VS Code on 8081 instead
 ```
 
-### Copilot Not Working
+**Volume issues:**
+```bash
+# List volumes
+docker volume ls
 
-1. Ensure `GITHUB_TOKEN` has `copilot` scope
-2. Check Copilot subscription: https://github.com/settings/copilot
-3. Restart code-server after token update
-4. Try manual OAuth: `gh auth login --web`
+# Inspect volume
+docker volume inspect dev8-workspace
 
-## 📚 Related Documentation
-
-- [DOCKER_ARCHITECTURE_SOLUTION.md](../DOCKER_ARCHITECTURE_SOLUTION.md) - Detailed architecture
-- [WORKSPACE_MANAGER_PLAN.md](../WORKSPACE_MANAGER_PLAN.md) - Supervisor design
-- [MVP_DOCKER_PLAN.md](../MVP_DOCKER_PLAN.md) - Implementation plan
-- [Issue #21](https://github.com/VAIBHAVSING/Dev8.dev/issues/21) - GitHub issue
-
-## 🤝 Contributing
-
-Contributions welcome! Please:
-
-1. Test changes locally
-2. Update documentation
-3. Run security scans
-4. Submit PR with description
-
-## 📄 License
-
-MIT License - see [../LICENSE](../LICENSE)
+# Clean rebuild
+make clean
+make up
+```
 
 ---
 
-**Built with ❤️ by the Dev8.dev Team**
+## Production Deployment Details
 
-For support: https://github.com/VAIBHAVSING/Dev8.dev/issues
+### Prerequisites
+
+1. **Azure Container Registry (ACR)**
+   ```bash
+   az acr create --name yourregistry --resource-group yourgroup --sku Basic
+   ```
+
+2. **Azure Storage Account**
+   ```bash
+   az storage account create --name yourstorage --resource-group yourgroup
+   ```
+
+3. **Azure File Shares**
+   ```bash
+   az storage share create --name dev8-home --account-name yourstorage
+   az storage share create --name dev8-workspace --account-name yourstorage
+   ```
+
+### Deployment Process
+
+**1. Build production image:**
+```bash
+docker build -t yourregistry.azurecr.io/dev8-workspace:latest -f images/30-ai-tools/Dockerfile .
+```
+
+**2. Push to registry:**
+```bash
+az acr login --name yourregistry
+docker push yourregistry.azurecr.io/dev8-workspace:latest
+```
+
+**3. Deploy using script:**
+```bash
+./deploy-to-aci.sh
+```
+
+Or manually:
+```bash
+az container create \
+  --resource-group yourgroup \
+  --name dev8-workspace \
+  --image yourregistry.azurecr.io/dev8-workspace:latest \
+  --cpu 2 --memory 4 \
+  --ports 8080 2222 9000 \
+  --environment-variables \
+    GITHUB_TOKEN=ghp_xxxxx \
+    CODE_SERVER_AUTH=password \
+    CODE_SERVER_PASSWORD=xxxxx
+```
+
+### Production Checklist
+
+- [ ] Set strong passwords (use `openssl rand -base64 32`)
+- [ ] Configure Azure Files for persistence
+- [ ] Set up backup strategy
+- [ ] Configure monitoring/logging
+- [ ] Test failover scenarios
+- [ ] Document access procedures
+- [ ] Set resource limits
+- [ ] Enable HTTPS (use Azure Application Gateway)
+
+### Monitoring
+
+```bash
+# Check container status
+az container show --resource-group yourgroup --name dev8-workspace
+
+# View logs
+az container logs --resource-group yourgroup --name dev8-workspace
+
+# Restart container
+az container restart --resource-group yourgroup --name dev8-workspace
+```
+
+---
+
+## File Reference
+
+- `docker-compose.yml`: Local development configuration
+- `docker-compose.prod.yml`: Production (ACI) configuration
+- `.env.example`: Development environment template
+- `.env.prod.example`: Production environment template
+- `deploy-to-aci.sh`: Automated ACI deployment script
+- `Makefile`: Common commands and shortcuts
+
+---
+
+## License
+
+See [LICENSE](../LICENSE) for details.

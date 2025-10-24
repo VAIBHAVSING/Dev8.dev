@@ -39,7 +39,7 @@ RUN wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/d
 COPY docker/images/30-ai-tools/scripts/*.sh /usr/local/share/ai-tools/
 RUN chmod +x /usr/local/share/ai-tools/*.sh
 
-# Copy final entrypoint
+# Copy entrypoint
 COPY docker/images/30-ai-tools/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
@@ -79,4 +79,3 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:8080/healthz || exit 1
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
-CMD ["/bin/bash"]

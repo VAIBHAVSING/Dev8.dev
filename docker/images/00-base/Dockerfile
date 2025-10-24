@@ -112,8 +112,24 @@ RUN chmod +x /usr/local/bin/workspace-supervisor
 COPY docker/shared/scripts/common.sh /usr/local/share/common.sh
 RUN chmod +x /usr/local/share/common.sh
 
-# Switch to dev8 user
+# Install user-space package managers for persistent installations
+# Switch to dev8 user for installations
 USER ${DEV8_USER}
+
+# Install SDKMAN (Java, Kotlin, Scala, Gradle, Maven, etc.)
+# Installed to /home/dev8/.sdkman - persists in volume
+RUN curl -s "https://get.sdkman.io" | bash && \
+    bash -c "source /home/dev8/.sdkman/bin/sdkman-init.sh && sdk version"
+
+# Install Homebrew on Linux (alternative package manager)
+# Installed to /home/dev8/.linuxbrew - persists in volume
+RUN /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" && \
+    echo 'eval "$(/home/dev8/.linuxbrew/bin/brew shellenv)"' >> /home/dev8/.bashrc
+
+# Add package manager paths to PATH
+RUN echo 'export PATH="/home/dev8/.local/bin:/home/dev8/.sdkman/bin:$PATH"' >> /home/dev8/.bashrc && \
+    echo 'source /home/dev8/.sdkman/bin/sdkman-init.sh 2>/dev/null || true' >> /home/dev8/.bashrc
+
 WORKDIR ${WORKSPACE_DIR}
 
 # Labels

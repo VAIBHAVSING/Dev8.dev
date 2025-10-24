@@ -15,7 +15,7 @@
    - Compiles workspace-supervisor from apps/supervisor/
    - Ubuntu 22.04 + SSH + system packages
 
-2. **Layer 2: Language Runtimes** (`images/10-languages/`)
+2. **Layer 2: Language Runtimes** (`images/10-landgdanguages/`)
    - Dockerfile (103 lines)
    - Node.js 20 LTS, Python 3.11, Go 1.21, Rust stable
 

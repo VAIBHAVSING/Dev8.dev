@@ -54,14 +54,6 @@ ENV PATH="/usr/local/go/bin:$PATH" \
     GOPATH="/home/dev8/go"
 
 ###############################################################################
-# Install Rust (stable)
-###############################################################################
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
-    sh -s -- -y --default-toolchain stable --profile minimal
-
-ENV PATH="/root/.cargo/bin:$PATH"
-
-###############################################################################
 # Switch to dev8 user and setup user-level tools
 ###############################################################################
 USER ${DEV8_USER}
@@ -73,11 +65,13 @@ ENV PATH="/home/dev8/.bun/bin:$PATH"
 
 # Setup Go workspace
 RUN mkdir -p "$GOPATH/bin" "$GOPATH/src" "$GOPATH/pkg"
-ENV PATH="$GOPATH/bin:/home/dev8/.cargo/bin:$PATH"
 
 # Install Rust for dev8 user (user-level toolchain)
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
     sh -s -- -y --default-toolchain stable --profile minimal
+
+# Update PATH for user tools
+ENV PATH="$GOPATH/bin:/home/dev8/.cargo/bin:$PATH"
 
 # Verify installations
 RUN echo "=== Verifying Language Installations ===" && \

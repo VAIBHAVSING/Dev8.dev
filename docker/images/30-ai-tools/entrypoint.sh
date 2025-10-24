@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+# Handle errors explicitly without strict mode
 
 ################################################################################
 # Dev8.dev Complete Workspace Entrypoint
@@ -84,7 +84,13 @@ start_code_server() {
     mkdir -p "$HOME/.config/code-server"
     
     local AUTH_TYPE="${CODE_SERVER_AUTH:-password}"
-    local PASSWORD="${CODE_SERVER_PASSWORD:-dev8dev}"
+    local PASSWORD="${CODE_SERVER_PASSWORD:-}"
+    
+    # Generate default password if not set and auth is password
+    if [ "$AUTH_TYPE" = "password" ] && [ -z "$PASSWORD" ]; then
+        PASSWORD="dev8dev"
+        log_warning "CODE_SERVER_PASSWORD not set, using default: dev8dev"
+    fi
     
     cat > "$HOME/.config/code-server/config.yaml" <<EOF
 bind-addr: 0.0.0.0:8080
@@ -101,7 +107,10 @@ EOF
     
     log_success "code-server started on http://0.0.0.0:8080"
     if [ "$AUTH_TYPE" = "password" ]; then
+        log_info "Authentication: password"
         log_info "Password: ${PASSWORD}"
+    elif [ "$AUTH_TYPE" = "none" ]; then
+        log_warning "Authentication: DISABLED - Anyone can access!"
     fi
 }
 
@@ -164,13 +173,11 @@ main() {
     echo "📝 Workspace: $WORKSPACE_DIR"
     echo "=================================================="
     
-    # Keep container running
+    # Keep container running by waiting for all background processes
     if [ $# -eq 0 ]; then
-        if [ -n "$SUPERVISOR_PID" ] && [ "$SUPERVISOR_PID" != "0" ]; then
-            wait "$SUPERVISOR_PID"
-        else
-            tail -f /dev/null
-        fi
+        # Keep container alive indefinitely
+        log_info "Container running - press Ctrl+C to stop"
+        tail -f /dev/null
     else
         exec "$@"
     fi

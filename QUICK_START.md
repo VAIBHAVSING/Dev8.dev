@@ -1,63 +1,75 @@
-# 🚀 Quick Start Guide - Docker Architecture for Issue #21
+# 🚀 Dev8.dev Quick Start
 
-## TL;DR - What You Need to Know
+## Get Started in 3 Steps
 
-### Recommended Approach: **Multi-Layer Docker Images** ✅
+```bash
+# 1. Set up environment
+cd docker
+cp .env.example .env
+# Edit .env and add your GITHUB_TOKEN
 
-```
-Layer 1: Ubuntu 22.04 + SSH + Basic Tools (500MB)
-    ↓
-Layer 2: Language Runtime (Node.js OR Python OR Full-stack) (+300-800MB)
-    ↓
-Layer 3: code-server + Vim + Neovim (+250MB)
-    ↓
-Layer 4: GitHub CLI + Copilot + Claude CLI (+150MB)
-    ↓
-Runtime: Secrets via environment variables (0MB)
+# 2. Start workspace
+make up
 
-Total: 1.2GB - 2.5GB per variant
+# 3. Open VS Code
+# Browser: http://localhost:8080
+# No password required!
 ```
 
-### Why Not Monolithic (One Big Image)?
+## What You Get
 
-| Multi-Layer          | Monolithic         |
-| -------------------- | ------------------ |
-| 1.8GB (Node.js only) | 4.5GB (everything) |
-| 5-min rebuild        | 30-min rebuild     |
-| $197/month storage   | $450/month storage |
-| Pick your stack      | Get everything     |
+- **VS Code Server** (browser-based)
+- **Languages**: Node.js, Python, Go, Rust
+- **AI Tools**: GitHub Copilot, Claude, OpenAI
+- **Persistent Storage**: Your code survives restarts
 
-**Savings**: 56% cost reduction + 5x faster updates
+## Configuration
+
+### Required
+```bash
+GITHUB_TOKEN=ghp_xxxxx  # For GitHub Copilot
+```
+
+### Optional
+```bash
+# Authentication (default: none)
+CODE_SERVER_AUTH=none
+
+# Add password protection (production)
+CODE_SERVER_AUTH=password
+CODE_SERVER_PASSWORD=your_password
+
+# SSH access (optional)
+SSH_PASSWORD=your_ssh_password
+```
+
+## Common Commands
+
+```bash
+# View logs
+make logs
+
+# Restart
+make rebuild
+
+# Stop
+make down
+
+# Clean everything
+make clean
+```
+
+## Production Deployment
+
+See [docker/README.md](docker/README.md#production-deployment) for Azure Container Instances deployment.
 
 ---
 
-## Implementation Plan (3 Weeks)
+## Legacy Documentation
 
-### Week 1: Core Images (MVP)
-
-- **Day 1-2**: Build base image + Node.js variant
-- **Day 3-4**: Add Python variant + code-server
-- **Day 5**: Integrate with Go agent + test on ACI
-- **Day 6-7**: Frontend integration + documentation
-
-**Deliverable**: Working code-server + SSH in browser
+The following sections contain the original implementation planning and architecture decisions.
 
 ---
-
-### Week 2: Auto-Shutdown
-
-- **Day 1-2**: Implement activity monitoring in Go agent
-- **Day 3-4**: Add auto-shutdown logic (2-min timeout)
-- **Day 5**: Testing + edge cases
-
-**Deliverable**: Containers stop when idle
-
----
-
-### Week 3: Production Ready
-
-- **Day 1-2**: Security hardening + vulnerability scanning
-- **Day 3-4**: Monitoring + alerting setup
 - **Day 5**: Documentation + user guide
 
 **Deliverable**: Production-ready platform

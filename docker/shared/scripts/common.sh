@@ -37,14 +37,20 @@ setup_ssh() {
     mkdir -p "$HOME/.ssh"
     chmod 700 "$HOME/.ssh"
     
+    # Set user password for SSH if provided
+    if [ -n "$SSH_PASSWORD" ]; then
+        echo "dev8:$SSH_PASSWORD" | sudo chpasswd
+        log_success "SSH password authentication configured"
+    fi
+    
+    # Configure SSH public key if provided
     if [ -n "$SSH_PUBLIC_KEY" ]; then
         printf '%s\n' "$SSH_PUBLIC_KEY" > "$HOME/.ssh/authorized_keys"
         chmod 600 "$HOME/.ssh/authorized_keys"
         log_success "SSH public key configured"
-    else
-        log_warning "No SSH_PUBLIC_KEY provided"
     fi
     
+    # Configure SSH private key if provided (optional)
     if [ -n "$SSH_PRIVATE_KEY" ]; then
         umask 077
         printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/id_rsa"
@@ -53,9 +59,24 @@ setup_ssh() {
         log_success "SSH private key configured"
     fi
     
+    # Configure sshd to allow password authentication if SSH_PASSWORD is set
+    if [ -n "$SSH_PASSWORD" ]; then
+        sudo sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
+        log_info "Enabled password authentication in sshd_config"
+    fi
+    
     # Start SSH server
     sudo /usr/sbin/sshd -D -e &
     log_success "SSH server started on port 2222"
+    
+    # Show access info
+    if [ -n "$SSH_PASSWORD" ]; then
+        log_info "SSH login: ssh -p 2222 dev8@<host>"
+    elif [ -n "$SSH_PUBLIC_KEY" ]; then
+        log_info "SSH login: ssh -p 2222 -i <private-key> dev8@<host>"
+    else
+        log_warning "No SSH_PASSWORD or SSH_PUBLIC_KEY provided - SSH access disabled"
+    fi
 }
 
 ################################################################################

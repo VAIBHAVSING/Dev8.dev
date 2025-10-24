@@ -1,9 +1,36 @@
-version: '3.8'
-
 services:
-  # Complete workspace with VS Code Server and AI tools
+  # Layer 1: Base image (build this first)
+  base:
+    image: dev8-base:latest
+    pull_policy: build
+    build:
+      context: ..
+      dockerfile: docker/images/00-base/Dockerfile
+    profiles: ["manual"]
+
+  # Layer 2: Languages (build after base)
+  languages:
+    image: dev8-languages:latest
+    pull_policy: build
+    build:
+      context: ..
+      dockerfile: docker/images/10-languages/Dockerfile
+    profiles: ["manual"]
+
+  # Layer 3: VS Code (build after languages)
+  vscode:
+    image: dev8-vscode:latest
+    pull_policy: build
+    build:
+      context: ..
+      dockerfile: docker/images/20-vscode/Dockerfile
+    profiles: ["manual"]
+
+  # Layer 4: Complete workspace with VS Code Server and AI tools
+  # This is the only service you need to run
   workspace:
     image: dev8-workspace:latest
+    pull_policy: build
     build:
       context: ..
       dockerfile: docker/images/30-ai-tools/Dockerfile
@@ -14,24 +41,25 @@ services:
       - "9000:9000"   # Workspace Supervisor API
     environment:
       # Required
-      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - GITHUB_TOKEN=${GITHUB_TOKEN:?GITHUB_TOKEN is required}
       - ENVIRONMENT_ID=${ENVIRONMENT_ID:-dev8-local-001}
       
       # Git configuration
       - GIT_USER_NAME=${GIT_USER_NAME:-Dev8 User}
       - GIT_USER_EMAIL=${GIT_USER_EMAIL:-user@dev8.dev}
       
-      # VS Code Server
-      - CODE_SERVER_PASSWORD=${CODE_SERVER_PASSWORD:-dev8dev}
-      - CODE_SERVER_AUTH=${CODE_SERVER_AUTH:-password}
+      # VS Code Server (default: no authentication required)
+      - CODE_SERVER_AUTH=${CODE_SERVER_AUTH:-none}
+      - CODE_SERVER_PASSWORD=${CODE_SERVER_PASSWORD:-}
       
-      # SSH Access
-      - SSH_PUBLIC_KEY=${SSH_PUBLIC_KEY}
+      # SSH Access (optional - not required for development)
+      - SSH_PASSWORD=${SSH_PASSWORD:-}
+      - SSH_PUBLIC_KEY=${SSH_PUBLIC_KEY:-}
       
-      # AI CLI Tools (optional)
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      # AI CLI Tools (optional - only warn if not set)
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       
       # Workspace Supervisor
       - SUPERVISOR_PORT=${SUPERVISOR_PORT:-9000}
@@ -42,8 +70,12 @@ services:
       # This preserves: installed packages, configs, extensions, etc.
       - dev8-home:/home/dev8
       
-      # Workspace directory (project files)
-      - ./workspace:/workspace
+      # User code/workspace directory (project files) - Named volume for persistence
+      - dev8-workspace:/workspace
+      
+      # Alternative: Use bind mount to sync with local directory
+      # Uncomment this and comment out the line above to use local ./workspace folder
+      # - ./workspace:/workspace
       
       # Optional: SSH keys
       # - ~/.ssh:/home/dev8/.ssh-host:ro
@@ -67,41 +99,28 @@ services:
     #       cpus: '2'
     #       memory: 4G
 
-  # Base image for custom builds
-  base:
-    image: dev8-base:latest
-    build:
-      context: ..
-      dockerfile: docker/images/00-base/Dockerfile
-    profiles: ["build"]
-
-  # Languages layer for custom builds
-  languages:
-    image: dev8-languages:latest
-    build:
-      context: ..
-      dockerfile: docker/images/10-languages/Dockerfile
-    profiles: ["build"]
-
-  # VS Code layer for custom builds
-  vscode:
-    image: dev8-vscode:latest
-    build:
-      context: ..
-      dockerfile: docker/images/20-vscode/Dockerfile
-    profiles: ["build"]
-
 volumes:
   # Named volume for user home directory
   # This is where user-installed packages, configs, extensions are stored
   # Data persists across container restarts and rebuilds
   dev8-home:
     driver: local
-    # Optional: use a specific mount point
+    # Optional: use a specific mount point for home directory
     # driver_opts:
     #   type: none
     #   o: bind
     #   device: /path/to/persistent/storage/dev8-home
+  
+  # Named volume for user workspace/code
+  # This is where user's project files and code are stored
+  # Data persists across container restarts and rebuilds
+  dev8-workspace:
+    driver: local
+    # Optional: use a specific mount point for workspace
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /path/to/persistent/storage/dev8-workspace
 
 networks:
   default:

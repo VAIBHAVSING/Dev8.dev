@@ -1,43 +1,46 @@
-name: Docker Images CI/CD
+# ============================================================================
+# Docker Images CI Pipeline
+# Runs on: Pull requests to main branch
+# Purpose: Build and test Docker images
+# ============================================================================
+name: Docker CI - Build & Test
 
 on:
-  push:
-    branches: [main, develop]
-    paths:
-      - 'docker/**'
-      - '.github/workflows/docker-images.yml'
   pull_request:
-    branches: [main, develop]
+    branches: [main]
     paths:
       - 'docker/**'
+      - 'apps/supervisor/**'
       - '.github/workflows/docker-images.yml'
-  release:
-    types: [published]
   workflow_dispatch:
     inputs:
       build_base:
         description: 'Build base image'
         required: false
         default: 'true'
+        type: boolean
       build_languages:
         description: 'Build languages image'
         required: false
         default: 'true'
+        type: boolean
       build_vscode:
         description: 'Build VS Code Server image'
         required: false
         default: 'true'
+        type: boolean
       build_ai_tools:
         description: 'Build AI tools image (final)'
         required: false
         default: 'true'
+        type: boolean
 
 env:
   DOCKER_BUILDKIT: 1
   COMPOSE_DOCKER_CLI_BUILD: 1
 
 concurrency:
-  group: docker-${{ github.workflow }}-${{ github.ref }}
+  group: docker-ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
