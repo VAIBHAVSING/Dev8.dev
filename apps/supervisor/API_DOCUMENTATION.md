@@ -41,16 +41,16 @@ Returns the health status of the supervisor service.
 {
   "healthy": true,
   "uptimeSeconds": 7890.45,
-  "activeIDE": 1,
-  "activeSSH": 0
+  "activeIDEConnections": 1,
+  "activeSSHConnections": 0
 }
 ```
 
 **Response Fields:**
 - `healthy` (boolean): Overall health status
 - `uptimeSeconds` (number): Service uptime in seconds
-- `activeIDE` (integer): Number of active IDE connections
-- `activeSSH` (integer): Number of active SSH connections
+- `activeIDEConnections` (integer): Number of active IDE connections
+- `activeSSHConnections` (integer): Number of active SSH connections
 
 **Status Codes:**
 - `200 OK` - Always returns 200 if the service is running
@@ -73,8 +73,8 @@ Returns detailed status information about the supervisor and workspace.
   "startedAt": "2025-10-24T09:00:00Z",
   "lastIDEActivity": "2025-10-24T11:10:00Z",
   "lastSSHActivity": "2025-10-24T10:00:00Z",
-  "activeIDE": 1,
-  "activeSSH": 0
+  "activeIDEConnections": 1,
+  "activeSSHConnections": 0
 }
 ```
 
@@ -83,8 +83,8 @@ Returns detailed status information about the supervisor and workspace.
 - `startedAt` (timestamp): Service start time in RFC3339 format
 - `lastIDEActivity` (timestamp): Last detected IDE activity
 - `lastSSHActivity` (timestamp): Last detected SSH activity
-- `activeIDE` (integer): Number of active IDE connections
-- `activeSSH` (integer): Number of active SSH connections
+- `activeIDEConnections` (integer): Number of active IDE connections
+- `activeSSHConnections` (integer): Number of active SSH connections
 
 **Status Codes:**
 - `200 OK` - Always returns 200 if the service is running
@@ -219,7 +219,7 @@ The supervisor can be configured using the following environment variables:
 #### Azure Mount
 - `MOUNT_ENABLED` - Enable Azure File Share mount (default: true)
 - `MOUNT_STORAGE_ACCOUNT` - Azure storage account name
-- `MOUNT_STORAGE_KEY` - Azure storage account key
+- `MOUNT_STORAGE_KEY` - Azure storage account key (**Security Note:** This is a sensitive credential. In production environments, use secure secrets management systems like Kubernetes Secrets, Azure Key Vault, or similar solutions. Never commit this value to source control.)
 - `MOUNT_FILE_SHARE` - Azure file share name
 - `MOUNT_POINT` - Mount point path (default: /mnt/workspace-backup)
 
@@ -279,8 +279,8 @@ Health check response format.
 {
   "healthy": true,
   "uptimeSeconds": 7890.45,
-  "activeIDE": 1,
-  "activeSSH": 0
+  "activeIDEConnections": 1,
+  "activeSSHConnections": 0
 }
 ```
 
@@ -296,8 +296,8 @@ Detailed status response format.
   "startedAt": "2025-10-24T09:00:00Z",
   "lastIDEActivity": "2025-10-24T11:10:00Z",
   "lastSSHActivity": "2025-10-24T10:00:00Z",
-  "activeIDE": 1,
-  "activeSSH": 0
+  "activeIDEConnections": 1,
+  "activeSSHConnections": 0
 }
 ```
 
@@ -358,12 +358,21 @@ The supervisor handles `SIGINT` and `SIGTERM` signals for graceful shutdown:
 
 ### HTTP Errors
 
-All HTTP endpoints return JSON responses with appropriate status codes.
+All HTTP endpoints return JSON responses with appropriate status codes. For consistency with the Dev8 Agent API, error responses follow a standardized format.
 
 **Error Response Format:**
 ```json
 {
-  "error": "Error description"
+  "error": "Human-readable error message",
+  "message": "Detailed error description"
+}
+```
+
+**Example Error Response:**
+```json
+{
+  "error": "Service unavailable",
+  "message": "Unable to connect to backup storage"
 }
 ```
 
@@ -465,8 +474,8 @@ curl http://localhost:9090/health
 {
   "healthy": true,
   "uptimeSeconds": 3600.0,
-  "activeIDE": 1,
-  "activeSSH": 0
+  "activeIDEConnections": 1,
+  "activeSSHConnections": 0
 }
 ```
 
@@ -485,8 +494,8 @@ curl http://localhost:9090/status
   "startedAt": "2025-10-24T10:00:00Z",
   "lastIDEActivity": "2025-10-24T11:00:00Z",
   "lastSSHActivity": "2025-10-24T10:30:00Z",
-  "activeIDE": 1,
-  "activeSSH": 0
+  "activeIDEConnections": 1,
+  "activeSSHConnections": 0
 }
 ```
 
@@ -507,15 +516,66 @@ kill -SIGUSR1 $(pidof supervisor)
 
 ### Access Control
 
-- The HTTP server listens on all interfaces by default
-- In production, bind to localhost or use network policies
-- No authentication is implemented (internal service only)
+**⚠️ CRITICAL SECURITY NOTICE:**
+
+The Supervisor API **does not implement authentication** and is designed as an **internal-only service**. This design choice has significant security implications:
+
+- **The HTTP server listens on all interfaces (0.0.0.0) by default** - This means it's accessible from any network interface
+- **No authentication or authorization** - Any client that can reach the service can access all endpoints
+- **Exposes sensitive operational data** - Activity metrics, workspace status, and configuration details
+
+**Required Security Measures for Production:**
+
+1. **Network Isolation (MANDATORY):**
+   - Deploy the supervisor in a private container network
+   - Use Kubernetes NetworkPolicies to restrict access to the supervisor pod
+   - Only allow traffic from authorized services (e.g., the Dev8 Agent)
+   - **Never expose the supervisor API to public networks or untrusted zones**
+
+2. **Firewall Rules:**
+   - Configure firewall rules to block external access to port 9090
+   - Use cloud provider security groups or network ACLs
+   - Implement defense-in-depth strategies
+
+3. **Service Mesh (Recommended):**
+   - Consider using a service mesh (Istio, Linkerd) for mutual TLS
+   - Enforce service-to-service authentication
+   - Implement fine-grained access policies
+
+4. **Monitoring:**
+   - Monitor for unauthorized access attempts
+   - Set up alerts for unexpected traffic patterns
+   - Log all API requests for audit purposes
+
+**Example Kubernetes NetworkPolicy:**
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: supervisor-network-policy
+spec:
+  podSelector:
+    matchLabels:
+      app: dev8-supervisor
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: dev8-agent
+    ports:
+    - protocol: TCP
+      port: 9090
+```
 
 ### Credentials
 
-- Azure Storage credentials are loaded from environment variables
-- Mount credentials are passed securely via environment
-- No credentials are logged or exposed via API
+- **Azure Storage credentials** are loaded from environment variables
+- **MOUNT_STORAGE_KEY is highly sensitive** - Use Kubernetes Secrets, Azure Key Vault, or similar secure storage
+- Mount credentials are passed securely via environment (never via command-line arguments)
+- No credentials are logged or exposed via API endpoints
+- **Best Practice:** Rotate storage keys regularly and use Azure Managed Identities where possible
 
 ### Process Monitoring
 
