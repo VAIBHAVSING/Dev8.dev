@@ -1,102 +1,178 @@
-# Dev8.dev Docker Images
+# Dev8.dev Docker Images - Layered Architecture
 
-> **Complete containerized development environments with GitHub Copilot integration**
+Production-ready Docker infrastructure for Dev8.dev cloud workspaces with VS Code Server and AI CLI tools.
 
-## 🎯 Overview
+## 🏗️ Layered Architecture
 
-This directory contains Docker images for Dev8.dev's cloud-based development environments. Each image provides a fully configured workspace with code-server (browser-based VS Code), SSH access, and automatic GitHub/Copilot authentication.
+```
+supervisor-builder → 00-base → 10-languages → 20-vscode → 30-ai-tools
+   (Go binary)      (1.5GB)      (2.5GB)        (3.0GB)    (3.5GB FINAL)
+```
 
-## 📦 Available Images
+### Layer Structure
 
-| Image              | Size   | Languages              | Use Case                       |
-| ------------------ | ------ | ---------------------- | ------------------------------ |
-| **dev8-base**      | ~800MB | None                   | Foundation for all images      |
-| **dev8-nodejs**    | ~1.8GB | Node.js, Bun           | JavaScript/TypeScript projects |
-| **dev8-python**    | ~2.2GB | Python 3.11            | Python projects, data science  |
-| **dev8-fullstack** | ~3.5GB | Node, Python, Go, Rust | Polyglot/full-stack projects   |
+1. **00-base** - Foundation
+   - Ubuntu 22.04 + system packages
+   - SSH server (hardened, port 2222)
+   - dev8 user + workspace directory
+   - workspace-supervisor binary
+
+2. **10-languages** - Runtimes
+   - Node.js 20 LTS (npm, pnpm, yarn, bun)
+   - Python 3.11 (pip, poetry, black)
+   - Go 1.21
+   - Rust (stable)
+
+3. **20-vscode** - IDE
+   - code-server (VS Code in browser)
+   - Pre-configured settings
+   - SSH + code-server entrypoint
+
+4. **30-ai-tools** - AI CLIs (Final)
+   - GitHub CLI + Copilot extension
+   - Azure CLI (backup)
+   - AI tool wrappers (Claude, Gemini)
+   - Complete entrypoint
 
 ## 🚀 Quick Start
 
-### Build Images Locally
+### Build
 
 ```bash
 cd docker
-./build.sh
+make build-all
 ```
 
-### Test an Image
+Or build individually:
+```bash
+make build-base        # Layer 1
+make build-languages   # Layer 2
+make build-vscode      # Layer 3
+make build-ai-tools    # Layer 4 (final)
+```
+
+### Run Locally
 
 ```bash
-docker run -it --rm \
-  -p 8080:8080 \
-  -p 2222:2222 \
-  -e GITHUB_TOKEN="ghp_your_token_here" \
-  -e SSH_PUBLIC_KEY="$(cat ~/.ssh/id_rsa.pub)" \
-  -e GIT_USER_NAME="Your Name" \
-  -e GIT_USER_EMAIL="your@email.com" \
-  -v $(pwd)/workspace:/workspace \
-  dev8-nodejs:latest
+make run-vscode
+# Access at http://localhost:8080 (password: dev8dev)
 ```
 
-Then access:
+## 📁 Directory Structure
 
-- **VS Code**: http://localhost:8080
-- **SSH**: `ssh -p 2222 dev8@localhost`
-
-## 🔐 DevCopilot Agent Features
-
-Each image includes the **DevCopilot Agent** that automatically:
-
-1. ✅ **Authenticates to GitHub CLI** using provided token
-2. ✅ **Installs GitHub Copilot CLI** extension
-3. ✅ **Configures Git credentials** for push/pull operations
-4. ✅ **Sets up SSH keys** for secure access
-5. ✅ **Configures VS Code** with Copilot extensions
-6. ✅ **Monitors authentication** and refreshes tokens
-7. ✅ **Starts code-server** for browser-based IDE
+```
+docker/
+├── images/                    # Layered image definitions
+│   ├── 00-base/              # Base system
+│   ├── 10-languages/         # Language runtimes
+│   ├── 20-vscode/            # VS Code Server
+│   │   ├── config/
+│   │   │   └── settings.json
+│   │   └── entrypoint.sh
+│   └── 30-ai-tools/          # AI CLI tools (final)
+│       ├── scripts/
+│       │   ├── setup-copilot.sh
+│       │   ├── setup-claude.sh
+│       │   └── setup-gemini.sh
+│       └── entrypoint.sh
+├── shared/                    # Shared resources
+│   └── scripts/
+│       └── common.sh         # Shared bash functions
+├── scripts/
+│   └── build.sh              # Build orchestrator
+├── Makefile                   # Build automation
+├── .dockerignore             # Build context optimization
+└── README.md                 # This file
+```
 
 ## 🔑 Environment Variables
 
-### Required
+**Required:**
+- `GITHUB_TOKEN` - GitHub personal access token
 
-- `GITHUB_TOKEN` or `GH_TOKEN` - GitHub personal access token with Copilot scope
+**Optional:**
+- `CODE_SERVER_PASSWORD` - VS Code password (default: `dev8dev`)
+- `SSH_PUBLIC_KEY` - SSH public key for access
+- `GIT_USER_NAME` / `GIT_USER_EMAIL` - Git configuration
+- `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `GEMINI_API_KEY` - AI APIs
 
-### Optional - Git Configuration
+## 🧪 Testing
 
-- `GIT_USER_NAME` - Your Git commit name
-- `GIT_USER_EMAIL` - Your Git commit email
-- `SSH_PUBLIC_KEY` - Public SSH key for authentication
-- `SSH_PRIVATE_KEY` - Private SSH key for Git operations
-
-### Optional - Code Server
-
-- `CODE_SERVER_PASSWORD` - Password for code-server (default: `dev8dev`)
-- `CODE_SERVER_AUTH` - Authentication method: `password` or `none`
-
-### Optional - AI Tools
-
-- `ANTHROPIC_API_KEY` - Claude CLI API key
-- `OPENAI_API_KEY` - OpenAI API key
-
-## 🏗️ Architecture
-
+```bash
+make test              # Test all layers
+make test-base         # Test base only
+make test-languages    # Test languages only
+make test-vscode       # Test VS Code only
 ```
-Container Startup
-    ↓
-[DevCopilot Agent - entrypoint.sh]
-    ├── 1. Setup SSH keys
-    ├── 2. Authenticate GitHub CLI
-    ├── 3. Install Copilot CLI
-    ├── 4. Configure VS Code
-    ├── 5. Start code-server (port 8080)
-    ├── 6. Start SSH server (port 2222)
-    └── 7. Monitor & refresh auth
-    ↓
-[Services Running]
-    ├── code-server (VS Code in browser)
-    ├── SSH server (terminal access)
-    └── Background auth monitor
+
+## ⚡ Performance
+
+| Layer | Fresh Build | Incremental | Size |
+|-------|-------------|-------------|------|
+| 00-base | ~3 min | - | ~1.5GB |
+| 10-languages | ~5 min | ~2 min | ~2.5GB |
+| 20-vscode | ~2 min | ~1 min | ~3.0GB |
+| 30-ai-tools | ~2 min | ~1 min | ~3.5GB |
+| **Total** | **~12 min** | **~3 min** | **3.5GB** |
+
+## 🎯 Available Images
+
+- `dev8-base:latest` - Base system only
+- `dev8-languages:latest` - With language runtimes
+- `dev8-vscode:latest` - With VS Code Server
+- `dev8-workspace:latest` - Complete (recommended)
+
+## 🔧 Makefile Commands
+
+```bash
+make help              # Show all commands
+make build-all         # Build all 4 layers
+make build-base        # Build base only
+make build-languages   # Build languages only
+make build-vscode      # Build VS Code only
+make build-ai-tools    # Build AI tools only
+make test              # Run all tests
+make run-vscode        # Run locally
+make clean             # Clean up images
 ```
+
+## 🤖 Using AI Tools
+
+### GitHub Copilot CLI
+```bash
+gh copilot suggest "create a REST API in Node.js"
+gh copilot explain "docker run -d nginx"
+```
+
+### Claude API (if configured)
+```bash
+source /usr/local/share/ai-tools/setup-claude.sh
+claude "Explain Docker layers"
+```
+
+## 📖 Documentation
+
+- [ARCHITECTURE.md](./ARCHITECTURE.md) - Architecture decisions
+- [CHANGELOG.md](./CHANGELOG.md) - Version history  
+- [MIGRATION.md](./MIGRATION.md) - Migration from old structure
+
+## 📊 Key Improvements
+
+| Aspect | Before | After |
+|--------|--------|-------|
+| Build time (fresh) | ~20 min | **~12 min** |
+| Build time (incremental) | ~15 min | **~3 min** |
+| Code duplication | High | **None** |
+| Testing | Manual | **Automated** |
+| Layers | Mixed | **4 clean layers** |
+
+## 📄 License
+
+Part of Dev8.dev - See [LICENSE](../LICENSE)
+
+---
+
+**Built for cloud development workspaces** 🚀
 
 ## 📝 Image Details
 

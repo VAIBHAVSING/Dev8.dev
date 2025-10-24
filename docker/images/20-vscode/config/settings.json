@@ -1,0 +1,44 @@
+{
+  "workbench.colorTheme": "Default Dark+",
+  "editor.fontSize": 14,
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit",
+    "source.organizeImports": "explicit"
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.tabSize": 2
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.tabSize": 2
+  },
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.black-formatter",
+    "editor.tabSize": 4
+  },
+  "[go]": {
+    "editor.formatOnSave": true,
+    "editor.tabSize": 4
+  },
+  "go.toolsManagement.autoUpdate": true,
+  "python.defaultInterpreterPath": "/usr/bin/python3",
+  "github.copilot.enable": {
+    "*": true,
+    "javascript": true,
+    "typescript": true,
+    "python": true,
+    "go": true,
+    "rust": true
+  },
+  "files.exclude": {
+    "**/node_modules": true,
+    "**/__pycache__": true,
+    "**/target": true,
+    "**/.git": true
+  },
+  "extensions.autoUpdate": false,
+  "update.mode": "none",
+  "telemetry.telemetryLevel": "off"
+}

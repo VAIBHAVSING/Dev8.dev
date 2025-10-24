@@ -1,4 +1,20 @@
-# Changelog - Docker Images Implementation
+# Changelog - Docker Images & Development Environment
+
+All notable changes to the Dev8.dev Docker infrastructure are documented here.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+---
+
+## [Unreleased]
+
+### Planned
+- VS Code Server with AI CLI tools integration (GitHub Copilot CLI, Gemini, Claude, Codex)
+- Enhanced workspace management with supervisor improvements
+- Credential injection mechanisms
+
+---
 
 ## [1.0.0] - 2025-01-10
 
@@ -48,138 +64,135 @@ Complete implementation of VS Code Server Docker Images with DevCopilot Agent fo
 - ✅ Background authentication monitoring & token refresh
 - ✅ code-server auto-start with proper settings
 - ✅ Support for multiple Git providers (GitHub, GitLab, Bitbucket)
-- ✅ AI CLI tools support (Claude, OpenAI)
 
-#### Build & Test Infrastructure
+#### Architecture & Documentation
 
-- **build.sh** - Automated build script with multi-image support
-  - Configurable via environment variables
-  - Proper tagging and registry management
-  - Build caching support
-  - Colored output and progress indicators
+- Complete Docker architecture documentation
+- Build scripts with multi-platform support
+- CI/CD pipeline for automated builds
+- Comprehensive README with usage examples
+- Security guidelines and best practices
 
-- **test.sh** - Comprehensive test suite
-  - Image functionality tests
-  - Security hardening verification
-  - DevCopilot Agent integration tests
-  - Full workflow integration tests
-  - Automated cleanup
-
-- **docker-compose.yml** - Local development setup
-  - Pre-configured services for all images
-  - Volume management for persistence
-  - Health checks
-  - Easy multi-environment testing
-
-#### CI/CD Pipeline
-
-- **docker-images.yml** - GitHub Actions workflow
-  - Multi-stage builds with caching
-  - Parallel image building
-  - Security scanning with Trivy
-  - SARIF reporting to GitHub Security
-  - Smart change detection
-  - Workflow dispatch for manual builds
-  - Release tag support
-
-### 🔒 Security Features
+### 🔒 Security
 
 - Non-root container execution
-- SSH hardening (key-only auth, no passwords)
-- Custom SSH port (2222) to avoid port scanning
-- Secrets via environment variables (never in images)
-- Regular vulnerability scanning with Trivy
-- Minimal attack surface (only essential packages)
-- Secure token handling (never logged or exposed)
-
-### 📚 Documentation
-
-- **README.md** - Comprehensive user guide
-  - Quick start instructions
-  - Image comparison table
-  - Environment variable reference
-  - Testing procedures
-  - Troubleshooting guide
-  - Security best practices
-
-- **.env.example** - Environment template
-  - All supported variables documented
-  - Example values provided
-  - Clear scope requirements for tokens
-
-- **CHANGELOG.md** - This file
-  - Complete change history
-  - Feature documentation
-
-### 🎯 Performance Metrics
-
-- Base image: ~800MB
-- Node.js image: ~1.8GB
-- Python image: ~2.2GB
-- Fullstack image: ~3.5GB
-- Cold start: 30-45 seconds
-- Warm start: 5-12 seconds
-
-### 🧪 Testing Coverage
-
-- ✅ Image build verification
-- ✅ Language runtime tests
-- ✅ code-server functionality
-- ✅ SSH server configuration
-- ✅ GitHub CLI authentication
-- ✅ Security hardening verification
-- ✅ Integration testing
-- ✅ DevCopilot Agent functionality
-
-### 🔧 Configuration Options
-
-#### Required Environment Variables
-
-- `GITHUB_TOKEN` or `GH_TOKEN` - GitHub authentication
-
-#### Optional Environment Variables
-
-- `GIT_USER_NAME` - Git commit author name
-- `GIT_USER_EMAIL` - Git commit author email
-- `SSH_PUBLIC_KEY` - SSH authentication key
-- `SSH_PRIVATE_KEY` - SSH key for Git operations
-- `CODE_SERVER_PASSWORD` - code-server password
-- `CODE_SERVER_AUTH` - code-server auth method
-- `ANTHROPIC_API_KEY` - Claude CLI support
-- `OPENAI_API_KEY` - OpenAI CLI support
-
-### 📊 Architecture Improvements
-
-- Multi-layer approach (56% storage cost reduction vs monolithic)
-- Build caching (80-90% cache hit rate)
-- Incremental updates (5x faster than rebuilding everything)
-- Smart dependency ordering (base → language → tools)
-
-### 🚀 Integration Points
-
-- Ready for Azure Container Instances (ACI)
-- Compatible with AWS ECS/Fargate
-- Works with Kubernetes
-- Docker Compose for local development
-- CI/CD pipeline for automated builds
-
-### 🐛 Known Issues / Limitations
-
-- code-server health check may timeout on slow systems (increase `start_period`)
-- First Copilot use may require OAuth web flow (fallback available)
-- Large images may take time to pull on first use (layer caching helps)
-
-### 📋 Related Issues
-
-- Closes: #21 - VS Code Server Docker Images and Integration
-
-### 🙏 Acknowledgments
-
-- Inspired by GitHub Codespaces, Gitpod, and Coder
-- code-server by Coder
-- GitHub CLI and Copilot by GitHub
-- Azure Container Instances by Microsoft
+- SSH key-only authentication
+- Runtime credential injection (no secrets in images)
+- Secure environment variable handling
 
 ---
 
-**Full Changelog**: https://github.com/VAIBHAVSING/Dev8.dev/commits/main
+## Historical Fixes & Improvements (October 2025)
+
+### Docker Build Architecture Fix - PR #51
+
+**Date:** October 2025  
+**Issue:** Circular dependency in base image and incorrect build context
+
+#### Problems Fixed
+- ❌ Circular dependency: `dev8-base` as FROM image when it doesn't exist yet
+- ❌ Build script in wrong directory causing context issues
+- ❌ Build context couldn't access `apps/supervisor/` for Go build
+- ❌ Violated documented architecture patterns
+
+#### Solution Implemented
+- ✅ Changed to multi-stage build pattern starting from `ubuntu:22.04`
+- ✅ Proper build context from repository root
+- ✅ Supervisor built in dedicated stage and copied to final image
+- ✅ CI workflow updated to match new architecture
+
+### Docker Compose & Package Installation Fixes
+
+**Date:** October 2025  
+**Issue:** Package installation failures and missing dependencies
+
+#### Problems Fixed
+- ❌ `yq` not available in Ubuntu 22.04 default repos
+- ❌ `supervisor` package conflicts with custom Go supervisor
+- ❌ Build failures due to missing packages
+
+#### Solutions Implemented
+- ✅ Installed `yq` from GitHub releases (v4.x)
+- ✅ Removed conflicting `supervisor` package
+- ✅ Updated apt package lists and dependencies
+- ✅ Proper error handling in entrypoint scripts
+
+### Local Development Environment Success
+
+**Date:** October 2025  
+**Achievement:** Fully functional local Docker dev environment
+
+#### Services Running
+- ✅ code-server (VS Code) on port 8080
+- ✅ SSH server on port 2222
+- ✅ Supervisor daemon on port 9000
+- ✅ All language runtimes (Node.js, Python, Go, Rust, Bun)
+
+#### Features Validated
+- ✅ Zero-config startup
+- ✅ Health checks passing
+- ✅ Container orchestration working
+- ✅ All ports properly exposed
+- ✅ Supervisor monitoring functional
+
+### GitHub Actions Workflow Fix
+
+**Date:** October 11, 2025  
+**Branch:** `feature/docker-images-devcopilot-agent`  
+**Commit:** `b3cb945`
+
+#### Problem Fixed
+- ❌ Deprecated `actions/upload-artifact: v3` causing workflow failures
+- ❌ Build artifacts not being uploaded properly
+
+#### Solution Implemented
+- ✅ Updated to `actions/upload-artifact@v4`
+- ✅ Updated to `actions/download-artifact@v4`
+- ✅ Fixed artifact naming and paths
+- ✅ Improved workflow reliability
+
+### Comprehensive Go Test Suite
+
+**Date:** October 16, 2025  
+**Branch:** `add-comprehensive-go-tests`  
+**PR:** #49
+
+#### Test Coverage Added
+- ✅ Agent service configuration tests
+- ✅ Supervisor service tests
+- ✅ Integration tests for workspace management
+- ✅ Mock implementations for external dependencies
+- ✅ Error handling validation
+- ✅ Configuration validation tests
+
+#### Test Infrastructure
+- ✅ Table-driven test patterns
+- ✅ Proper test fixtures and mocks
+- ✅ CI integration for automated testing
+- ✅ Coverage reporting
+
+---
+
+## Migration Notes
+
+### October 24, 2025 - Documentation Consolidation
+
+This CHANGELOG now consolidates information from multiple summary documents:
+- `DOCKER_BUILD_FIX_SUMMARY.md` (archived)
+- `DOCKER_COMPOSE_FIX.md` (archived)
+- `DOCKER_SUCCESS_SUMMARY.md` (archived)
+- Root level `DOCKER_FIX_SUMMARY.md` (archived)
+- Root level `IMPLEMENTATION_SUMMARY.md` (archived)
+- Root level `TEST_IMPLEMENTATION_SUMMARY.md` (archived)
+
+All archived documents are available in `docker/docs/archive/` for historical reference.
+
+---
+
+## Links
+
+- [Architecture Documentation](./ARCHITECTURE.md)
+- [Main README](./README.md)
+- [VS Code Server + AI CLI Integration Plan](../VSCODE_SERVER_AI_CLI_INTEGRATION_PLAN.md)
+- [Quick Reference - AI Tools](../QUICK_REFERENCE_AI_TOOLS.md)
+
