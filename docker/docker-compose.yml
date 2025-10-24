@@ -1,102 +1,107 @@
 version: '3.8'
 
 services:
-  # Node.js development environment
-  nodejs:
-    image: dev8-nodejs:latest
+  # Complete workspace with VS Code Server and AI tools
+  workspace:
+    image: dev8-workspace:latest
     build:
-      context: .
-      dockerfile: nodejs/Dockerfile
-    container_name: dev8-nodejs-dev
+      context: ..
+      dockerfile: docker/images/30-ai-tools/Dockerfile
+    container_name: dev8-workspace
     ports:
-      - "8080:8080"  # code-server
-      - "2222:2222"  # SSH
+      - "8080:8080"   # VS Code Server
+      - "2222:2222"   # SSH
+      - "9000:9000"   # Workspace Supervisor API
     environment:
+      # Required
       - GITHUB_TOKEN=${GITHUB_TOKEN}
-      - GH_TOKEN=${GH_TOKEN}
+      - ENVIRONMENT_ID=${ENVIRONMENT_ID:-dev8-local-001}
+      
+      # Git configuration
       - GIT_USER_NAME=${GIT_USER_NAME:-Dev8 User}
       - GIT_USER_EMAIL=${GIT_USER_EMAIL:-user@dev8.dev}
-      - SSH_PUBLIC_KEY=${SSH_PUBLIC_KEY}
+      
+      # VS Code Server
       - CODE_SERVER_PASSWORD=${CODE_SERVER_PASSWORD:-dev8dev}
+      - CODE_SERVER_AUTH=${CODE_SERVER_AUTH:-password}
+      
+      # SSH Access
+      - SSH_PUBLIC_KEY=${SSH_PUBLIC_KEY}
+      
+      # AI CLI Tools (optional)
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      
+      # Workspace Supervisor
+      - SUPERVISOR_PORT=${SUPERVISOR_PORT:-9000}
+      - REPORT_INTERVAL=${REPORT_INTERVAL:-60s}
+      
     volumes:
+      # CRITICAL: User's home directory for persistence
+      # This preserves: installed packages, configs, extensions, etc.
+      - dev8-home:/home/dev8
+      
+      # Workspace directory (project files)
       - ./workspace:/workspace
-      - nodejs-home:/home/dev8
+      
+      # Optional: SSH keys
+      # - ~/.ssh:/home/dev8/.ssh-host:ro
+      
     restart: unless-stopped
+    
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-
-  # Python development environment
-  python:
-    image: dev8-python:latest
-    build:
-      context: .
-      dockerfile: python/Dockerfile
-    container_name: dev8-python-dev
-    ports:
-      - "8081:8080"  # code-server
-      - "2223:2222"  # SSH
-      - "8888:8888"  # Jupyter
-    environment:
-      - GITHUB_TOKEN=${GITHUB_TOKEN}
-      - GH_TOKEN=${GH_TOKEN}
-      - GIT_USER_NAME=${GIT_USER_NAME:-Dev8 User}
-      - GIT_USER_EMAIL=${GIT_USER_EMAIL:-user@dev8.dev}
-      - SSH_PUBLIC_KEY=${SSH_PUBLIC_KEY}
-      - CODE_SERVER_PASSWORD=${CODE_SERVER_PASSWORD:-dev8dev}
-    volumes:
-      - ./workspace:/workspace
-      - python-home:/home/dev8
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-
-  # Fullstack development environment
-  fullstack:
-    image: dev8-fullstack:latest
-    build:
-      context: .
-      dockerfile: fullstack/Dockerfile
-    container_name: dev8-fullstack-dev
-    ports:
-      - "8082:8080"  # code-server
-      - "2224:2222"  # SSH
-    environment:
-      - GITHUB_TOKEN=${GITHUB_TOKEN}
-      - GH_TOKEN=${GH_TOKEN}
-      - GIT_USER_NAME=${GIT_USER_NAME:-Dev8 User}
-      - GIT_USER_EMAIL=${GIT_USER_EMAIL:-user@dev8.dev}
-      - SSH_PUBLIC_KEY=${SSH_PUBLIC_KEY}
-      - CODE_SERVER_PASSWORD=${CODE_SERVER_PASSWORD:-dev8dev}
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-    volumes:
-      - ./workspace:/workspace
-      - fullstack-home:/home/dev8
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/healthz", "||", "exit", "1"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 60s
+    
+    # Resource limits (adjust based on your needs)
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '4'
+    #       memory: 8G
+    #     reservations:
+    #       cpus: '2'
+    #       memory: 4G
+
+  # Base image for custom builds
+  base:
+    image: dev8-base:latest
+    build:
+      context: ..
+      dockerfile: docker/images/00-base/Dockerfile
+    profiles: ["build"]
+
+  # Languages layer for custom builds
+  languages:
+    image: dev8-languages:latest
+    build:
+      context: ..
+      dockerfile: docker/images/10-languages/Dockerfile
+    profiles: ["build"]
+
+  # VS Code layer for custom builds
+  vscode:
+    image: dev8-vscode:latest
+    build:
+      context: ..
+      dockerfile: docker/images/20-vscode/Dockerfile
+    profiles: ["build"]
 
 volumes:
-  nodejs-home:
+  # Named volume for user home directory
+  # This is where user-installed packages, configs, extensions are stored
+  # Data persists across container restarts and rebuilds
+  dev8-home:
     driver: local
-  python-home:
-    driver: local
-  fullstack-home:
-    driver: local
+    # Optional: use a specific mount point
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /path/to/persistent/storage/dev8-home
 
 networks:
   default:

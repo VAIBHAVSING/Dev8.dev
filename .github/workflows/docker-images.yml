@@ -105,9 +105,11 @@ jobs:
 
       - name: Test base image
         run: |
-          docker run --rm dev8-base:latest sh -c "echo 'Testing base image...' && workspace-supervisor --version && echo 'Base image works!'"
-          docker run --rm dev8-base:latest which git
-          docker run --rm dev8-base:latest which ssh
+          echo "Testing base image..."
+          docker run --rm dev8-base:latest git --version
+          docker run --rm dev8-base:latest ssh -V
+          docker run --rm dev8-base:latest which workspace-supervisor
+          echo "Base image works!"
 
       - name: Scan for vulnerabilities
         uses: aquasecurity/trivy-action@master

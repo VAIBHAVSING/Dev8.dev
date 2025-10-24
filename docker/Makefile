@@ -44,8 +44,22 @@ run-vscode:  ## Run VS Code Server locally
 	docker run -it --rm \
 		-p 8080:8080 -p 2222:2222 -p 9000:9000 \
 		-e GITHUB_TOKEN=${GITHUB_TOKEN} \
+		-e ENVIRONMENT_ID=dev8-local-001 \
 		-e CODE_SERVER_PASSWORD=dev8dev \
 		-v $(PWD)/workspace:/workspace \
+		-v dev8-home:/home/dev8 \
 		dev8-workspace:latest
+
+compose-up:  ## Start workspace with docker-compose
+	docker-compose up -d
+
+compose-down:  ## Stop workspace
+	docker-compose down
+
+compose-logs:  ## View workspace logs
+	docker-compose logs -f workspace
+
+compose-rebuild:  ## Rebuild and restart workspace
+	docker-compose up -d --build workspace
 
 .DEFAULT_GOAL := help
