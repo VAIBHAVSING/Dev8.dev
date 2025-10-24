@@ -1,0 +1,500 @@
+# ============================================================================
+# Docker Images CD Pipeline - Production Deployment
+# Runs on: Push to production branch (merge from main)
+# Purpose: Build, test, scan, and deploy to Azure Container Registry
+# ============================================================================
+name: Docker CD - Production Deploy
+
+on:
+  push:
+    branches: [production]
+    paths:
+      - 'docker/**'
+      - 'apps/supervisor/**'
+      - '.github/workflows/docker-cd-production.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+      force_rebuild:
+        description: 'Force rebuild all layers'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  DOCKER_BUILDKIT: 1
+  COMPOSE_DOCKER_CLI_BUILD: 1
+  REGISTRY_NAME: dev8registry
+  REGISTRY_URL: dev8registry.azurecr.io
+
+concurrency:
+  group: docker-cd-production
+  cancel-in-progress: false
+
+jobs:
+  # Setup and versioning
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      short_sha: ${{ steps.version.outputs.short_sha }}
+      registry: ${{ steps.version.outputs.registry }}
+      build_base: ${{ steps.changes.outputs.build_base }}
+      build_languages: ${{ steps.changes.outputs.build_languages }}
+      build_vscode: ${{ steps.changes.outputs.build_vscode }}
+      build_ai_tools: ${{ steps.changes.outputs.build_ai_tools }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Generate version
+        id: version
+        run: |
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          VERSION="v$(date +%Y%m%d)-${SHORT_SHA}"
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "short_sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
+          echo "registry=${{ env.REGISTRY_URL }}" >> $GITHUB_OUTPUT
+          echo "Generated version: ${VERSION}"
+
+      - name: Detect changes
+        id: changes
+        run: |
+          if [ "${{ inputs.force_rebuild }}" = "true" ]; then
+            echo "Force rebuild enabled - building all layers"
+            echo "build_base=true" >> "$GITHUB_OUTPUT"
+            echo "build_languages=true" >> "$GITHUB_OUTPUT"
+            echo "build_vscode=true" >> "$GITHUB_OUTPUT"
+            echo "build_ai_tools=true" >> "$GITHUB_OUTPUT"
+          else
+            # Detect changes in the last commit
+            if git diff --name-only HEAD~1 HEAD | grep -q "docker/images/00-base/\|apps/supervisor/"; then
+              echo "Base layer changed - rebuilding all"
+              echo "build_base=true" >> "$GITHUB_OUTPUT"
+              echo "build_languages=true" >> "$GITHUB_OUTPUT"
+              echo "build_vscode=true" >> "$GITHUB_OUTPUT"
+              echo "build_ai_tools=true" >> "$GITHUB_OUTPUT"
+            elif git diff --name-only HEAD~1 HEAD | grep -q "docker/images/10-languages/"; then
+              echo "Languages layer changed"
+              echo "build_base=false" >> "$GITHUB_OUTPUT"
+              echo "build_languages=true" >> "$GITHUB_OUTPUT"
+              echo "build_vscode=true" >> "$GITHUB_OUTPUT"
+              echo "build_ai_tools=true" >> "$GITHUB_OUTPUT"
+            elif git diff --name-only HEAD~1 HEAD | grep -q "docker/images/20-vscode/"; then
+              echo "VS Code layer changed"
+              echo "build_base=false" >> "$GITHUB_OUTPUT"
+              echo "build_languages=false" >> "$GITHUB_OUTPUT"
+              echo "build_vscode=true" >> "$GITHUB_OUTPUT"
+              echo "build_ai_tools=true" >> "$GITHUB_OUTPUT"
+            elif git diff --name-only HEAD~1 HEAD | grep -q "docker/images/30-ai-tools/"; then
+              echo "AI tools layer changed"
+              echo "build_base=false" >> "$GITHUB_OUTPUT"
+              echo "build_languages=false" >> "$GITHUB_OUTPUT"
+              echo "build_vscode=false" >> "$GITHUB_OUTPUT"
+              echo "build_ai_tools=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "No specific changes detected - building all layers"
+              echo "build_base=true" >> "$GITHUB_OUTPUT"
+              echo "build_languages=true" >> "$GITHUB_OUTPUT"
+              echo "build_vscode=true" >> "$GITHUB_OUTPUT"
+              echo "build_ai_tools=true" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
+  # Build and push base image
+  build-base:
+    runs-on: ubuntu-latest
+    needs: setup
+    if: needs.setup.outputs.build_base == 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Azure Container Registry
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ env.REGISTRY_URL }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Build base image
+        run: |
+          echo "Building base image..."
+          docker build \
+            --cache-from ${{ env.REGISTRY_URL }}/dev8-base:latest \
+            --tag ${{ env.REGISTRY_URL }}/dev8-base:${{ needs.setup.outputs.version }} \
+            --tag ${{ env.REGISTRY_URL }}/dev8-base:latest \
+            --tag dev8-base:latest \
+            --file ./docker/images/00-base/Dockerfile \
+            --build-arg BUILDKIT_INLINE_CACHE=1 \
+            .
+
+      - name: Test base image
+        run: |
+          echo "Testing base image..."
+          docker run --rm dev8-base:latest bash -c "git --version && ssh -V && workspace-supervisor --version"
+          echo "✅ Base image tests passed!"
+
+      - name: Scan base image for vulnerabilities
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: dev8-base:latest
+          format: 'sarif'
+          output: 'trivy-base-results.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-base-results.sarif'
+          category: docker-base-production
+
+      - name: Push base image to ACR
+        run: |
+          echo "Pushing base image to Azure Container Registry..."
+          docker push ${{ env.REGISTRY_URL }}/dev8-base:${{ needs.setup.outputs.version }}
+          docker push ${{ env.REGISTRY_URL }}/dev8-base:latest
+          echo "✅ Base image pushed successfully!"
+
+      - name: Image details
+        run: |
+          docker images | grep dev8-base
+          echo "Image size: $(docker inspect dev8-base:latest --format='{{.Size}}' | numfmt --to=iec-i --suffix=B)"
+
+  # Build and push languages image
+  build-languages:
+    runs-on: ubuntu-latest
+    needs: [setup, build-base]
+    if: |
+      always() &&
+      needs.setup.outputs.build_languages == 'true' &&
+      (needs.setup.outputs.build_base == 'false' || needs.build-base.result == 'success')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Azure Container Registry
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ env.REGISTRY_URL }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Pull or build base image
+        run: |
+          if [ "${{ needs.setup.outputs.build_base }}" = "true" ]; then
+            echo "Pulling newly built base image..."
+            docker pull ${{ env.REGISTRY_URL }}/dev8-base:latest
+            docker tag ${{ env.REGISTRY_URL }}/dev8-base:latest dev8-base:latest
+          else
+            echo "Building base image locally..."
+            docker build \
+              -t dev8-base:latest \
+              -f ./docker/images/00-base/Dockerfile \
+              .
+          fi
+
+      - name: Build languages image
+        run: |
+          echo "Building languages image..."
+          docker build \
+            --cache-from ${{ env.REGISTRY_URL }}/dev8-languages:latest \
+            --tag ${{ env.REGISTRY_URL }}/dev8-languages:${{ needs.setup.outputs.version }} \
+            --tag ${{ env.REGISTRY_URL }}/dev8-languages:latest \
+            --tag dev8-languages:latest \
+            --file ./docker/images/10-languages/Dockerfile \
+            --build-arg BUILDKIT_INLINE_CACHE=1 \
+            .
+
+      - name: Test languages image
+        run: |
+          echo "Testing language runtimes..."
+          docker run --rm dev8-languages:latest bash -c "
+            node --version && 
+            python --version && 
+            go version && 
+            rustc --version &&
+            bun --version
+          "
+          echo "✅ Languages image tests passed!"
+
+      - name: Push languages image to ACR
+        run: |
+          echo "Pushing languages image to Azure Container Registry..."
+          docker push ${{ env.REGISTRY_URL }}/dev8-languages:${{ needs.setup.outputs.version }}
+          docker push ${{ env.REGISTRY_URL }}/dev8-languages:latest
+          echo "✅ Languages image pushed successfully!"
+
+  # Build and push VS Code image
+  build-vscode:
+    runs-on: ubuntu-latest
+    needs: [setup, build-base, build-languages]
+    if: |
+      always() &&
+      needs.setup.outputs.build_vscode == 'true' &&
+      (needs.setup.outputs.build_languages == 'false' || needs.build-languages.result == 'success')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Azure Container Registry
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ env.REGISTRY_URL }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Pull or build prerequisite images
+        run: |
+          if [ "${{ needs.setup.outputs.build_languages }}" = "true" ]; then
+            echo "Pulling newly built languages image..."
+            docker pull ${{ env.REGISTRY_URL }}/dev8-languages:latest
+            docker tag ${{ env.REGISTRY_URL }}/dev8-languages:latest dev8-languages:latest
+          else
+            echo "Building prerequisite images locally..."
+            docker build -t dev8-base:latest -f ./docker/images/00-base/Dockerfile .
+            docker build -t dev8-languages:latest -f ./docker/images/10-languages/Dockerfile .
+          fi
+
+      - name: Build VS Code image
+        run: |
+          echo "Building VS Code image..."
+          docker build \
+            --cache-from ${{ env.REGISTRY_URL }}/dev8-vscode:latest \
+            --tag ${{ env.REGISTRY_URL }}/dev8-vscode:${{ needs.setup.outputs.version }} \
+            --tag ${{ env.REGISTRY_URL }}/dev8-vscode:latest \
+            --tag dev8-vscode:latest \
+            --file ./docker/images/20-vscode/Dockerfile \
+            --build-arg BUILDKIT_INLINE_CACHE=1 \
+            .
+
+      - name: Test VS Code image
+        run: |
+          echo "Testing VS Code Server..."
+          docker run --rm dev8-vscode:latest code-server --version
+          echo "✅ VS Code image tests passed!"
+
+      - name: Push VS Code image to ACR
+        run: |
+          echo "Pushing VS Code image to Azure Container Registry..."
+          docker push ${{ env.REGISTRY_URL }}/dev8-vscode:${{ needs.setup.outputs.version }}
+          docker push ${{ env.REGISTRY_URL }}/dev8-vscode:latest
+          echo "✅ VS Code image pushed successfully!"
+
+  # Build and push AI tools image (final)
+  build-ai-tools:
+    runs-on: ubuntu-latest
+    needs: [setup, build-base, build-languages, build-vscode]
+    if: |
+      always() &&
+      needs.setup.outputs.build_ai_tools == 'true' &&
+      (needs.setup.outputs.build_vscode == 'false' || needs.build-vscode.result == 'success')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Azure Container Registry
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ env.REGISTRY_URL }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Pull or build prerequisite images
+        run: |
+          if [ "${{ needs.setup.outputs.build_vscode }}" = "true" ]; then
+            echo "Pulling newly built VS Code image..."
+            docker pull ${{ env.REGISTRY_URL }}/dev8-vscode:latest
+            docker tag ${{ env.REGISTRY_URL }}/dev8-vscode:latest dev8-vscode:latest
+          else
+            echo "Building prerequisite images locally..."
+            docker build -t dev8-base:latest -f ./docker/images/00-base/Dockerfile .
+            docker build -t dev8-languages:latest -f ./docker/images/10-languages/Dockerfile .
+            docker build -t dev8-vscode:latest -f ./docker/images/20-vscode/Dockerfile .
+          fi
+
+      - name: Build AI tools image (final workspace)
+        run: |
+          echo "Building AI tools image..."
+          docker build \
+            --cache-from ${{ env.REGISTRY_URL }}/dev8-workspace:latest \
+            --tag ${{ env.REGISTRY_URL }}/dev8-workspace:${{ needs.setup.outputs.version }} \
+            --tag ${{ env.REGISTRY_URL }}/dev8-workspace:latest \
+            --tag ${{ env.REGISTRY_URL }}/dev8-workspace:production \
+            --tag dev8-workspace:latest \
+            --file ./docker/images/30-ai-tools/Dockerfile \
+            --build-arg BUILDKIT_INLINE_CACHE=1 \
+            --label "git.commit=${{ github.sha }}" \
+            --label "git.branch=${{ github.ref_name }}" \
+            --label "build.date=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+            --label "version=${{ needs.setup.outputs.version }}" \
+            .
+
+      - name: Test AI tools image
+        run: |
+          echo "Testing AI tools and services..."
+          docker run --rm dev8-workspace:latest bash -c "
+            gh --version && 
+            az version && 
+            yq --version &&
+            code-server --version
+          "
+          echo "✅ AI tools image tests passed!"
+
+      - name: Comprehensive security scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: dev8-workspace:latest
+          format: 'sarif'
+          output: 'trivy-workspace-results.sarif'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+          vuln-type: 'os,library'
+          timeout: '10m'
+
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-workspace-results.sarif'
+          category: docker-workspace-production
+
+      - name: Push AI tools image to ACR
+        run: |
+          echo "Pushing AI tools (workspace) image to Azure Container Registry..."
+          docker push ${{ env.REGISTRY_URL }}/dev8-workspace:${{ needs.setup.outputs.version }}
+          docker push ${{ env.REGISTRY_URL }}/dev8-workspace:latest
+          docker push ${{ env.REGISTRY_URL }}/dev8-workspace:production
+          echo "✅ Workspace image pushed successfully!"
+
+      - name: Final image details
+        run: |
+          echo "=== Final Workspace Image Details ==="
+          docker images | grep dev8-workspace
+          echo ""
+          echo "Image size: $(docker inspect dev8-workspace:latest --format='{{.Size}}' | numfmt --to=iec-i --suffix=B)"
+          echo ""
+          echo "Image labels:"
+          docker inspect dev8-workspace:latest --format='{{json .Config.Labels}}' | jq
+          echo ""
+          echo "Image layers:"
+          docker history dev8-workspace:latest --no-trunc
+
+  # Post-deployment tasks
+  post-deployment:
+    runs-on: ubuntu-latest
+    needs: [setup, build-base, build-languages, build-vscode, build-ai-tools]
+    if: always()
+    steps:
+      - name: Generate deployment summary
+        run: |
+          {
+            echo "# 🚀 Docker Production Deployment Summary"
+            echo ""
+            echo "## 📦 Deployment Information"
+            echo "- **Version**: \`${{ needs.setup.outputs.version }}\`"
+            echo "- **Commit**: \`${{ github.sha }}\`"
+            echo "- **Branch**: \`${{ github.ref_name }}\`"
+            echo "- **Registry**: \`${{ needs.setup.outputs.registry }}\`"
+            echo "- **Timestamp**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+            echo ""
+            echo "## 🏗️ Build Status"
+            echo ""
+            echo "| Image | Status | Pushed to ACR |"
+            echo "|-------|--------|---------------|"
+            echo "| dev8-base | ${{ needs.build-base.result }} | ${{ needs.build-base.result == 'success' && '✅' || '❌' }} |"
+            echo "| dev8-languages | ${{ needs.build-languages.result }} | ${{ needs.build-languages.result == 'success' && '✅' || '❌' }} |"
+            echo "| dev8-vscode | ${{ needs.build-vscode.result }} | ${{ needs.build-vscode.result == 'success' && '✅' || '❌' }} |"
+            echo "| dev8-workspace | ${{ needs.build-ai-tools.result }} | ${{ needs.build-ai-tools.result == 'success' && '✅' || '❌' }} |"
+            echo ""
+            echo "## 🔗 Azure Container Registry Images"
+            echo ""
+            echo "Pull commands:"
+            echo "\`\`\`bash"
+            echo "# Base image"
+            echo "docker pull ${{ env.REGISTRY_URL }}/dev8-base:${{ needs.setup.outputs.version }}"
+            echo ""
+            echo "# Languages image"
+            echo "docker pull ${{ env.REGISTRY_URL }}/dev8-languages:${{ needs.setup.outputs.version }}"
+            echo ""
+            echo "# VS Code image"
+            echo "docker pull ${{ env.REGISTRY_URL }}/dev8-vscode:${{ needs.setup.outputs.version }}"
+            echo ""
+            echo "# Workspace image (recommended)"
+            echo "docker pull ${{ env.REGISTRY_URL }}/dev8-workspace:${{ needs.setup.outputs.version }}"
+            echo "docker pull ${{ env.REGISTRY_URL }}/dev8-workspace:latest"
+            echo "docker pull ${{ env.REGISTRY_URL }}/dev8-workspace:production"
+            echo "\`\`\`"
+            echo ""
+            echo "## 🔐 Security Scans"
+            echo ""
+            echo "Trivy vulnerability scans completed. Check GitHub Security tab for detailed results."
+            echo ""
+            echo "## 📝 Next Steps"
+            echo ""
+            echo "1. Review security scan results in GitHub Security"
+            echo "2. Update production deployments to use version \`${{ needs.setup.outputs.version }}\`"
+            echo "3. Test in staging environment before full rollout"
+            echo "4. Monitor application logs after deployment"
+            echo ""
+            echo "---"
+            echo ""
+            echo "**Deployment completed at**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Check for failures
+        if: |
+          needs.build-base.result == 'failure' ||
+          needs.build-languages.result == 'failure' ||
+          needs.build-vscode.result == 'failure' ||
+          needs.build-ai-tools.result == 'failure'
+        run: |
+          echo "❌ One or more builds failed!"
+          echo "Please check the logs and security scan results."
+          exit 1
+
+  # Notify on completion
+  notify-success:
+    runs-on: ubuntu-latest
+    needs: [setup, post-deployment]
+    if: success()
+    steps:
+      - name: Success notification
+        run: |
+          echo "✅ Docker images successfully deployed to Azure Container Registry!"
+          echo "Version: ${{ needs.setup.outputs.version }}"
+          echo "Registry: ${{ needs.setup.outputs.registry }}"
+          echo ""
+          echo "Images are ready for deployment to production environments."
+
+  notify-failure:
+    runs-on: ubuntu-latest
+    needs: [setup, post-deployment]
+    if: failure()
+    steps:
+      - name: Failure notification
+        run: |
+          echo "❌ Docker deployment failed!"
+          echo "Please check the build logs and fix the issues before redeploying."
+          exit 1

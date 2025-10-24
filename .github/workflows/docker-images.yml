@@ -63,26 +63,46 @@ jobs:
         id: check
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "build_base=${{ github.event.inputs.build_base }}" >> "$GITHUB_OUTPUT"
-            echo "build_languages=${{ github.event.inputs.build_languages }}" >> "$GITHUB_OUTPUT"
-            echo "build_vscode=${{ github.event.inputs.build_vscode }}" >> "$GITHUB_OUTPUT"
-            echo "build_ai_tools=${{ github.event.inputs.build_ai_tools }}" >> "$GITHUB_OUTPUT"
+            echo "build_base=${{ inputs.build_base }}" >> "$GITHUB_OUTPUT"
+            echo "build_languages=${{ inputs.build_languages }}" >> "$GITHUB_OUTPUT"
+            echo "build_vscode=${{ inputs.build_vscode }}" >> "$GITHUB_OUTPUT"
+            echo "build_ai_tools=${{ inputs.build_ai_tools }}" >> "$GITHUB_OUTPUT"
           else
-            # Always build all on docker/ changes
-            echo "build_base=true" >> "$GITHUB_OUTPUT"
-            echo "build_languages=true" >> "$GITHUB_OUTPUT"
-            echo "build_vscode=true" >> "$GITHUB_OUTPUT"
-            echo "build_ai_tools=true" >> "$GITHUB_OUTPUT"
+            # Detect changes to determine what to build
+            if git diff --name-only HEAD~1 | grep -q "docker/images/00-base/\|apps/supervisor/"; then
+              echo "build_base=true" >> "$GITHUB_OUTPUT"
+              echo "build_languages=true" >> "$GITHUB_OUTPUT"
+              echo "build_vscode=true" >> "$GITHUB_OUTPUT"
+              echo "build_ai_tools=true" >> "$GITHUB_OUTPUT"
+            elif git diff --name-only HEAD~1 | grep -q "docker/images/10-languages/"; then
+              echo "build_base=false" >> "$GITHUB_OUTPUT"
+              echo "build_languages=true" >> "$GITHUB_OUTPUT"
+              echo "build_vscode=true" >> "$GITHUB_OUTPUT"
+              echo "build_ai_tools=true" >> "$GITHUB_OUTPUT"
+            elif git diff --name-only HEAD~1 | grep -q "docker/images/20-vscode/"; then
+              echo "build_base=false" >> "$GITHUB_OUTPUT"
+              echo "build_languages=false" >> "$GITHUB_OUTPUT"
+              echo "build_vscode=true" >> "$GITHUB_OUTPUT"
+              echo "build_ai_tools=true" >> "$GITHUB_OUTPUT"
+            elif git diff --name-only HEAD~1 | grep -q "docker/images/30-ai-tools/"; then
+              echo "build_base=false" >> "$GITHUB_OUTPUT"
+              echo "build_languages=false" >> "$GITHUB_OUTPUT"
+              echo "build_vscode=false" >> "$GITHUB_OUTPUT"
+              echo "build_ai_tools=true" >> "$GITHUB_OUTPUT"
+            else
+              # Default: build all layers
+              echo "build_base=true" >> "$GITHUB_OUTPUT"
+              echo "build_languages=true" >> "$GITHUB_OUTPUT"
+              echo "build_vscode=true" >> "$GITHUB_OUTPUT"
+              echo "build_ai_tools=true" >> "$GITHUB_OUTPUT"
+            fi
           fi
 
       - name: Determine version
         id: version
         run: |
-          if [ "${{ github.event_name }}" = "release" ]; then
-            echo "version=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
-          else
-            echo "version=${{ github.sha }}" >> $GITHUB_OUTPUT
-          fi
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          echo "version=pr-${{ github.event.pull_request.number }}-${SHORT_SHA}" >> $GITHUB_OUTPUT
 
   # Build and test base image
   build-base:
