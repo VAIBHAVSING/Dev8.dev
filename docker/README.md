@@ -522,6 +522,16 @@ az container restart --resource-group yourgroup --name dev8-workspace
 
 ---
 
+## 📚 Documentation
+
+- **[VOLUME_GUIDE.md](./VOLUME_GUIDE.md)** - Complete guide to volume management, package installation, and storage optimization
+- **[CONTAINER_CAPABILITIES.md](./CONTAINER_CAPABILITIES.md)** - What's pre-installed and container features
+- **[ARCHITECTURE.md](./ARCHITECTURE.md)** - Technical architecture and design decisions
+- **[ACR_SETUP_GUIDE.md](./ACR_SETUP_GUIDE.md)** - Azure Container Registry setup
+- **[CHANGELOG.md](./CHANGELOG.md)** - Version history and changes
+
+---
+
 ## File Reference
 
 - `docker-compose.yml`: Local development configuration
