@@ -63,9 +63,7 @@ ENV PATH="/usr/local/go/bin:$PATH"
 # Saves: ~100 MB per volume
 ###############################################################################
 ENV BUN_INSTALL="/opt/bun"
-RUN mkdir -p "$BUN_INSTALL" && \
-    curl -fsSL https://bun.sh/install | bash && \
-    mv /root/.bun "$BUN_INSTALL" 2>/dev/null || true && \
+RUN curl -fsSL https://bun.sh/install | bash && \
     chmod -R 755 "$BUN_INSTALL"
 ENV PATH="$BUN_INSTALL/bin:$PATH"
 
