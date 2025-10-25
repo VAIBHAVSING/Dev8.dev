@@ -10,33 +10,23 @@ import (
 	"github.com/VAIBHAVSING/Dev8.dev/apps/agent/internal/azure"
 	"github.com/VAIBHAVSING/Dev8.dev/apps/agent/internal/config"
 	"github.com/VAIBHAVSING/Dev8.dev/apps/agent/internal/models"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // EnvironmentService handles environment lifecycle operations
+// This service is stateless and only orchestrates Azure resources
+// All data persistence is handled by Next.js + PostgreSQL
 type EnvironmentService struct {
 	config         *config.Config
 	azureClient    *azure.Client
 	storageClients map[string]*azure.StorageClient
-	db             *pgxpool.Pool
 }
 
 // NewEnvironmentService creates a new environment service
 func NewEnvironmentService(cfg *config.Config, azureClient *azure.Client) (*EnvironmentService, error) {
-	if cfg.DatabaseURL == "" {
-		return nil, fmt.Errorf("DATABASE_URL must be configured")
-	}
-
-	pool, err := pgxpool.New(context.Background(), cfg.DatabaseURL)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create database pool: %w", err)
-	}
-
 	service := &EnvironmentService{
 		config:         cfg,
 		azureClient:    azureClient,
 		storageClients: make(map[string]*azure.StorageClient),
-		db:             pool,
 	}
 
 	// Initialize storage clients for all regions
@@ -54,10 +44,9 @@ func NewEnvironmentService(cfg *config.Config, azureClient *azure.Client) (*Envi
 }
 
 // Close releases service resources.
+// No-op for stateless service - kept for compatibility
 func (s *EnvironmentService) Close() {
-	if s.db != nil {
-		s.db.Close()
-	}
+	// No resources to clean up - service is stateless
 }
 
 // CreateEnvironment creates a new cloud development environment
@@ -147,160 +136,116 @@ func (s *EnvironmentService) CreateEnvironment(ctx context.Context, req *models.
 			env.ACIPublicIP = *containerGroup.Properties.IPAddress.IP
 		}
 		if containerGroup.Properties.IPAddress.Fqdn != nil {
-			env.VSCodeURL = fmt.Sprintf("http://%s:8080", *containerGroup.Properties.IPAddress.Fqdn)
+			fqdn := *containerGroup.Properties.IPAddress.Fqdn
+			env.VSCodeURL = fmt.Sprintf("http://%s:8080", fqdn)
+			// Add SSH URL for terminal access
+			env.SSHURL = fmt.Sprintf("ssh://workspace@%s:2222", fqdn)
 		}
 	}
 
+	// Add resource group information for Next.js to use in Start/Stop/Delete operations
+	env.ResourceGroup = resourceGroup
 	env.Status = models.StatusRunning
 	env.UpdatedAt = time.Now()
 
 	return env, nil
 }
 
-// GetEnvironment retrieves an environment by ID
-func (s *EnvironmentService) GetEnvironment(ctx context.Context, envID, userID string) (*models.Environment, error) {
-	// In a real implementation, this would fetch from database
-	// For now, we'll return a not found error
-	return nil, models.ErrNotFound("environment not found")
-}
-
 // StartEnvironment starts a stopped environment
-func (s *EnvironmentService) StartEnvironment(ctx context.Context, envID, userID string) error {
-	// Get environment details (from database in real implementation)
-	env, err := s.GetEnvironment(ctx, envID, userID)
-	if err != nil {
-		return err
+// Next.js provides the Azure resource identifiers from its database
+func (s *EnvironmentService) StartEnvironment(ctx context.Context, region, resourceGroup, containerGroupName string) error {
+	// Validate inputs
+	if region == "" || resourceGroup == "" || containerGroupName == "" {
+		return models.ErrInvalidRequest("region, resourceGroup, and containerGroupName are required")
 	}
 
-	if env.Status != models.StatusStopped {
-		return models.ErrInvalidRequest("environment is not in stopped state")
-	}
-
-	// Get region configuration
-	regionConfig := s.config.GetRegion(env.CloudRegion)
+	// Validate region
+	regionConfig := s.config.GetRegion(region)
 	if regionConfig == nil {
-		return models.ErrInternalServer("region configuration not found")
-	}
-
-	resourceGroup := regionConfig.ResourceGroupName
-	if resourceGroup == "" {
-		resourceGroup = s.config.Azure.ResourceGroupName
+		return models.ErrInvalidRequest(fmt.Sprintf("region %s is not available", region))
 	}
 
 	// Start the container group
-	if err := s.azureClient.StartContainerGroup(ctx, env.CloudRegion, resourceGroup, env.ACIContainerGroupID); err != nil {
+	if err := s.azureClient.StartContainerGroup(ctx, region, resourceGroup, containerGroupName); err != nil {
 		return fmt.Errorf("failed to start container group: %w", err)
 	}
-
-	// Update status (in database in real implementation)
-	env.Status = models.StatusRunning
-	env.UpdatedAt = time.Now()
 
 	return nil
 }
 
 // StopEnvironment stops a running environment
-func (s *EnvironmentService) StopEnvironment(ctx context.Context, envID, userID string) error {
-	// Get environment details (from database in real implementation)
-	env, err := s.GetEnvironment(ctx, envID, userID)
-	if err != nil {
-		return err
+// Next.js provides the Azure resource identifiers from its database
+func (s *EnvironmentService) StopEnvironment(ctx context.Context, region, resourceGroup, containerGroupName string) error {
+	// Validate inputs
+	if region == "" || resourceGroup == "" || containerGroupName == "" {
+		return models.ErrInvalidRequest("region, resourceGroup, and containerGroupName are required")
 	}
 
-	if env.Status != models.StatusRunning {
-		return models.ErrInvalidRequest("environment is not in running state")
-	}
-
-	// Get region configuration
-	regionConfig := s.config.GetRegion(env.CloudRegion)
+	// Validate region
+	regionConfig := s.config.GetRegion(region)
 	if regionConfig == nil {
-		return models.ErrInternalServer("region configuration not found")
-	}
-
-	resourceGroup := regionConfig.ResourceGroupName
-	if resourceGroup == "" {
-		resourceGroup = s.config.Azure.ResourceGroupName
+		return models.ErrInvalidRequest(fmt.Sprintf("region %s is not available", region))
 	}
 
 	// Stop the container group
-	if err := s.azureClient.StopContainerGroup(ctx, env.CloudRegion, resourceGroup, env.ACIContainerGroupID); err != nil {
+	if err := s.azureClient.StopContainerGroup(ctx, region, resourceGroup, containerGroupName); err != nil {
 		return fmt.Errorf("failed to stop container group: %w", err)
 	}
-
-	// Update status (in database in real implementation)
-	env.Status = models.StatusStopped
-	env.UpdatedAt = time.Now()
 
 	return nil
 }
 
 // DeleteEnvironment deletes an environment and all associated resources
-func (s *EnvironmentService) DeleteEnvironment(ctx context.Context, envID, userID string) error {
-	// Get environment details (from database in real implementation)
-	env, err := s.GetEnvironment(ctx, envID, userID)
-	if err != nil {
-		return err
+// Next.js provides the Azure resource identifiers from its database
+func (s *EnvironmentService) DeleteEnvironment(ctx context.Context, region, resourceGroup, containerGroupName, fileShareName string) error {
+	// Validate inputs
+	if region == "" || resourceGroup == "" || containerGroupName == "" {
+		return models.ErrInvalidRequest("region, resourceGroup, and containerGroupName are required")
 	}
 
-	// Get region configuration
-	regionConfig := s.config.GetRegion(env.CloudRegion)
+	// Validate region
+	regionConfig := s.config.GetRegion(region)
 	if regionConfig == nil {
-		return models.ErrInternalServer("region configuration not found")
-	}
-
-	resourceGroup := regionConfig.ResourceGroupName
-	if resourceGroup == "" {
-		resourceGroup = s.config.Azure.ResourceGroupName
+		return models.ErrInvalidRequest(fmt.Sprintf("region %s is not available", region))
 	}
 
 	// Delete container group
-	if err := s.azureClient.DeleteContainerGroup(ctx, env.CloudRegion, resourceGroup, env.ACIContainerGroupID); err != nil {
+	if err := s.azureClient.DeleteContainerGroup(ctx, region, resourceGroup, containerGroupName); err != nil {
 		// Log error but continue with cleanup
-		fmt.Printf("Warning: failed to delete container group: %v\n", err)
+		log.Printf("Warning: failed to delete container group: %v", err)
 	}
 
-	// Delete file share
-	storageClient, ok := s.storageClients[env.CloudRegion]
-	if ok && env.AzureFileShareName != "" {
-		if err := storageClient.DeleteFileShare(ctx, env.AzureFileShareName); err != nil {
-			// Log error but continue
-			fmt.Printf("Warning: failed to delete file share: %v\n", err)
+	// Delete file share if specified
+	if fileShareName != "" {
+		storageClient, ok := s.storageClients[region]
+		if ok {
+			if err := storageClient.DeleteFileShare(ctx, fileShareName); err != nil {
+				// Log error but continue
+				log.Printf("Warning: failed to delete file share: %v", err)
+			}
 		}
 	}
-
-	// Update status (in database in real implementation)
-	env.Status = models.StatusDeleting
-	env.UpdatedAt = time.Now()
 
 	return nil
 }
 
-// RecordActivity updates persistence with the latest activity snapshot.
+// RecordActivity logs activity from the workspace supervisor
+// In a stateless architecture, this just logs the activity
+// In the future, this could forward to a Next.js webhook
 func (s *EnvironmentService) RecordActivity(ctx context.Context, report *models.ActivityReport) error {
 	if report == nil {
 		return models.ErrInvalidRequest("activity payload is required")
 	}
 
-	if s.db == nil {
-		return models.ErrInternalServer("database connection not configured")
-	}
+	// Log activity for observability
+	log.Printf("Activity recorded for environment %s: IDE=%d, SSH=%d, timestamp=%s",
+		report.EnvironmentID,
+		report.Snapshot.ActiveIDE,
+		report.Snapshot.ActiveSSH,
+		report.Timestamp.Format(time.RFC3339))
 
-	cmdTag, err := s.db.Exec(ctx, `
-		UPDATE environments
-		SET last_accessed_at = $2,
-			updated_at = NOW()
-		WHERE id = $1
-	`, report.EnvironmentID, report.Timestamp)
-	if err != nil {
-		return fmt.Errorf("update environment activity: %w", err)
-	}
-
-	if cmdTag.RowsAffected() == 0 {
-		return models.ErrNotFound("environment not found")
-	}
-
-	// Optional: log metrics for observability
-	log.Printf("environment %s activity recorded: ide=%d ssh=%d", report.EnvironmentID, report.Snapshot.ActiveIDE, report.Snapshot.ActiveSSH)
+	// TODO: Forward to Next.js webhook for persistence
+	// This would allow Next.js to update the database with activity information
 
 	return nil
 }

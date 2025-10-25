@@ -32,10 +32,12 @@ type Environment struct {
 	Status              EnvironmentStatus `json:"status"`
 	CloudProvider       CloudProvider     `json:"cloudProvider"`
 	CloudRegion         string            `json:"cloudRegion"`
+	ResourceGroup       string            `json:"resourceGroup,omitempty"`
 	ACIContainerGroupID string            `json:"aciContainerGroupId,omitempty"`
 	ACIPublicIP         string            `json:"aciPublicIp,omitempty"`
 	AzureFileShareName  string            `json:"azureFileShareName,omitempty"`
 	VSCodeURL           string            `json:"vsCodeUrl,omitempty"`
+	SSHURL              string            `json:"sshUrl,omitempty"`
 	CPUCores            int               `json:"cpuCores"`
 	MemoryGB            int               `json:"memoryGB"`
 	StorageGB           int               `json:"storageGB"`
@@ -61,6 +63,28 @@ type CreateEnvironmentRequest struct {
 type UpdateEnvironmentRequest struct {
 	Name   string `json:"name,omitempty"`
 	Status string `json:"status,omitempty"`
+}
+
+// StartEnvironmentRequest represents a request to start an environment
+type StartEnvironmentRequest struct {
+	Region             string `json:"region"`
+	ResourceGroup      string `json:"resourceGroup"`
+	ContainerGroupName string `json:"containerGroupName"`
+}
+
+// StopEnvironmentRequest represents a request to stop an environment
+type StopEnvironmentRequest struct {
+	Region             string `json:"region"`
+	ResourceGroup      string `json:"resourceGroup"`
+	ContainerGroupName string `json:"containerGroupName"`
+}
+
+// DeleteEnvironmentRequest represents a request to delete an environment
+type DeleteEnvironmentRequest struct {
+	Region             string `json:"region"`
+	ResourceGroup      string `json:"resourceGroup"`
+	ContainerGroupName string `json:"containerGroupName"`
+	FileShareName      string `json:"fileShareName,omitempty"`
 }
 
 // EnvironmentResponse represents the response for environment operations

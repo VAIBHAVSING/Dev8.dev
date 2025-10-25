@@ -185,9 +185,8 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("AGENT_PORT is required")
 	}
 
-	if c.DatabaseURL == "" {
-		return fmt.Errorf("DATABASE_URL is required")
-	}
+	// DATABASE_URL is optional - the agent is stateless
+	// Next.js maintains all state in PostgreSQL
 
 	if c.Azure.SubscriptionID == "" {
 		return fmt.Errorf("AZURE_SUBSCRIPTION_ID is required")

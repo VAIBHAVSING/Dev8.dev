@@ -22,12 +22,12 @@ func TestLoad(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "missing database URL",
+			name: "missing database URL - should pass (optional)",
 			envVars: map[string]string{
 				"AGENT_PORT":            "8080",
 				"AZURE_SUBSCRIPTION_ID": "test-sub-id",
 			},
-			wantErr: true,
+			wantErr: false,
 		},
 		{
 			name: "missing subscription ID",

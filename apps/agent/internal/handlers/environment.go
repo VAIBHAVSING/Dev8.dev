@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -49,43 +50,32 @@ func (h *EnvironmentHandler) CreateEnvironment(w http.ResponseWriter, r *http.Re
 }
 
 // GetEnvironment handles GET /api/v1/environments/{id}
+// This endpoint is deprecated - Next.js maintains environment state
 func (h *EnvironmentHandler) GetEnvironment(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	envID := vars["id"]
-
-	// TODO: Extract user ID from authentication context
-	userID := "default-user"
-
-	env, err := h.service.GetEnvironment(r.Context(), envID, userID)
-	if err != nil {
-		handleServiceError(w, err)
-		return
-	}
-
-	respondWithJSON(w, http.StatusOK, models.EnvironmentResponse{
-		Environment: env,
-	})
+	respondWithError(w, http.StatusNotImplemented, "This endpoint is not implemented", 
+		fmt.Errorf("environment data is managed by Next.js - query the Next.js API instead"))
 }
 
 // ListEnvironments handles GET /api/v1/environments
+// This endpoint is deprecated - Next.js maintains environment state
 func (h *EnvironmentHandler) ListEnvironments(w http.ResponseWriter, r *http.Request) {
-	// TODO: Implement list environments
-	// For now, return empty list
-	respondWithJSON(w, http.StatusOK, models.EnvironmentListResponse{
-		Environments: []models.Environment{},
-		Total:        0,
-	})
+	respondWithError(w, http.StatusNotImplemented, "This endpoint is not implemented",
+		fmt.Errorf("environment data is managed by Next.js - query the Next.js API instead"))
 }
 
 // StartEnvironment handles POST /api/v1/environments/{id}/start
+// Next.js must provide Azure resource identifiers in the request body
 func (h *EnvironmentHandler) StartEnvironment(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	envID := vars["id"]
 
-	// TODO: Extract user ID from authentication context
-	userID := "default-user"
+	var req models.StartEnvironmentRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid request body", err)
+		return
+	}
 
-	if err := h.service.StartEnvironment(r.Context(), envID, userID); err != nil {
+	if err := h.service.StartEnvironment(r.Context(), req.Region, req.ResourceGroup, req.ContainerGroupName); err != nil {
 		handleServiceError(w, err)
 		return
 	}
@@ -97,14 +87,18 @@ func (h *EnvironmentHandler) StartEnvironment(w http.ResponseWriter, r *http.Req
 }
 
 // StopEnvironment handles POST /api/v1/environments/{id}/stop
+// Next.js must provide Azure resource identifiers in the request body
 func (h *EnvironmentHandler) StopEnvironment(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	envID := vars["id"]
 
-	// TODO: Extract user ID from authentication context
-	userID := "default-user"
+	var req models.StopEnvironmentRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid request body", err)
+		return
+	}
 
-	if err := h.service.StopEnvironment(r.Context(), envID, userID); err != nil {
+	if err := h.service.StopEnvironment(r.Context(), req.Region, req.ResourceGroup, req.ContainerGroupName); err != nil {
 		handleServiceError(w, err)
 		return
 	}
@@ -145,14 +139,18 @@ func (h *EnvironmentHandler) ReportActivity(w http.ResponseWriter, r *http.Reque
 }
 
 // DeleteEnvironment handles DELETE /api/v1/environments/{id}
+// Next.js must provide Azure resource identifiers in the request body
 func (h *EnvironmentHandler) DeleteEnvironment(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	envID := vars["id"]
 
-	// TODO: Extract user ID from authentication context
-	userID := "default-user"
+	var req models.DeleteEnvironmentRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid request body", err)
+		return
+	}
 
-	if err := h.service.DeleteEnvironment(r.Context(), envID, userID); err != nil {
+	if err := h.service.DeleteEnvironment(r.Context(), req.Region, req.ResourceGroup, req.ContainerGroupName, req.FileShareName); err != nil {
 		handleServiceError(w, err)
 		return
 	}
