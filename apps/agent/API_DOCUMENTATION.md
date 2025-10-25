@@ -2,7 +2,13 @@
 
 ## Overview
 
-The Dev8 Agent is a RESTful API service that manages cloud development environments. It provides endpoints for creating, managing, and monitoring containerized development environments across cloud providers (primarily Azure).
+The Dev8 Agent is a **stateless** RESTful API service that orchestrates Azure cloud development environments. It provides endpoints for creating and managing containerized development environments in Azure Container Instances (ACI).
+
+**Architecture:**
+- The Agent is stateless and does not maintain any database
+- Next.js backend is the source of truth for all environment data
+- The Agent only orchestrates Azure resources (ACI, File Shares)
+- All state management happens in Next.js + PostgreSQL
 
 **Base URL:** `http://<host>:<port>`  
 **Default Port:** `8080`  
@@ -126,52 +132,18 @@ Creates a new development environment.
 **Request Fields:**
 - `userId` (string, optional): User identifier. Defaults to "default-user" if not provided
 - `name` (string, required): Human-readable name for the environment
-- `cloudProvider` (string, required): Cloud provider. Must be one of: `AZURE`, `AWS`, or `GCP`
-- `cloudRegion` (string, required): Cloud region for deployment (e.g., "eastus", "westus2")
-- `cpuCores` (integer, required): Number of CPU cores (1-4)
-- `memoryGB` (integer, required): Memory in GB (1-16)
-- `storageGB` (integer, required): Storage size in GB (10-100)
-- `baseImage` (string, required): Docker base image to use. Should be a valid container registry image (e.g., from Docker Hub or Microsoft Container Registry)
-
-**Response:**
-```json
-{
-  "environment": {
-    "id": "env-abc123",
-    "userId": "user-123",
-    "name": "my-dev-environment",
-    "status": "CREATING",
-    "cloudProvider": "AZURE",
-    "cloudRegion": "eastus",
-    "aciContainerGroupId": "/subscriptions/.../containerGroups/env-abc123",
-    "aciPublicIp": "20.185.123.45",
-    "azureFileShareName": "workspace-env-abc123",
-    "vsCodeUrl": "https://20.185.123.45:8443",
-    "cpuCores": 2,
-    "memoryGB": 4,
-    "storageGB": 20,
-    "baseImage": "mcr.microsoft.com/devcontainers/base:ubuntu",
-    "createdAt": "2025-10-24T10:30:00Z",
-    "updatedAt": "2025-10-24T10:30:00Z",
-    "lastAccessedAt": "2025-10-24T10:30:00Z"
-  },
-  "message": "Environment created successfully"
-}
-```
-
-**Status Codes:**
-- `201 Created` - Environment created successfully
-- `400 Bad Request` - Invalid request body or parameters
-- `500 Internal Server Error` - Server error during creation
-
----
-
-### GET /api/v1/environments/{id}
-
-Retrieves details of a specific environment.
-
-**Path Parameters:**
-- `id` (string, required): Environment ID
+- `cloudProvider` (string, required): Cloud provider. Currently only `AZURE` is supported
+- `cloudRegion` (string, required): Azure region for deployment (must be configured in AZURE_REGIONS)
+- `cpuCores` (integer, required): Number of CPU cores (1-64)
+- `memoryGB` (integer, required): Memory in GB (1-256)
+- `storageGB` (integer, required): Storage size in GB (10-2000)
+- `baseImage` (string, required): Base development image. Supported values:
+  - `node` - Node.js development environment
+  - `python` - Python development environment
+  - `go` - Go development environment
+  - `rust` - Rust development environment
+  - `java` - Java development environment
+  - Defaults to `node` if not specified
 
 **Response:**
 ```json
@@ -183,64 +155,86 @@ Retrieves details of a specific environment.
     "status": "RUNNING",
     "cloudProvider": "AZURE",
     "cloudRegion": "eastus",
-    "aciContainerGroupId": "/subscriptions/.../containerGroups/env-abc123",
+    "resourceGroup": "dev8-aci-mvp-rg",
+    "aciContainerGroupId": "aci-env-abc123",
     "aciPublicIp": "20.185.123.45",
-    "azureFileShareName": "workspace-env-abc123",
-    "vsCodeUrl": "https://20.185.123.45:8443",
+    "azureFileShareName": "workspace-user123-abc123",
+    "vsCodeUrl": "http://dev8-env-abc123.eastus.azurecontainer.io:8080",
+    "sshUrl": "ssh://workspace@dev8-env-abc123.eastus.azurecontainer.io:2222",
     "cpuCores": 2,
     "memoryGB": 4,
     "storageGB": 20,
-    "baseImage": "mcr.microsoft.com/devcontainers/base:ubuntu",
+    "baseImage": "node",
     "createdAt": "2025-10-24T10:30:00Z",
     "updatedAt": "2025-10-24T10:30:00Z",
-    "lastAccessedAt": "2025-10-24T11:00:00Z"
-  }
+    "lastAccessedAt": "2025-10-24T10:30:00Z"
+  },
+  "message": "Environment created successfully"
+}
+```
+
+**Response Fields:**
+- All request fields are returned
+- `id`: Generated unique environment identifier
+- `status`: Will be "RUNNING" when creation succeeds
+- `resourceGroup`: Azure resource group where resources were created
+- `aciContainerGroupId`: Azure Container Instance group name
+- `aciPublicIp`: Public IP address assigned to the container
+- `azureFileShareName`: Azure File Share name for persistent storage
+- `vsCodeUrl`: URL to access VS Code server (http://<fqdn>:8080)
+- `sshUrl`: SSH connection URL (ssh://workspace@<fqdn>:2222)
+- `createdAt`, `updatedAt`, `lastAccessedAt`: Timestamps
+
+**Important:** Next.js must store all returned Azure resource identifiers (`resourceGroup`, `aciContainerGroupId`, `azureFileShareName`, `cloudRegion`) in its database. These identifiers are required for subsequent Start/Stop/Delete operations.
+
+**Status Codes:**
+- `201 Created` - Environment created successfully
+- `400 Bad Request` - Invalid request body or parameters
+- `500 Internal Server Error` - Server error during creation
+
+---
+
+### GET /api/v1/environments/{id}
+
+**DEPRECATED** - This endpoint is not implemented in the stateless architecture.
+
+Retrieves details of a specific environment.
+
+**Implementation Note:**
+Since the Agent is stateless, environment data is managed by Next.js. Use the Next.js API to retrieve environment details instead.
+
+**Response:**
+```json
+{
+  "error": "This endpoint is not implemented",
+  "message": "environment data is managed by Next.js - query the Next.js API instead"
 }
 ```
 
 **Status Codes:**
-- `200 OK` - Environment found
-- `404 Not Found` - Environment not found
-- `401 Unauthorized` - User not authorized to access this environment
+- `501 Not Implemented` - This endpoint is not implemented
 
 ---
 
 ### GET /api/v1/environments
 
+**DEPRECATED** - This endpoint is not implemented in the stateless architecture.
+
 Lists all environments for the current user.
 
-**Query Parameters:**
-- `page` (integer, optional): Page number for pagination (default: 1)
-- `pageSize` (integer, optional): Number of items per page (default: 20)
+**Implementation Note:**
+Since the Agent is stateless, environment data is managed by Next.js. Use the Next.js API to list environments instead.
 
 **Response:**
 ```json
 {
-  "environments": [
-    {
-      "id": "env-abc123",
-      "userId": "user-123",
-      "name": "my-dev-environment",
-      "status": "RUNNING",
-      "cloudProvider": "AZURE",
-      "cloudRegion": "eastus",
-      "cpuCores": 2,
-      "memoryGB": 4,
-      "storageGB": 20,
-      "baseImage": "mcr.microsoft.com/devcontainers/base:ubuntu",
-      "createdAt": "2025-10-24T10:30:00Z",
-      "updatedAt": "2025-10-24T10:30:00Z",
-      "lastAccessedAt": "2025-10-24T11:00:00Z"
-    }
-  ],
-  "total": 1,
-  "page": 1,
-  "pageSize": 20
+  "error": "This endpoint is not implemented",
+  "message": "environment data is managed by Next.js - query the Next.js API instead"
 }
 ```
 
 **Status Codes:**
-- `200 OK` - List retrieved successfully
+- `501 Not Implemented` - This endpoint is not implemented
 
 ---
 
@@ -250,6 +244,23 @@ Starts a stopped environment.
 
 **Path Parameters:**
 - `id` (string, required): Environment ID
+
+**Request Body:**
+```json
+{
+  "region": "eastus",
+  "resourceGroup": "dev8-aci-mvp-rg",
+  "containerGroupName": "aci-env-abc123"
+}
+```
+
+**Request Fields:**
+- `region` (string, required): Azure region where the container group is deployed
+- `resourceGroup` (string, required): Azure resource group name
+- `containerGroupName` (string, required): Azure Container Instance group name
+
+**Implementation Note:**
+Next.js must provide the Azure resource identifiers from its database when calling this endpoint. The Agent does not store or retrieve this information.
 
 **Response:**
 ```json
@@ -261,8 +272,8 @@ Starts a stopped environment.
 
 **Status Codes:**
 - `200 OK` - Environment started successfully
-- `404 Not Found` - Environment not found
-- `400 Bad Request` - Environment cannot be started (already running or invalid state)
+- `400 Bad Request` - Missing required fields or invalid region
+- `500 Internal Server Error` - Azure API error
 
 ---
 
@@ -272,6 +283,23 @@ Stops a running environment.
 
 **Path Parameters:**
 - `id` (string, required): Environment ID
+
+**Request Body:**
+```json
+{
+  "region": "eastus",
+  "resourceGroup": "dev8-aci-mvp-rg",
+  "containerGroupName": "aci-env-abc123"
+}
+```
+
+**Request Fields:**
+- `region` (string, required): Azure region where the container group is deployed
+- `resourceGroup` (string, required): Azure resource group name
+- `containerGroupName` (string, required): Azure Container Instance group name
+
+**Implementation Note:**
+Next.js must provide the Azure resource identifiers from its database when calling this endpoint. The Agent does not store or retrieve this information.
 
 **Response:**
 ```json
@@ -283,8 +311,8 @@ Stops a running environment.
 
 **Status Codes:**
 - `200 OK` - Environment stopped successfully
-- `404 Not Found` - Environment not found
-- `400 Bad Request` - Environment cannot be stopped (already stopped or invalid state)
+- `400 Bad Request` - Missing required fields or invalid region
+- `500 Internal Server Error` - Azure API error
 
 ---
 
@@ -316,7 +344,8 @@ Reports activity for an environment (used by the workspace supervisor).
   - `activeSSHConnections` (integer): Number of active SSH connections
 - `timestamp` (timestamp, required): Report timestamp
 
-**Note:** The environment ID is taken from the path parameter `{id}` and does not need to be included in the request body.
+**Implementation Note:**
+In the stateless architecture, the Agent only logs activity for observability. The activity data is not persisted to a database. In the future, this could forward activity data to a Next.js webhook for persistence.
 
 **Response:**
 ```json
@@ -334,18 +363,36 @@ Reports activity for an environment (used by the workspace supervisor).
 ```
 
 **Status Codes:**
-- `200 OK` - Activity recorded successfully
+- `200 OK` - Activity logged successfully
 - `400 Bad Request` - Invalid activity data
-- `404 Not Found` - Environment not found
 
 ---
 
 ### DELETE /api/v1/environments/{id}
 
-Deletes an environment and all associated resources.
+Deletes an environment and all associated Azure resources.
 
 **Path Parameters:**
 - `id` (string, required): Environment ID
+
+**Request Body:**
+```json
+{
+  "region": "eastus",
+  "resourceGroup": "dev8-aci-mvp-rg",
+  "containerGroupName": "aci-env-abc123",
+  "fileShareName": "workspace-env-abc123"
+}
+```
+
+**Request Fields:**
+- `region` (string, required): Azure region where the container group is deployed
+- `resourceGroup` (string, required): Azure resource group name
+- `containerGroupName` (string, required): Azure Container Instance group name
+- `fileShareName` (string, optional): Azure File Share name to delete
+
+**Implementation Note:**
+Next.js must provide the Azure resource identifiers from its database when calling this endpoint. The Agent does not store or retrieve this information. The Agent will attempt to delete both the container group and file share, logging any errors but continuing with cleanup.
 
 **Response:**
 ```json
@@ -356,9 +403,9 @@ Deletes an environment and all associated resources.
 ```
 
 **Status Codes:**
-- `200 OK` - Environment deleted successfully
-- `404 Not Found` - Environment not found
-- `401 Unauthorized` - User not authorized to delete this environment
+- `200 OK` - Environment deletion initiated (may have partial failures - check logs)
+- `400 Bad Request` - Missing required fields or invalid region
+- `500 Internal Server Error` - Azure API error
 
 ---
 

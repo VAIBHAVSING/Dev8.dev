@@ -52,7 +52,7 @@ func (h *EnvironmentHandler) CreateEnvironment(w http.ResponseWriter, r *http.Re
 // GetEnvironment handles GET /api/v1/environments/{id}
 // This endpoint is deprecated - Next.js maintains environment state
 func (h *EnvironmentHandler) GetEnvironment(w http.ResponseWriter, r *http.Request) {
-	respondWithError(w, http.StatusNotImplemented, "This endpoint is not implemented", 
+	respondWithError(w, http.StatusNotImplemented, "This endpoint is not implemented",
 		fmt.Errorf("environment data is managed by Next.js - query the Next.js API instead"))
 }
 
