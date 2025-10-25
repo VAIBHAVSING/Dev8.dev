@@ -17,22 +17,22 @@ on:
       build_base:
         description: 'Build base image'
         required: false
-        default: 'true'
+        default: true
         type: boolean
       build_languages:
         description: 'Build languages image'
         required: false
-        default: 'true'
+        default: true
         type: boolean
       build_vscode:
         description: 'Build VS Code Server image'
         required: false
-        default: 'true'
+        default: true
         type: boolean
       build_ai_tools:
         description: 'Build AI tools image (final)'
         required: false
-        default: 'true'
+        default: true
         type: boolean
 
 env:
