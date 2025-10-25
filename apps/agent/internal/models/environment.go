@@ -35,30 +35,30 @@ type ConnectionURLs struct {
 
 // Environment represents a cloud development environment
 type Environment struct {
-	ID        string            `json:"id"`        // Same as WorkspaceID (UUID from DB)
-	UserID    string            `json:"userId"`
-	Name      string            `json:"name"`
-	Status    EnvironmentStatus `json:"status"`
-	
+	ID     string            `json:"id"` // Same as WorkspaceID (UUID from DB)
+	UserID string            `json:"userId"`
+	Name   string            `json:"name"`
+	Status EnvironmentStatus `json:"status"`
+
 	// Cloud Configuration
 	CloudProvider CloudProvider `json:"cloudProvider"`
 	CloudRegion   string        `json:"cloudRegion"`
-	
+
 	// Resources
 	CPUCores  int    `json:"cpuCores"`
 	MemoryGB  int    `json:"memoryGB"`
 	StorageGB int    `json:"storageGB"`
 	BaseImage string `json:"baseImage"`
-	
+
 	// Azure Resource Identifiers (all based on UUID)
 	AzureResourceGroup  string `json:"azureResourceGroup"`  // e.g., "dev8-eastus-rg"
 	AzureContainerGroup string `json:"azureContainerGroup"` // e.g., "aci-clxxx-yyyy-zzzz"
 	AzureFileShare      string `json:"azureFileShare"`      // e.g., "fs-clxxx-yyyy-zzzz"
 	AzureFQDN           string `json:"azureFqdn"`           // e.g., "ws-clxxx-yyyy-zzzz.eastus.azurecontainer.io"
-	
+
 	// Connection Information (all contain UUID)
 	ConnectionURLs ConnectionURLs `json:"connectionUrls"`
-	
+
 	// Timestamps
 	CreatedAt      time.Time `json:"createdAt"`
 	UpdatedAt      time.Time `json:"updatedAt"`
@@ -70,7 +70,7 @@ type CreateEnvironmentRequest struct {
 	// CRITICAL: WorkspaceID is the UUID from Next.js database (Prisma cuid)
 	// This UUID is used for all Azure resource naming
 	WorkspaceID string `json:"workspaceId"` // e.g., "clxxx-yyyy-zzzz"
-	
+
 	UserID        string        `json:"userId"`
 	Name          string        `json:"name"`
 	CloudProvider CloudProvider `json:"cloudProvider"`
@@ -147,12 +147,12 @@ func (r *CreateEnvironmentRequest) Validate() error {
 	if r.WorkspaceID == "" {
 		return ErrInvalidRequest("workspaceId is required (UUID from database)")
 	}
-	
+
 	// Validate UUID format (basic check)
 	if len(r.WorkspaceID) < 10 {
 		return ErrInvalidRequest("workspaceId must be a valid UUID")
 	}
-	
+
 	if r.Name == "" {
 		return ErrInvalidRequest("name is required")
 	}

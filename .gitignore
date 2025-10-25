@@ -47,6 +47,9 @@ yarn-error.log*
 coverage.out
 tmp/
 
+# Go Agent binary
+apps/agent/agent
+
 # CI/CD artifacts
 *.tar.gz
 *.zip

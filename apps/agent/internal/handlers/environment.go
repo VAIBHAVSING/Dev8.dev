@@ -52,7 +52,7 @@ func (h *EnvironmentHandler) CreateEnvironment(w http.ResponseWriter, r *http.Re
 func (h *EnvironmentHandler) GetEnvironment(w http.ResponseWriter, r *http.Request) {
 	// GetEnvironment is removed - Next.js is the source of truth
 	// Agent is stateless and doesn't store environment data
-	respondWithError(w, http.StatusNotImplemented, "Get environment not supported", 
+	respondWithError(w, http.StatusNotImplemented, "Get environment not supported",
 		models.ErrInvalidRequest("Agent is stateless - query Next.js for environment details"))
 }
 
@@ -60,7 +60,7 @@ func (h *EnvironmentHandler) GetEnvironment(w http.ResponseWriter, r *http.Reque
 func (h *EnvironmentHandler) ListEnvironments(w http.ResponseWriter, r *http.Request) {
 	// ListEnvironments is removed - Next.js is the source of truth
 	// Agent is stateless and doesn't store environment data
-	respondWithError(w, http.StatusNotImplemented, "List environments not supported", 
+	respondWithError(w, http.StatusNotImplemented, "List environments not supported",
 		models.ErrInvalidRequest("Agent is stateless - query Next.js for environment list"))
 }
 
@@ -70,20 +70,20 @@ func (h *EnvironmentHandler) StartEnvironment(w http.ResponseWriter, r *http.Req
 		WorkspaceID string `json:"workspaceId"`
 		Region      string `json:"region"`
 	}
-	
+
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respondWithError(w, http.StatusBadRequest, "Invalid request body", err)
 		return
 	}
 
 	if req.WorkspaceID == "" {
-		respondWithError(w, http.StatusBadRequest, "workspaceId is required", 
+		respondWithError(w, http.StatusBadRequest, "workspaceId is required",
 			models.ErrInvalidRequest("workspaceId is required"))
 		return
 	}
-	
+
 	if req.Region == "" {
-		respondWithError(w, http.StatusBadRequest, "region is required", 
+		respondWithError(w, http.StatusBadRequest, "region is required",
 			models.ErrInvalidRequest("region is required"))
 		return
 	}
@@ -105,20 +105,20 @@ func (h *EnvironmentHandler) StopEnvironment(w http.ResponseWriter, r *http.Requ
 		WorkspaceID string `json:"workspaceId"`
 		Region      string `json:"region"`
 	}
-	
+
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respondWithError(w, http.StatusBadRequest, "Invalid request body", err)
 		return
 	}
 
 	if req.WorkspaceID == "" {
-		respondWithError(w, http.StatusBadRequest, "workspaceId is required", 
+		respondWithError(w, http.StatusBadRequest, "workspaceId is required",
 			models.ErrInvalidRequest("workspaceId is required"))
 		return
 	}
-	
+
 	if req.Region == "" {
-		respondWithError(w, http.StatusBadRequest, "region is required", 
+		respondWithError(w, http.StatusBadRequest, "region is required",
 			models.ErrInvalidRequest("region is required"))
 		return
 	}
@@ -169,20 +169,20 @@ func (h *EnvironmentHandler) DeleteEnvironment(w http.ResponseWriter, r *http.Re
 		WorkspaceID string `json:"workspaceId"`
 		Region      string `json:"region"`
 	}
-	
+
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respondWithError(w, http.StatusBadRequest, "Invalid request body", err)
 		return
 	}
 
 	if req.WorkspaceID == "" {
-		respondWithError(w, http.StatusBadRequest, "workspaceId is required", 
+		respondWithError(w, http.StatusBadRequest, "workspaceId is required",
 			models.ErrInvalidRequest("workspaceId is required"))
 		return
 	}
-	
+
 	if req.Region == "" {
-		respondWithError(w, http.StatusBadRequest, "region is required", 
+		respondWithError(w, http.StatusBadRequest, "region is required",
 			models.ErrInvalidRequest("region is required"))
 		return
 	}
