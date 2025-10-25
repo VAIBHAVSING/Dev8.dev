@@ -15,7 +15,7 @@ type Config struct {
 	Host string
 
 	// Database Configuration
-	DatabaseURL string
+	DatabaseURL string // Optional - not used by Agent, kept for future
 
 	// Azure Configuration
 	Azure AzureConfig
@@ -55,7 +55,7 @@ func Load() (*Config, error) {
 	config := &Config{
 		Port:        getEnv("AGENT_PORT", "8080"),
 		Host:        getEnv("AGENT_HOST", "0.0.0.0"),
-		DatabaseURL: getEnv("DATABASE_URL", ""),
+		DatabaseURL: getEnv("DATABASE_URL", ""), // Optional, no error if empty
 		Environment: getEnv("ENVIRONMENT", "development"),
 		LogLevel:    getEnv("LOG_LEVEL", "info"),
 	}
@@ -185,9 +185,7 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("AGENT_PORT is required")
 	}
 
-	if c.DatabaseURL == "" {
-		return fmt.Errorf("DATABASE_URL is required")
-	}
+	// DATABASE_URL is now optional - Agent is stateless
 
 	if c.Azure.SubscriptionID == "" {
 		return fmt.Errorf("AZURE_SUBSCRIPTION_ID is required")

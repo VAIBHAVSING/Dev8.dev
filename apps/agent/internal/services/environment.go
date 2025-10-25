@@ -4,13 +4,11 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"strings"
 	"time"
 
 	"github.com/VAIBHAVSING/Dev8.dev/apps/agent/internal/azure"
 	"github.com/VAIBHAVSING/Dev8.dev/apps/agent/internal/config"
 	"github.com/VAIBHAVSING/Dev8.dev/apps/agent/internal/models"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // EnvironmentService handles environment lifecycle operations
@@ -18,25 +16,15 @@ type EnvironmentService struct {
 	config         *config.Config
 	azureClient    *azure.Client
 	storageClients map[string]*azure.StorageClient
-	db             *pgxpool.Pool
 }
 
 // NewEnvironmentService creates a new environment service
 func NewEnvironmentService(cfg *config.Config, azureClient *azure.Client) (*EnvironmentService, error) {
-	if cfg.DatabaseURL == "" {
-		return nil, fmt.Errorf("DATABASE_URL must be configured")
-	}
-
-	pool, err := pgxpool.New(context.Background(), cfg.DatabaseURL)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create database pool: %w", err)
-	}
-
+	// No database requirement - Agent is stateless
 	service := &EnvironmentService{
 		config:         cfg,
 		azureClient:    azureClient,
 		storageClients: make(map[string]*azure.StorageClient),
-		db:             pool,
 	}
 
 	// Initialize storage clients for all regions
@@ -55,14 +43,12 @@ func NewEnvironmentService(cfg *config.Config, azureClient *azure.Client) (*Envi
 
 // Close releases service resources.
 func (s *EnvironmentService) Close() {
-	if s.db != nil {
-		s.db.Close()
-	}
+	// Nothing to close - stateless!
 }
 
 // CreateEnvironment creates a new cloud development environment
 func (s *EnvironmentService) CreateEnvironment(ctx context.Context, req *models.CreateEnvironmentRequest) (*models.Environment, error) {
-	// Validate request
+	// CRITICAL: workspaceId (UUID) comes from Next.js (already created in DB)
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
@@ -73,177 +59,162 @@ func (s *EnvironmentService) CreateEnvironment(ctx context.Context, req *models.
 		return nil, models.ErrInvalidRequest(fmt.Sprintf("region %s is not available", req.CloudRegion))
 	}
 
-	// Generate unique identifiers
-	envID := generateEnvironmentID()
-	fileShareName := generateFileShareName(req.UserID, envID)
-	containerGroupName := generateContainerGroupName(envID)
-	dnsLabel := generateDNSLabel(envID)
-
-	// Create environment object
-	env := &models.Environment{
-		ID:                  envID,
-		UserID:              req.UserID,
-		Name:                req.Name,
-		Status:              models.StatusCreating,
-		CloudProvider:       models.ProviderAzure,
-		CloudRegion:         req.CloudRegion,
-		CPUCores:            req.CPUCores,
-		MemoryGB:            req.MemoryGB,
-		StorageGB:           req.StorageGB,
-		BaseImage:           req.BaseImage,
-		AzureFileShareName:  fileShareName,
-		ACIContainerGroupID: containerGroupName,
-		CreatedAt:           time.Now(),
-		UpdatedAt:           time.Now(),
-		LastAccessedAt:      time.Now(),
-	}
-
-	// Step 1: Create Azure File Share for persistent storage
+	// Get storage client for region
 	storageClient, ok := s.storageClients[req.CloudRegion]
 	if !ok {
 		return nil, models.ErrInternalServer(fmt.Sprintf("storage client not found for region %s", req.CloudRegion))
 	}
 
+	// IMPORTANT: Use workspaceId for all Azure resource names
+	workspaceID := req.WorkspaceID // UUID from database (e.g., "clxxx-yyyy-zzzz")
+	
+	// Azure resource names based on UUID
+	fileShareName := fmt.Sprintf("fs-%s", workspaceID)           // fs-clxxx-yyyy-zzzz
+	containerGroupName := fmt.Sprintf("aci-%s", workspaceID)     // aci-clxxx-yyyy-zzzz
+	dnsLabel := fmt.Sprintf("ws-%s", workspaceID)                // ws-clxxx-yyyy-zzzz
+	
+	resourceGroup := regionConfig.ResourceGroupName
+	if resourceGroup == "" {
+		resourceGroup = s.config.Azure.ResourceGroupName
+	}
+
+	// Create Azure File Share (named by UUID)
+	log.Printf("Creating file share: %s (workspace: %s)", fileShareName, workspaceID)
 	if err := storageClient.CreateFileShare(ctx, fileShareName, int32(req.StorageGB)); err != nil {
 		return nil, fmt.Errorf("failed to create file share: %w", err)
 	}
 
-	// Step 2: Create ACI Container Group with VS Code Server
+	// Create container spec with UUID-based names
 	containerSpec := azure.ContainerGroupSpec{
 		ContainerName:      "vscode-server",
 		Image:              s.getContainerImage(req.BaseImage),
 		CPUCores:           req.CPUCores,
 		MemoryGB:           req.MemoryGB,
-		DNSNameLabel:       dnsLabel,
-		FileShareName:      fileShareName,
+		DNSNameLabel:       dnsLabel,                    // ws-clxxx-yyyy-zzzz
+		FileShareName:      fileShareName,               // fs-clxxx-yyyy-zzzz
 		StorageAccountName: regionConfig.StorageAccount,
 		StorageAccountKey:  s.config.Azure.StorageAccountKey,
-		EnvironmentID:      envID,
+		EnvironmentID:      workspaceID,                 // Pass UUID to container env vars
 		UserID:             req.UserID,
 	}
 
-	resourceGroup := regionConfig.ResourceGroupName
-	if resourceGroup == "" {
-		resourceGroup = s.config.Azure.ResourceGroupName
-	}
-
+	// Create ACI Container Group (named by UUID)
+	log.Printf("Creating container group: %s (workspace: %s)", containerGroupName, workspaceID)
 	if err := s.azureClient.CreateContainerGroup(ctx, req.CloudRegion, resourceGroup, containerGroupName, containerSpec); err != nil {
-		// Cleanup: Delete file share if container creation fails
-		if cleanupErr := storageClient.DeleteFileShare(ctx, fileShareName); cleanupErr != nil {
-			fmt.Printf("Warning: failed to cleanup file share during error handling: %v\n", cleanupErr)
-		}
+		// Cleanup file share on error
+		_ = storageClient.DeleteFileShare(ctx, fileShareName)
 		return nil, fmt.Errorf("failed to create container group: %w", err)
 	}
 
-	// Step 3: Get container group details to populate URLs
-	containerGroup, err := s.azureClient.GetContainerGroup(ctx, req.CloudRegion, resourceGroup, containerGroupName)
+	// Wait for container to get FQDN
+	time.Sleep(5 * time.Second)
+
+	// Get container details
+	containerDetails, err := s.azureClient.GetContainerGroup(ctx, req.CloudRegion, resourceGroup, containerGroupName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get container group details: %w", err)
+		log.Printf("Warning: failed to get container details: %v", err)
 	}
 
-	// Update environment with container details
-	if containerGroup.Properties != nil && containerGroup.Properties.IPAddress != nil {
-		if containerGroup.Properties.IPAddress.IP != nil {
-			env.ACIPublicIP = *containerGroup.Properties.IPAddress.IP
-		}
-		if containerGroup.Properties.IPAddress.Fqdn != nil {
-			env.VSCodeURL = fmt.Sprintf("http://%s:8080", *containerGroup.Properties.IPAddress.Fqdn)
-		}
+	// Extract FQDN (will be ws-{workspaceId}.{region}.azurecontainer.io)
+	var fqdn string
+	if containerDetails != nil && 
+	   containerDetails.Properties != nil && 
+	   containerDetails.Properties.IPAddress != nil && 
+	   containerDetails.Properties.IPAddress.Fqdn != nil {
+		fqdn = *containerDetails.Properties.IPAddress.Fqdn
 	}
 
-	env.Status = models.StatusRunning
-	env.UpdatedAt = time.Now()
+	// Generate connection URLs (all contain UUID via FQDN)
+	connectionURLs := generateConnectionURLs(fqdn, "")
 
+	// Build environment response
+	env := &models.Environment{
+		ID:        workspaceID,  // CRITICAL: Return the UUID from request
+		Name:      req.Name,
+		UserID:    req.UserID,
+		Status:    "running",
+		CloudRegion: req.CloudRegion,
+		CPUCores:  req.CPUCores,
+		MemoryGB:  req.MemoryGB,
+		StorageGB: req.StorageGB,
+		BaseImage: req.BaseImage,
+		
+		// Azure resource identifiers (all based on UUID)
+		AzureResourceGroup:  resourceGroup,
+		AzureContainerGroup: containerGroupName,  // aci-clxxx-yyyy-zzzz
+		AzureFileShare:      fileShareName,       // fs-clxxx-yyyy-zzzz
+		AzureFQDN:           fqdn,                // ws-clxxx-yyyy-zzzz.eastus.azurecontainer.io
+		
+		// Connection URLs (contain UUID)
+		ConnectionURLs: connectionURLs,
+		
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+
+	log.Printf("✅ Created workspace %s: container=%s, fileshare=%s, fqdn=%s", 
+		workspaceID, containerGroupName, fileShareName, fqdn)
+
+	// ❌ NO DATABASE OPERATIONS - Next.js will update the workspace with these details
 	return env, nil
 }
 
-// GetEnvironment retrieves an environment by ID
-func (s *EnvironmentService) GetEnvironment(ctx context.Context, envID, userID string) (*models.Environment, error) {
-	// In a real implementation, this would fetch from database
-	// For now, we'll return a not found error
-	return nil, models.ErrNotFound("environment not found")
-}
-
 // StartEnvironment starts a stopped environment
-func (s *EnvironmentService) StartEnvironment(ctx context.Context, envID, userID string) error {
-	// Get environment details (from database in real implementation)
-	env, err := s.GetEnvironment(ctx, envID, userID)
-	if err != nil {
-		return err
-	}
-
-	if env.Status != models.StatusStopped {
-		return models.ErrInvalidRequest("environment is not in stopped state")
-	}
-
-	// Get region configuration
-	regionConfig := s.config.GetRegion(env.CloudRegion)
+func (s *EnvironmentService) StartEnvironment(ctx context.Context, workspaceID, region string) error {
+	// Derive Azure resource names from UUID
+	regionConfig := s.config.GetRegion(region)
 	if regionConfig == nil {
 		return models.ErrInternalServer("region configuration not found")
 	}
-
+	
 	resourceGroup := regionConfig.ResourceGroupName
 	if resourceGroup == "" {
 		resourceGroup = s.config.Azure.ResourceGroupName
 	}
-
-	// Start the container group
-	if err := s.azureClient.StartContainerGroup(ctx, env.CloudRegion, resourceGroup, env.ACIContainerGroupID); err != nil {
+	
+	containerGroupName := fmt.Sprintf("aci-%s", workspaceID)  // aci-{uuid}
+	
+	log.Printf("Starting workspace %s: container=%s", workspaceID, containerGroupName)
+	
+	// Start the container
+	if err := s.azureClient.StartContainerGroup(ctx, region, resourceGroup, containerGroupName); err != nil {
 		return fmt.Errorf("failed to start container group: %w", err)
 	}
 
-	// Update status (in database in real implementation)
-	env.Status = models.StatusRunning
-	env.UpdatedAt = time.Now()
-
+	log.Printf("✅ Started workspace %s", workspaceID)
 	return nil
 }
 
 // StopEnvironment stops a running environment
-func (s *EnvironmentService) StopEnvironment(ctx context.Context, envID, userID string) error {
-	// Get environment details (from database in real implementation)
-	env, err := s.GetEnvironment(ctx, envID, userID)
-	if err != nil {
-		return err
-	}
-
-	if env.Status != models.StatusRunning {
-		return models.ErrInvalidRequest("environment is not in running state")
-	}
-
-	// Get region configuration
-	regionConfig := s.config.GetRegion(env.CloudRegion)
+func (s *EnvironmentService) StopEnvironment(ctx context.Context, workspaceID, region string) error {
+	// Derive Azure resource names from UUID
+	regionConfig := s.config.GetRegion(region)
 	if regionConfig == nil {
 		return models.ErrInternalServer("region configuration not found")
 	}
-
+	
 	resourceGroup := regionConfig.ResourceGroupName
 	if resourceGroup == "" {
 		resourceGroup = s.config.Azure.ResourceGroupName
 	}
-
-	// Stop the container group
-	if err := s.azureClient.StopContainerGroup(ctx, env.CloudRegion, resourceGroup, env.ACIContainerGroupID); err != nil {
+	
+	containerGroupName := fmt.Sprintf("aci-%s", workspaceID)  // aci-{uuid}
+	
+	log.Printf("Stopping workspace %s: container=%s", workspaceID, containerGroupName)
+	
+	// Stop the container
+	if err := s.azureClient.StopContainerGroup(ctx, region, resourceGroup, containerGroupName); err != nil {
 		return fmt.Errorf("failed to stop container group: %w", err)
 	}
 
-	// Update status (in database in real implementation)
-	env.Status = models.StatusStopped
-	env.UpdatedAt = time.Now()
-
+	log.Printf("✅ Stopped workspace %s", workspaceID)
 	return nil
 }
 
 // DeleteEnvironment deletes an environment and all associated resources
-func (s *EnvironmentService) DeleteEnvironment(ctx context.Context, envID, userID string) error {
-	// Get environment details (from database in real implementation)
-	env, err := s.GetEnvironment(ctx, envID, userID)
-	if err != nil {
-		return err
-	}
-
-	// Get region configuration
-	regionConfig := s.config.GetRegion(env.CloudRegion)
+func (s *EnvironmentService) DeleteEnvironment(ctx context.Context, workspaceID, region string) error {
+	// Derive Azure resource names from UUID
+	regionConfig := s.config.GetRegion(region)
 	if regionConfig == nil {
 		return models.ErrInternalServer("region configuration not found")
 	}
@@ -252,26 +223,28 @@ func (s *EnvironmentService) DeleteEnvironment(ctx context.Context, envID, userI
 	if resourceGroup == "" {
 		resourceGroup = s.config.Azure.ResourceGroupName
 	}
+	
+	containerGroupName := fmt.Sprintf("aci-%s", workspaceID)   // aci-{uuid}
+	fileShareName := fmt.Sprintf("fs-%s", workspaceID)         // fs-{uuid}
+	
+	log.Printf("Deleting workspace %s: container=%s, fileshare=%s", 
+		workspaceID, containerGroupName, fileShareName)
 
-	// Delete container group
-	if err := s.azureClient.DeleteContainerGroup(ctx, env.CloudRegion, resourceGroup, env.ACIContainerGroupID); err != nil {
-		// Log error but continue with cleanup
-		fmt.Printf("Warning: failed to delete container group: %v\n", err)
+	// Delete ACI container
+	if err := s.azureClient.DeleteContainerGroup(ctx, region, resourceGroup, containerGroupName); err != nil {
+		log.Printf("Warning: failed to delete container group %s: %v", containerGroupName, err)
+		// Continue with file share deletion even if container delete fails
 	}
 
 	// Delete file share
-	storageClient, ok := s.storageClients[env.CloudRegion]
-	if ok && env.AzureFileShareName != "" {
-		if err := storageClient.DeleteFileShare(ctx, env.AzureFileShareName); err != nil {
-			// Log error but continue
-			fmt.Printf("Warning: failed to delete file share: %v\n", err)
+	storageClient, ok := s.storageClients[region]
+	if ok && fileShareName != "" {
+		if err := storageClient.DeleteFileShare(ctx, fileShareName); err != nil {
+			log.Printf("Warning: failed to delete file share %s: %v", fileShareName, err)
 		}
 	}
 
-	// Update status (in database in real implementation)
-	env.Status = models.StatusDeleting
-	env.UpdatedAt = time.Now()
-
+	log.Printf("✅ Deleted workspace %s", workspaceID)
 	return nil
 }
 
@@ -281,65 +254,35 @@ func (s *EnvironmentService) RecordActivity(ctx context.Context, report *models.
 		return models.ErrInvalidRequest("activity payload is required")
 	}
 
-	if s.db == nil {
-		return models.ErrInternalServer("database connection not configured")
-	}
-
-	cmdTag, err := s.db.Exec(ctx, `
-		UPDATE environments
-		SET last_accessed_at = $2,
-			updated_at = NOW()
-		WHERE id = $1
-	`, report.EnvironmentID, report.Timestamp)
-	if err != nil {
-		return fmt.Errorf("update environment activity: %w", err)
-	}
-
-	if cmdTag.RowsAffected() == 0 {
-		return models.ErrNotFound("environment not found")
-	}
-
-	// Optional: log metrics for observability
-	log.Printf("environment %s activity recorded: ide=%d ssh=%d", report.EnvironmentID, report.Snapshot.ActiveIDE, report.Snapshot.ActiveSSH)
+	// Just log activity for MVP
+	// Later: forward to Next.js webhook
+	log.Printf("Activity recorded for environment %s: IDE=%d SSH=%d", 
+		report.EnvironmentID, 
+		report.Snapshot.ActiveIDE, 
+		report.Snapshot.ActiveSSH)
 
 	return nil
 }
 
 // Helper functions
 
-func generateEnvironmentID() string {
-	// In production, use a more robust ID generation (e.g., UUID)
-	return fmt.Sprintf("env-%d", time.Now().UnixNano())
-}
-
-func generateFileShareName(userID, envID string) string {
-	// Azure File Share names must be lowercase and alphanumeric with hyphens
-	cleanUserID := strings.ToLower(strings.ReplaceAll(userID, "_", "-"))
-	cleanEnvID := strings.ToLower(strings.ReplaceAll(envID, "_", "-"))
-
-	// Ensure we don't exceed string bounds
-	userIDPart := cleanUserID
-	if len(cleanUserID) > 8 {
-		userIDPart = cleanUserID[:8]
+func generateConnectionURLs(fqdn, password string) models.ConnectionURLs {
+	if fqdn == "" {
+		return models.ConnectionURLs{}
 	}
-
-	envIDPart := cleanEnvID
-	if len(cleanEnvID) > 12 {
-		envIDPart = cleanEnvID[4:12]
-	} else if len(cleanEnvID) > 4 {
-		envIDPart = cleanEnvID[4:]
+	
+	// Generate a secure password if not provided
+	if password == "" {
+		password = fmt.Sprintf("dev8-%d", time.Now().UnixNano()%100000)
 	}
-
-	return fmt.Sprintf("workspace-%s-%s", userIDPart, envIDPart)
-}
-
-func generateContainerGroupName(envID string) string {
-	return fmt.Sprintf("aci-%s", envID)
-}
-
-func generateDNSLabel(envID string) string {
-	// DNS labels must be lowercase and alphanumeric with hyphens
-	return fmt.Sprintf("dev8-%s", strings.ToLower(envID))
+	
+	return models.ConnectionURLs{
+		SSHURL:             fmt.Sprintf("ssh://user@%s:2222", fqdn),
+		VSCodeWebURL:       fmt.Sprintf("https://%s:8080", fqdn),
+		VSCodeDesktopURL:   fmt.Sprintf("vscode-remote://ssh-remote+user@%s:2222/workspace", fqdn),
+		SupervisorURL:      fmt.Sprintf("http://%s:9000", fqdn),
+		CodeServerPassword: password,
+	}
 }
 
 func (s *EnvironmentService) getContainerImage(baseImage string) string {

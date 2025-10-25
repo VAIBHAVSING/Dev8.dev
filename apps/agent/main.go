@@ -47,8 +47,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to create environment service: %v", err)
 	}
-	log.Printf("🚀 Environment service initialized")
-	defer envService.Close()
+	log.Printf("🚀 Environment service initialized (stateless)")
+	// No need to defer Close() - nothing to close
 
 	// Initialize handlers
 	envHandler := handlers.NewEnvironmentHandler(envService)
@@ -73,9 +73,9 @@ func main() {
 	api.HandleFunc("/environments", envHandler.CreateEnvironment).Methods("POST")
 	api.HandleFunc("/environments", envHandler.ListEnvironments).Methods("GET")
 	api.HandleFunc("/environments/{id}", envHandler.GetEnvironment).Methods("GET")
-	api.HandleFunc("/environments/{id}", envHandler.DeleteEnvironment).Methods("DELETE")
-	api.HandleFunc("/environments/{id}/start", envHandler.StartEnvironment).Methods("POST")
-	api.HandleFunc("/environments/{id}/stop", envHandler.StopEnvironment).Methods("POST")
+	api.HandleFunc("/environments", envHandler.DeleteEnvironment).Methods("DELETE")
+	api.HandleFunc("/environments/start", envHandler.StartEnvironment).Methods("POST")
+	api.HandleFunc("/environments/stop", envHandler.StopEnvironment).Methods("POST")
 	api.HandleFunc("/environments/{id}/activity", envHandler.ReportActivity).Methods("POST")
 
 	// Root route

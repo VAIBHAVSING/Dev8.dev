@@ -50,68 +50,87 @@ func (h *EnvironmentHandler) CreateEnvironment(w http.ResponseWriter, r *http.Re
 
 // GetEnvironment handles GET /api/v1/environments/{id}
 func (h *EnvironmentHandler) GetEnvironment(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	envID := vars["id"]
-
-	// TODO: Extract user ID from authentication context
-	userID := "default-user"
-
-	env, err := h.service.GetEnvironment(r.Context(), envID, userID)
-	if err != nil {
-		handleServiceError(w, err)
-		return
-	}
-
-	respondWithJSON(w, http.StatusOK, models.EnvironmentResponse{
-		Environment: env,
-	})
+	// GetEnvironment is removed - Next.js is the source of truth
+	// Agent is stateless and doesn't store environment data
+	respondWithError(w, http.StatusNotImplemented, "Get environment not supported", 
+		models.ErrInvalidRequest("Agent is stateless - query Next.js for environment details"))
 }
 
 // ListEnvironments handles GET /api/v1/environments
 func (h *EnvironmentHandler) ListEnvironments(w http.ResponseWriter, r *http.Request) {
-	// TODO: Implement list environments
-	// For now, return empty list
-	respondWithJSON(w, http.StatusOK, models.EnvironmentListResponse{
-		Environments: []models.Environment{},
-		Total:        0,
-	})
+	// ListEnvironments is removed - Next.js is the source of truth
+	// Agent is stateless and doesn't store environment data
+	respondWithError(w, http.StatusNotImplemented, "List environments not supported", 
+		models.ErrInvalidRequest("Agent is stateless - query Next.js for environment list"))
 }
 
-// StartEnvironment handles POST /api/v1/environments/{id}/start
+// StartEnvironment handles POST /api/v1/environments/start
 func (h *EnvironmentHandler) StartEnvironment(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	envID := vars["id"]
+	var req struct {
+		WorkspaceID string `json:"workspaceId"`
+		Region      string `json:"region"`
+	}
+	
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid request body", err)
+		return
+	}
 
-	// TODO: Extract user ID from authentication context
-	userID := "default-user"
+	if req.WorkspaceID == "" {
+		respondWithError(w, http.StatusBadRequest, "workspaceId is required", 
+			models.ErrInvalidRequest("workspaceId is required"))
+		return
+	}
+	
+	if req.Region == "" {
+		respondWithError(w, http.StatusBadRequest, "region is required", 
+			models.ErrInvalidRequest("region is required"))
+		return
+	}
 
-	if err := h.service.StartEnvironment(r.Context(), envID, userID); err != nil {
+	if err := h.service.StartEnvironment(r.Context(), req.WorkspaceID, req.Region); err != nil {
 		handleServiceError(w, err)
 		return
 	}
 
 	respondWithJSON(w, http.StatusOK, map[string]string{
-		"message": "Environment started successfully",
-		"id":      envID,
+		"message":     "Environment started successfully",
+		"workspaceId": req.WorkspaceID,
 	})
 }
 
-// StopEnvironment handles POST /api/v1/environments/{id}/stop
+// StopEnvironment handles POST /api/v1/environments/stop
 func (h *EnvironmentHandler) StopEnvironment(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	envID := vars["id"]
+	var req struct {
+		WorkspaceID string `json:"workspaceId"`
+		Region      string `json:"region"`
+	}
+	
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid request body", err)
+		return
+	}
 
-	// TODO: Extract user ID from authentication context
-	userID := "default-user"
+	if req.WorkspaceID == "" {
+		respondWithError(w, http.StatusBadRequest, "workspaceId is required", 
+			models.ErrInvalidRequest("workspaceId is required"))
+		return
+	}
+	
+	if req.Region == "" {
+		respondWithError(w, http.StatusBadRequest, "region is required", 
+			models.ErrInvalidRequest("region is required"))
+		return
+	}
 
-	if err := h.service.StopEnvironment(r.Context(), envID, userID); err != nil {
+	if err := h.service.StopEnvironment(r.Context(), req.WorkspaceID, req.Region); err != nil {
 		handleServiceError(w, err)
 		return
 	}
 
 	respondWithJSON(w, http.StatusOK, map[string]string{
-		"message": "Environment stopped successfully",
-		"id":      envID,
+		"message":     "Environment stopped successfully",
+		"workspaceId": req.WorkspaceID,
 	})
 }
 
@@ -144,22 +163,38 @@ func (h *EnvironmentHandler) ReportActivity(w http.ResponseWriter, r *http.Reque
 	})
 }
 
-// DeleteEnvironment handles DELETE /api/v1/environments/{id}
+// DeleteEnvironment handles DELETE /api/v1/environments
 func (h *EnvironmentHandler) DeleteEnvironment(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	envID := vars["id"]
+	var req struct {
+		WorkspaceID string `json:"workspaceId"`
+		Region      string `json:"region"`
+	}
+	
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid request body", err)
+		return
+	}
 
-	// TODO: Extract user ID from authentication context
-	userID := "default-user"
+	if req.WorkspaceID == "" {
+		respondWithError(w, http.StatusBadRequest, "workspaceId is required", 
+			models.ErrInvalidRequest("workspaceId is required"))
+		return
+	}
+	
+	if req.Region == "" {
+		respondWithError(w, http.StatusBadRequest, "region is required", 
+			models.ErrInvalidRequest("region is required"))
+		return
+	}
 
-	if err := h.service.DeleteEnvironment(r.Context(), envID, userID); err != nil {
+	if err := h.service.DeleteEnvironment(r.Context(), req.WorkspaceID, req.Region); err != nil {
 		handleServiceError(w, err)
 		return
 	}
 
 	respondWithJSON(w, http.StatusOK, map[string]string{
-		"message": "Environment deleted successfully",
-		"id":      envID,
+		"message":     "Environment deleted successfully",
+		"workspaceId": req.WorkspaceID,
 	})
 }
 

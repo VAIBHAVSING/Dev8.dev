@@ -24,29 +24,53 @@ const (
 	ProviderGCP   CloudProvider = "GCP"
 )
 
+// ConnectionURLs contains all connection endpoints for the workspace
+type ConnectionURLs struct {
+	SSHURL             string `json:"sshUrl"`             // ssh://user@ws-{uuid}.region.azurecontainer.io:2222
+	VSCodeWebURL       string `json:"vscodeWebUrl"`       // https://ws-{uuid}.region.azurecontainer.io:8080
+	VSCodeDesktopURL   string `json:"vscodeDesktopUrl"`   // vscode-remote://ssh-remote+user@ws-{uuid}...:2222/workspace
+	SupervisorURL      string `json:"supervisorUrl"`      // http://ws-{uuid}.region.azurecontainer.io:9000
+	CodeServerPassword string `json:"codeServerPassword"` // Generated password for VS Code auth
+}
+
 // Environment represents a cloud development environment
 type Environment struct {
-	ID                  string            `json:"id"`
-	UserID              string            `json:"userId"`
-	Name                string            `json:"name"`
-	Status              EnvironmentStatus `json:"status"`
-	CloudProvider       CloudProvider     `json:"cloudProvider"`
-	CloudRegion         string            `json:"cloudRegion"`
-	ACIContainerGroupID string            `json:"aciContainerGroupId,omitempty"`
-	ACIPublicIP         string            `json:"aciPublicIp,omitempty"`
-	AzureFileShareName  string            `json:"azureFileShareName,omitempty"`
-	VSCodeURL           string            `json:"vsCodeUrl,omitempty"`
-	CPUCores            int               `json:"cpuCores"`
-	MemoryGB            int               `json:"memoryGB"`
-	StorageGB           int               `json:"storageGB"`
-	BaseImage           string            `json:"baseImage"`
-	CreatedAt           time.Time         `json:"createdAt"`
-	UpdatedAt           time.Time         `json:"updatedAt"`
-	LastAccessedAt      time.Time         `json:"lastAccessedAt"`
+	ID        string            `json:"id"`        // Same as WorkspaceID (UUID from DB)
+	UserID    string            `json:"userId"`
+	Name      string            `json:"name"`
+	Status    EnvironmentStatus `json:"status"`
+	
+	// Cloud Configuration
+	CloudProvider CloudProvider `json:"cloudProvider"`
+	CloudRegion   string        `json:"cloudRegion"`
+	
+	// Resources
+	CPUCores  int    `json:"cpuCores"`
+	MemoryGB  int    `json:"memoryGB"`
+	StorageGB int    `json:"storageGB"`
+	BaseImage string `json:"baseImage"`
+	
+	// Azure Resource Identifiers (all based on UUID)
+	AzureResourceGroup  string `json:"azureResourceGroup"`  // e.g., "dev8-eastus-rg"
+	AzureContainerGroup string `json:"azureContainerGroup"` // e.g., "aci-clxxx-yyyy-zzzz"
+	AzureFileShare      string `json:"azureFileShare"`      // e.g., "fs-clxxx-yyyy-zzzz"
+	AzureFQDN           string `json:"azureFqdn"`           // e.g., "ws-clxxx-yyyy-zzzz.eastus.azurecontainer.io"
+	
+	// Connection Information (all contain UUID)
+	ConnectionURLs ConnectionURLs `json:"connectionUrls"`
+	
+	// Timestamps
+	CreatedAt      time.Time `json:"createdAt"`
+	UpdatedAt      time.Time `json:"updatedAt"`
+	LastAccessedAt time.Time `json:"lastAccessedAt,omitempty"`
 }
 
 // CreateEnvironmentRequest represents a request to create a new environment
 type CreateEnvironmentRequest struct {
+	// CRITICAL: WorkspaceID is the UUID from Next.js database (Prisma cuid)
+	// This UUID is used for all Azure resource naming
+	WorkspaceID string `json:"workspaceId"` // e.g., "clxxx-yyyy-zzzz"
+	
 	UserID        string        `json:"userId"`
 	Name          string        `json:"name"`
 	CloudProvider CloudProvider `json:"cloudProvider"`
@@ -120,20 +144,29 @@ func (r *ActivityReport) Normalize(pathEnvironmentID string) error {
 
 // Validate validates the create environment request
 func (r *CreateEnvironmentRequest) Validate() error {
+	if r.WorkspaceID == "" {
+		return ErrInvalidRequest("workspaceId is required (UUID from database)")
+	}
+	
+	// Validate UUID format (basic check)
+	if len(r.WorkspaceID) < 10 {
+		return ErrInvalidRequest("workspaceId must be a valid UUID")
+	}
+	
 	if r.Name == "" {
 		return ErrInvalidRequest("name is required")
 	}
 	if r.CloudRegion == "" {
 		return ErrInvalidRequest("cloudRegion is required")
 	}
-	if r.CPUCores < 1 || r.CPUCores > 64 {
-		return ErrInvalidRequest("cpuCores must be between 1 and 64")
+	if r.CPUCores < 1 || r.CPUCores > 4 {
+		return ErrInvalidRequest("cpuCores must be between 1 and 4")
 	}
-	if r.MemoryGB < 1 || r.MemoryGB > 256 {
-		return ErrInvalidRequest("memoryGB must be between 1 and 256")
+	if r.MemoryGB < 2 || r.MemoryGB > 16 {
+		return ErrInvalidRequest("memoryGB must be between 2 and 16")
 	}
-	if r.StorageGB < 10 || r.StorageGB > 2000 {
-		return ErrInvalidRequest("storageGB must be between 10 and 2000")
+	if r.StorageGB < 10 || r.StorageGB > 100 {
+		return ErrInvalidRequest("storageGB must be between 10 and 100")
 	}
 	if r.BaseImage == "" {
 		r.BaseImage = "node" // Default to Node.js
