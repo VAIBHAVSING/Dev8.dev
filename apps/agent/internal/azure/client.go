@@ -106,6 +106,78 @@ func (c *Client) CreateContainerGroup(ctx context.Context, region, resourceGroup
 		}
 	}
 
+	// Build environment variables dynamically
+	envVars := []*armcontainerinstance.EnvironmentVariable{
+		// Always required
+		{Name: to.Ptr("WORKSPACE_ID"), Value: to.Ptr(spec.EnvironmentID)},
+		{Name: to.Ptr("USER_ID"), Value: to.Ptr(spec.UserID)},
+		{Name: to.Ptr("WORKSPACE_DIR"), Value: to.Ptr("/workspace")},
+		{Name: to.Ptr("AGENT_BASE_URL"), Value: to.Ptr(spec.AgentBaseURL)},
+		{Name: to.Ptr("AGENT_ENABLED"), Value: to.Ptr("true")},
+		{Name: to.Ptr("MONITOR_INTERVAL"), Value: to.Ptr("30s")},
+		{Name: to.Ptr("LOG_FILE_PATH"), Value: to.Ptr("/var/log/supervisor.log")},
+	}
+
+	// Add optional environment variables only if provided
+	if spec.GitHubToken != "" {
+		envVars = append(envVars, &armcontainerinstance.EnvironmentVariable{
+			Name:        to.Ptr("GITHUB_TOKEN"),
+			SecureValue: to.Ptr(spec.GitHubToken),
+		})
+	}
+	if spec.CodeServerPassword != "" {
+		envVars = append(envVars, &armcontainerinstance.EnvironmentVariable{
+			Name:        to.Ptr("CODE_SERVER_PASSWORD"),
+			SecureValue: to.Ptr(spec.CodeServerPassword),
+		})
+	}
+	if spec.SSHPublicKey != "" {
+		envVars = append(envVars, &armcontainerinstance.EnvironmentVariable{
+			Name:  to.Ptr("SSH_PUBLIC_KEY"),
+			Value: to.Ptr(spec.SSHPublicKey),
+		})
+	}
+	if spec.GitUserName != "" {
+		envVars = append(envVars, &armcontainerinstance.EnvironmentVariable{
+			Name:  to.Ptr("GIT_USER_NAME"),
+			Value: to.Ptr(spec.GitUserName),
+		})
+	}
+	if spec.GitUserEmail != "" {
+		envVars = append(envVars, &armcontainerinstance.EnvironmentVariable{
+			Name:  to.Ptr("GIT_USER_EMAIL"),
+			Value: to.Ptr(spec.GitUserEmail),
+		})
+	}
+	if spec.AnthropicAPIKey != "" {
+		envVars = append(envVars, &armcontainerinstance.EnvironmentVariable{
+			Name:        to.Ptr("ANTHROPIC_API_KEY"),
+			SecureValue: to.Ptr(spec.AnthropicAPIKey),
+		})
+	}
+	if spec.OpenAIAPIKey != "" {
+		envVars = append(envVars, &armcontainerinstance.EnvironmentVariable{
+			Name:        to.Ptr("OPENAI_API_KEY"),
+			SecureValue: to.Ptr(spec.OpenAIAPIKey),
+		})
+	}
+	if spec.GeminiAPIKey != "" {
+		envVars = append(envVars, &armcontainerinstance.EnvironmentVariable{
+			Name:        to.Ptr("GEMINI_API_KEY"),
+			SecureValue: to.Ptr(spec.GeminiAPIKey),
+		})
+	}
+
+	// Backup configuration (always enabled)
+	if spec.StorageAccountName != "" {
+		envVars = append(envVars,
+			&armcontainerinstance.EnvironmentVariable{Name: to.Ptr("BACKUP_ENABLED"), Value: to.Ptr("true")},
+			&armcontainerinstance.EnvironmentVariable{Name: to.Ptr("BACKUP_INTERVAL"), Value: to.Ptr("1h")},
+			&armcontainerinstance.EnvironmentVariable{Name: to.Ptr("BACKUP_STORAGE_ACCOUNT"), Value: to.Ptr(spec.StorageAccountName)},
+			&armcontainerinstance.EnvironmentVariable{Name: to.Ptr("BACKUP_CONTAINER"), Value: to.Ptr("backups")},
+		)
+	}
+
 	// Build container group configuration
 	containerGroup := armcontainerinstance.ContainerGroup{
 		Location: to.Ptr(region),
@@ -125,7 +197,8 @@ func (c *Client) CreateContainerGroup(ctx context.Context, region, resourceGroup
 						Ports: []*armcontainerinstance.ContainerPort{
 							{Port: to.Ptr(int32(8080)), Protocol: to.Ptr(armcontainerinstance.ContainerNetworkProtocolTCP)},
 						},
-						VolumeMounts: volumeMounts,
+						VolumeMounts:         volumeMounts,
+						EnvironmentVariables: envVars,
 					},
 				},
 			},
@@ -144,6 +217,17 @@ func (c *Client) CreateContainerGroup(ctx context.Context, region, resourceGroup
 			"userId":      to.Ptr(spec.UserID),
 			"managed-by":  to.Ptr("dev8-agent"),
 		},
+	}
+
+	// Add image registry credentials if username is provided (for private Docker Hub)
+	if spec.RegistryUsername != "" && spec.RegistryServer != "" {
+		containerGroup.Properties.ImageRegistryCredentials = []*armcontainerinstance.ImageRegistryCredential{
+			{
+				Server:   to.Ptr(spec.RegistryServer),
+				Username: to.Ptr(spec.RegistryUsername),
+				Password: to.Ptr(spec.RegistryPassword),
+			},
+		}
 	}
 
 	// Start the container group creation
