@@ -78,6 +78,8 @@ jobs:
         run: |
           echo "🏗️ Building all Docker layers (base → languages → vscode → ai-tools)..."
           cd docker
+          # Set dummy GITHUB_TOKEN for docker compose (only needed for validation, not used during build)
+          export GITHUB_TOKEN=dummy-token-for-build
           make build-all
           echo "✅ All layers built successfully!"
       
