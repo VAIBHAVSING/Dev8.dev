@@ -96,6 +96,24 @@ func (s *EnvironmentService) CreateEnvironment(ctx context.Context, req *models.
 		StorageAccountKey:  s.config.Azure.StorageAccountKey,
 		EnvironmentID:      workspaceID, // Pass UUID to container env vars
 		UserID:             req.UserID,
+
+		// Registry credentials (static from config)
+		RegistryServer:   s.config.RegistryServer,
+		RegistryUsername: s.config.RegistryUsername,
+		RegistryPassword: s.config.RegistryPassword,
+
+		// Agent URL for workspace reporting (static from config)
+		AgentBaseURL: s.config.AgentBaseURL,
+
+		// Dynamic per-workspace values (from API request)
+		GitHubToken:        req.GitHubToken,
+		CodeServerPassword: req.CodeServerPassword,
+		SSHPublicKey:       req.SSHPublicKey,
+		GitUserName:        req.GitUserName,
+		GitUserEmail:       req.GitUserEmail,
+		AnthropicAPIKey:    req.AnthropicAPIKey,
+		OpenAIAPIKey:       req.OpenAIAPIKey,
+		GeminiAPIKey:       req.GeminiAPIKey,
 	}
 
 	// Create ACI Container Group (named by UUID)
