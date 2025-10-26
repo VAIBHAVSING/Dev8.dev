@@ -16,6 +16,43 @@ export type EnvironmentStatus =
   | "DELETING";
 
 /**
+ * IDE types (matching Prisma schema enum)
+ */
+export type IDEType = "VSCODE" | "CURSOR" | "JUPYTER";
+
+/**
+ * AI Agent types (matching Prisma schema enum)
+ */
+export type AgentType =
+  | "NONE"
+  | "COPILOT"
+  | "CLAUDE"
+  | "GEMINI"
+  | "CODEX"
+  | "COPILOT_PLUS";
+
+/**
+ * Secret types (matching Prisma schema enum)
+ */
+export type SecretType =
+  | "GITHUB_TOKEN"
+  | "ANTHROPIC_API_KEY"
+  | "OPENAI_API_KEY"
+  | "GEMINI_API_KEY"
+  | "CUSTOM_ENV_VAR"
+  | "SSH_PRIVATE_KEY";
+
+/**
+ * Backup trigger types (matching Prisma schema enum)
+ */
+export type BackupTrigger = "MANUAL" | "PRE_SHUTDOWN" | "SCHEDULED";
+
+/**
+ * Backup status types (matching Prisma schema enum)
+ */
+export type BackupStatus = "PENDING" | "RUNNING" | "COMPLETED" | "FAILED";
+
+/**
  * Instance types for resource optimization
  */
 export type InstanceType =
@@ -74,6 +111,13 @@ export interface Environment {
   userId: string;
   name: string;
   status: EnvironmentStatus;
+
+  // IDE and Agent Configuration
+  ideType: IDEType;
+  agentType: AgentType;
+  dockerImage?: string;
+  autoStopMinutes: number;
+  autoStopEnabled: boolean;
 
   // Cloud Configuration
   cloudProvider: CloudProvider;
@@ -165,6 +209,11 @@ export interface ResourceUsage {
 export interface CreateEnvironmentRequest {
   name: string;
   baseImage: BaseImage;
+  ideType?: IDEType;
+  agentType?: AgentType;
+  dockerImage?: string;
+  autoStopMinutes?: number;
+  autoStopEnabled?: boolean;
   cloudProvider?: CloudProvider;
   cloudRegion?: string;
   cpuCores: number;
@@ -180,6 +229,11 @@ export interface CreateEnvironmentRequest {
  */
 export interface UpdateEnvironmentRequest {
   name?: string;
+  ideType?: IDEType;
+  agentType?: AgentType;
+  dockerImage?: string;
+  autoStopMinutes?: number;
+  autoStopEnabled?: boolean;
   cpuCores?: number;
   memoryGB?: number;
   storageGB?: number;
@@ -271,4 +325,158 @@ export function isValidBaseImage(image: string): image is BaseImage {
     "docker",
     "data-science",
   ].includes(image);
+}
+
+export function isValidIDEType(type: string): type is IDEType {
+  return ["VSCODE", "CURSOR", "JUPYTER"].includes(type);
+}
+
+export function isValidAgentType(type: string): type is AgentType {
+  return [
+    "NONE",
+    "COPILOT",
+    "CLAUDE",
+    "GEMINI",
+    "CODEX",
+    "COPILOT_PLUS",
+  ].includes(type);
+}
+
+export function isValidSecretType(type: string): type is SecretType {
+  return [
+    "GITHUB_TOKEN",
+    "ANTHROPIC_API_KEY",
+    "OPENAI_API_KEY",
+    "GEMINI_API_KEY",
+    "CUSTOM_ENV_VAR",
+    "SSH_PRIVATE_KEY",
+  ].includes(type);
+}
+
+export function isValidBackupTrigger(trigger: string): trigger is BackupTrigger {
+  return ["MANUAL", "PRE_SHUTDOWN", "SCHEDULED"].includes(trigger);
+}
+
+export function isValidBackupStatus(status: string): status is BackupStatus {
+  return ["PENDING", "RUNNING", "COMPLETED", "FAILED"].includes(status);
+}
+
+/**
+ * Activity report interface (matching Prisma schema)
+ */
+export interface ActivityReport {
+  id: string;
+  environmentId: string;
+  lastIDEActivity?: Date;
+  lastSSHActivity?: Date;
+  activeIDEConnections: number;
+  activeSSHConnections: number;
+  cpuUsagePercent?: number;
+  memoryUsageMB?: number;
+  diskUsageMB?: number;
+  networkRxMB?: number;
+  networkTxMB?: number;
+  supervisorVersion?: string;
+  metadata?: Record<string, any>;
+  reportedAt: Date;
+}
+
+/**
+ * SSH key interface (matching Prisma schema)
+ */
+export interface SSHKey {
+  id: string;
+  userId: string;
+  name: string;
+  publicKey: string;
+  fingerprint: string;
+  keyType: string;
+  isActive: boolean;
+  lastUsedAt?: Date;
+  usageCount: number;
+  createdAt: Date;
+  updatedAt: Date;
+  expiresAt?: Date;
+  revokedAt?: Date;
+}
+
+/**
+ * Secret interface (matching Prisma schema)
+ */
+export interface Secret {
+  id: string;
+  userId: string;
+  name: string;
+  secretType: SecretType;
+  description?: string;
+  vaultName?: string;
+  secretName?: string;
+  secretVersion?: string;
+  lastRotatedAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+  expiresAt?: Date;
+}
+
+/**
+ * Workspace interface (matching Prisma schema)
+ */
+export interface Workspace {
+  id: string;
+  environmentId: string;
+  userId: string;
+  storagePath: string;
+  storageType: string;
+  azureStorageAccount?: string;
+  azureContainerName?: string;
+  azureBlobPrefix?: string;
+  backupEnabled: boolean;
+  backupRetentionDays: number;
+  lastBackupAt?: Date;
+  totalSizeMB?: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/**
+ * Backup interface (matching Prisma schema)
+ */
+export interface Backup {
+  id: string;
+  workspaceId: string;
+  environmentId: string;
+  trigger: BackupTrigger;
+  status: BackupStatus;
+  backupPath?: string;
+  backupSizeMB?: number;
+  startedAt: Date;
+  completedAt?: Date;
+  errorMessage?: string;
+  metadata?: Record<string, any>;
+}
+
+/**
+ * Create SSH key request
+ */
+export interface CreateSSHKeyRequest {
+  name: string;
+  publicKey: string;
+}
+
+/**
+ * Create secret request
+ */
+export interface CreateSecretRequest {
+  name: string;
+  secretType: SecretType;
+  description?: string;
+  vaultName?: string;
+  secretName?: string;
+}
+
+/**
+ * Trigger backup request
+ */
+export interface TriggerBackupRequest {
+  trigger?: BackupTrigger;
 }
