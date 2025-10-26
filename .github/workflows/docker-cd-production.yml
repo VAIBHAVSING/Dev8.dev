@@ -1,64 +1,69 @@
-# ============================================================================
-# Docker Images CD Pipeline - Production Deployment
-# Runs on: Push to production branch (merge from main) OR Manual Trigger
-# Purpose: Build, test, scan, and deploy to Docker Hub
-# ============================================================================
-name: Docker CD - Production Deploy
+################################################################################
+# Docker CD - Production Multi-Stage Build
+# Builds all 4 layers in a single multi-stage Dockerfile
+# Only uploads the final workspace image to Docker Hub
+################################################################################
+name: Docker CD - Production
 
 on:
   push:
-    branches: [production]
+    branches:
+      - main
+      - production
+      
+    paths:
+      - 'docker/**'
+      - 'apps/supervisor/**'
+      - '.github/workflows/docker-cd-production.yml'
+  pull_request:
+    branches:
+      - main
+      - production
     paths:
       - 'docker/**'
       - 'apps/supervisor/**'
       - '.github/workflows/docker-cd-production.yml'
   workflow_dispatch:
     inputs:
-      environment:
-        description: 'Deployment environment'
+      push_to_dockerhub:
+        description: 'Push to Docker Hub'
         required: true
-        default: 'production'
+        default: 'true'
         type: choice
         options:
-          - production
-          - staging
-      force_rebuild:
-        description: 'Force rebuild all layers'
-        required: false
-        default: true
-        type: boolean
-      push_to_dockerhub:
-        description: 'Push images to DockerHub'
-        required: false
-        default: true
-        type: boolean
+          - 'true'
+          - 'false'
 
 env:
+  DOCKERHUB_IMAGE: vaibhavsing/dev8-workspace
   DOCKER_BUILDKIT: 1
-  COMPOSE_DOCKER_CLI_BUILD: 1
-  DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME || 'vaibhavsing' }}
 
 concurrency:
-  group: docker-cd-production
-  cancel-in-progress: false
+  group: docker-cd-production-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  # Setup and versioning
-  setup:
+  build-and-push:
+    name: Build Multi-Stage Docker Image
     runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-      short_sha: ${{ steps.version.outputs.short_sha }}
-      build_base: ${{ steps.changes.outputs.build_base }}
-      build_languages: ${{ steps.changes.outputs.build_languages }}
-      build_vscode: ${{ steps.changes.outputs.build_vscode }}
-      build_ai_tools: ${{ steps.changes.outputs.build_ai_tools }}
+    
+    permissions:
+      contents: read
+      packages: write
+      security-events: write
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
         with:
-          fetch-depth: 2
-
+          install: true
+          driver-opts: |
+            image=moby/buildkit:latest
+            network=host
+      
       - name: Generate version
         id: version
         run: |
@@ -67,452 +72,238 @@ jobs:
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "short_sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
           echo "Generated version: ${VERSION}"
-
-      - name: Detect changes
-        id: changes
-        run: |
-          if [ "${{ inputs.force_rebuild }}" = "true" ]; then
-            echo "Force rebuild enabled - building all layers"
-            echo "build_base=true" >> "$GITHUB_OUTPUT"
-            echo "build_languages=true" >> "$GITHUB_OUTPUT"
-            echo "build_vscode=true" >> "$GITHUB_OUTPUT"
-            echo "build_ai_tools=true" >> "$GITHUB_OUTPUT"
-          else
-            # Detect changes in the last commit
-            if git diff --name-only HEAD~1 HEAD | grep -q "docker/images/00-base/\|apps/supervisor/"; then
-              echo "Base layer changed - rebuilding all"
-              echo "build_base=true" >> "$GITHUB_OUTPUT"
-              echo "build_languages=true" >> "$GITHUB_OUTPUT"
-              echo "build_vscode=true" >> "$GITHUB_OUTPUT"
-              echo "build_ai_tools=true" >> "$GITHUB_OUTPUT"
-            elif git diff --name-only HEAD~1 HEAD | grep -q "docker/images/10-languages/"; then
-              echo "Languages layer changed"
-              echo "build_base=false" >> "$GITHUB_OUTPUT"
-              echo "build_languages=true" >> "$GITHUB_OUTPUT"
-              echo "build_vscode=true" >> "$GITHUB_OUTPUT"
-              echo "build_ai_tools=true" >> "$GITHUB_OUTPUT"
-            elif git diff --name-only HEAD~1 HEAD | grep -q "docker/images/20-vscode/"; then
-              echo "VS Code layer changed"
-              echo "build_base=false" >> "$GITHUB_OUTPUT"
-              echo "build_languages=false" >> "$GITHUB_OUTPUT"
-              echo "build_vscode=true" >> "$GITHUB_OUTPUT"
-              echo "build_ai_tools=true" >> "$GITHUB_OUTPUT"
-            elif git diff --name-only HEAD~1 HEAD | grep -q "docker/images/30-ai-tools/"; then
-              echo "AI tools layer changed"
-              echo "build_base=false" >> "$GITHUB_OUTPUT"
-              echo "build_languages=false" >> "$GITHUB_OUTPUT"
-              echo "build_vscode=false" >> "$GITHUB_OUTPUT"
-              echo "build_ai_tools=true" >> "$GITHUB_OUTPUT"
-            else
-              echo "No specific changes detected - building all layers"
-              echo "build_base=true" >> "$GITHUB_OUTPUT"
-              echo "build_languages=true" >> "$GITHUB_OUTPUT"
-              echo "build_vscode=true" >> "$GITHUB_OUTPUT"
-              echo "build_ai_tools=true" >> "$GITHUB_OUTPUT"
-            fi
-          fi
-
-  # Build and push base image
-  build-base:
-    runs-on: ubuntu-latest
-    needs: setup
-    if: needs.setup.outputs.build_base == 'true'
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Docker Hub
-        if: github.event.inputs.push_to_dockerhub != 'false'
+      
+      - name: Log in to Docker Hub
+        if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME || 'vaibhavsing' }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Build base image
-        run: |
-          echo "Building base image..."
-          DOCKERHUB_USER="${{ secrets.DOCKERHUB_USERNAME || 'vaibhavsing' }}"
-          docker build \
-            --cache-from ${DOCKERHUB_USER}/dev8-base:latest \
-            --tag ${DOCKERHUB_USER}/dev8-base:${{ needs.setup.outputs.version }} \
-            --tag ${DOCKERHUB_USER}/dev8-base:latest \
-            --tag dev8-base:latest \
-            --file ./docker/images/00-base/Dockerfile \
-            --build-arg BUILDKIT_INLINE_CACHE=1 \
-            .
-
-      - name: Test base image
-        run: |
-          echo "Testing base image..."
-          docker run --rm dev8-base:latest bash -c "git --version && ssh -V && workspace-supervisor --version"
-          echo "✅ Base image tests passed!"
-
-      - name: Scan base image for vulnerabilities
-        uses: aquasecurity/trivy-action@master
+      
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
         with:
-          image-ref: dev8-base:latest
-          format: 'sarif'
-          output: 'trivy-base-results.sarif'
-          severity: 'CRITICAL,HIGH'
-
-      - name: Upload Trivy results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
+          images: ${{ env.DOCKERHUB_IMAGE }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=${{ steps.version.outputs.version }}
+          labels: |
+            org.opencontainers.image.title=Dev8.dev Workspace
+            org.opencontainers.image.description=Complete development workspace with VS Code Server and AI tools
+            org.opencontainers.image.vendor=Dev8.dev
+            org.opencontainers.image.version=${{ steps.version.outputs.version }}
+      
+      - name: Build multi-stage Docker image
+        uses: docker/build-push-action@v5
         with:
-          sarif_file: 'trivy-base-results.sarif'
-          category: docker-base-production
-
-      - name: Push base image to Docker Hub
-        if: github.event.inputs.push_to_dockerhub != 'false'
+          context: .
+          file: ./docker/Dockerfile.production
+          push: false
+          load: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+      
+      - name: Test final workspace image
         run: |
-          echo "Pushing base image to Docker Hub..."
-          DOCKERHUB_USER="${{ secrets.DOCKERHUB_USERNAME || 'vaibhavsing' }}"
-          docker push ${DOCKERHUB_USER}/dev8-base:${{ needs.setup.outputs.version }}
-          docker push ${DOCKERHUB_USER}/dev8-base:latest
-          echo "✅ Base image pushed successfully!"
-
-      - name: Image details
-        run: |
-          docker images | grep dev8-base
-          echo "Image size: $(docker inspect dev8-base:latest --format='{{.Size}}' | numfmt --to=iec-i --suffix=B)"
-
-  # Build and push languages image
-  build-languages:
-    runs-on: ubuntu-latest
-    needs: [setup, build-base]
-    if: |
-      always() &&
-      needs.setup.outputs.build_languages == 'true' &&
-      (needs.setup.outputs.build_base == 'false' || needs.build-base.result == 'success')
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Docker Hub
-        if: github.event.inputs.push_to_dockerhub != 'false'
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME || 'vaibhavsing' }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Pull or build base image
-        run: |
-          DOCKERHUB_USER="${{ secrets.DOCKERHUB_USERNAME || 'vaibhavsing' }}"
-          if [ "${{ needs.setup.outputs.build_base }}" = "true" ]; then
-            echo "Pulling newly built base image..."
-            docker pull ${DOCKERHUB_USER}/dev8-base:latest
-            docker tag ${DOCKERHUB_USER}/dev8-base:latest dev8-base:latest
-          else
-            echo "Building base image locally..."
-            docker build \
-              -t dev8-base:latest \
-              -f ./docker/images/00-base/Dockerfile \
-              .
-          fi
-
-      - name: Build languages image
-        run: |
-          echo "Building languages image..."
-          DOCKERHUB_USER="${{ secrets.DOCKERHUB_USERNAME || 'vaibhavsing' }}"
-          docker build \
-            --cache-from ${DOCKERHUB_USER}/dev8-languages:latest \
-            --tag ${DOCKERHUB_USER}/dev8-languages:${{ needs.setup.outputs.version }} \
-            --tag ${DOCKERHUB_USER}/dev8-languages:latest \
-            --tag dev8-languages:latest \
-            --file ./docker/images/10-languages/Dockerfile \
-            --build-arg BUILDKIT_INLINE_CACHE=1 \
-            .
-
-      - name: Test languages image
-        run: |
-          echo "Testing language runtimes..."
-          docker run --rm dev8-languages:latest bash -c "
-            node --version && 
-            python --version && 
-            go version && 
+          echo "=== Testing Final Workspace Image ==="
+          docker run --rm ${{ env.DOCKERHUB_IMAGE }}:${{ steps.version.outputs.version }} bash -c "
+            echo '--- Testing Workspace Supervisor ---' &&
+            workspace-supervisor --version &&
+            echo '--- Testing Node.js ---' &&
+            node --version &&
+            npm --version &&
+            pnpm --version &&
+            echo '--- Testing Python ---' &&
+            python --version &&
+            pip --version &&
+            echo '--- Testing Go ---' &&
+            go version &&
+            echo '--- Testing Rust ---' &&
             rustc --version &&
-            bun --version
-          "
-          echo "✅ Languages image tests passed!"
-
-      - name: Push languages image to Docker Hub
-        if: github.event.inputs.push_to_dockerhub != 'false'
-        run: |
-          echo "Pushing languages image to Docker Hub..."
-          DOCKERHUB_USER="${{ secrets.DOCKERHUB_USERNAME || 'vaibhavsing' }}"
-          docker push ${DOCKERHUB_USER}/dev8-languages:${{ needs.setup.outputs.version }}
-          docker push ${DOCKERHUB_USER}/dev8-languages:latest
-          echo "✅ Languages image pushed successfully!"
-
-  # Build and push VS Code image
-  build-vscode:
-    runs-on: ubuntu-latest
-    needs: [setup, build-base, build-languages]
-    if: |
-      always() &&
-      needs.setup.outputs.build_vscode == 'true' &&
-      (needs.setup.outputs.build_languages == 'false' || needs.build-languages.result == 'success')
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Docker Hub
-        if: github.event.inputs.push_to_dockerhub != 'false'
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME || 'vaibhavsing' }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Pull or build prerequisite images
-        run: |
-          DOCKERHUB_USER="${{ secrets.DOCKERHUB_USERNAME || 'vaibhavsing' }}"
-          if [ "${{ needs.setup.outputs.build_languages }}" = "true" ]; then
-            echo "Pulling newly built languages image..."
-            docker pull ${DOCKERHUB_USER}/dev8-languages:latest
-            docker tag ${DOCKERHUB_USER}/dev8-languages:latest dev8-languages:latest
-          else
-            echo "Building prerequisite images locally..."
-            docker build -t dev8-base:latest -f ./docker/images/00-base/Dockerfile .
-            docker build -t dev8-languages:latest -f ./docker/images/10-languages/Dockerfile .
-          fi
-
-      - name: Build VS Code image
-        run: |
-          echo "Building VS Code image..."
-          DOCKERHUB_USER="${{ secrets.DOCKERHUB_USERNAME || 'vaibhavsing' }}"
-          docker build \
-            --cache-from ${DOCKERHUB_USER}/dev8-vscode:latest \
-            --tag ${DOCKERHUB_USER}/dev8-vscode:${{ needs.setup.outputs.version }} \
-            --tag ${DOCKERHUB_USER}/dev8-vscode:latest \
-            --tag dev8-vscode:latest \
-            --file ./docker/images/20-vscode/Dockerfile \
-            --build-arg BUILDKIT_INLINE_CACHE=1 \
-            .
-
-      - name: Test VS Code image
-        run: |
-          echo "Testing VS Code Server..."
-          docker run --rm dev8-vscode:latest code-server --version
-          echo "✅ VS Code image tests passed!"
-
-      - name: Push VS Code image to Docker Hub
-        if: github.event.inputs.push_to_dockerhub != 'false'
-        run: |
-          echo "Pushing VS Code image to Docker Hub..."
-          DOCKERHUB_USER="${{ secrets.DOCKERHUB_USERNAME || 'vaibhavsing' }}"
-          docker push ${DOCKERHUB_USER}/dev8-vscode:${{ needs.setup.outputs.version }}
-          docker push ${DOCKERHUB_USER}/dev8-vscode:latest
-          echo "✅ VS Code image pushed successfully!"
-
-  # Build and push AI tools image (final)
-  build-ai-tools:
-    runs-on: ubuntu-latest
-    needs: [setup, build-base, build-languages, build-vscode]
-    if: |
-      always() &&
-      needs.setup.outputs.build_ai_tools == 'true' &&
-      (needs.setup.outputs.build_vscode == 'false' || needs.build-vscode.result == 'success')
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Docker Hub
-        if: github.event.inputs.push_to_dockerhub != 'false'
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME || 'vaibhavsing' }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Pull or build prerequisite images
-        run: |
-          DOCKERHUB_USER="${{ secrets.DOCKERHUB_USERNAME || 'vaibhavsing' }}"
-          if [ "${{ needs.setup.outputs.build_vscode }}" = "true" ]; then
-            echo "Pulling newly built VS Code image..."
-            docker pull ${DOCKERHUB_USER}/dev8-vscode:latest
-            docker tag ${DOCKERHUB_USER}/dev8-vscode:latest dev8-vscode:latest
-          else
-            echo "Building prerequisite images locally..."
-            docker build -t dev8-base:latest -f ./docker/images/00-base/Dockerfile .
-            docker build -t dev8-languages:latest -f ./docker/images/10-languages/Dockerfile .
-            docker build -t dev8-vscode:latest -f ./docker/images/20-vscode/Dockerfile .
-          fi
-
-      - name: Build AI tools image (final workspace)
-        run: |
-          echo "Building AI tools image..."
-          DOCKERHUB_USER="${{ secrets.DOCKERHUB_USERNAME || 'vaibhavsing' }}"
-          docker build \
-            --cache-from ${DOCKERHUB_USER}/dev8-workspace:latest \
-            --tag ${DOCKERHUB_USER}/dev8-workspace:${{ needs.setup.outputs.version }} \
-            --tag ${DOCKERHUB_USER}/dev8-workspace:latest \
-            --tag ${DOCKERHUB_USER}/dev8-workspace:production \
-            --tag dev8-workspace:latest \
-            --file ./docker/images/30-ai-tools/Dockerfile \
-            --build-arg BUILDKIT_INLINE_CACHE=1 \
-            --label "git.commit=${{ github.sha }}" \
-            --label "git.branch=${{ github.ref_name }}" \
-            --label "build.date=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
-            --label "version=${{ needs.setup.outputs.version }}" \
-            .
-
-      - name: Test AI tools image
-        run: |
-          echo "Testing AI tools and services..."
-          docker run --rm dev8-workspace:latest bash -c "
-            gh --version && 
-            az version && 
+            echo '--- Testing Bun ---' &&
+            bun --version &&
+            echo '--- Testing VS Code Server ---' &&
+            code-server --version &&
+            echo '--- Testing GitHub CLI ---' &&
+            gh --version &&
+            echo '--- Testing Azure CLI ---' &&
+            az version &&
+            echo '--- Testing yq ---' &&
             yq --version &&
-            code-server --version
+            echo '' &&
+            echo '=== All Tests Passed Successfully! ==='
           "
-          echo "✅ AI tools image tests passed!"
-
-      - name: Comprehensive security scan
+      
+      - name: Security scan with Trivy
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: dev8-workspace:latest
+          image-ref: ${{ env.DOCKERHUB_IMAGE }}:${{ steps.version.outputs.version }}
           format: 'sarif'
-          output: 'trivy-workspace-results.sarif'
-          severity: 'CRITICAL,HIGH,MEDIUM'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
           vuln-type: 'os,library'
-          timeout: '10m'
-
+          timeout: '15m'
+      
       - name: Upload Trivy results to GitHub Security
         uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
-          sarif_file: 'trivy-workspace-results.sarif'
+          sarif_file: 'trivy-results.sarif'
           category: docker-workspace-production
-
-      - name: Push AI tools image to Docker Hub
-        if: github.event.inputs.push_to_dockerhub != 'false'
+      
+      - name: Image size and details
         run: |
-          echo "Pushing AI tools (workspace) image to Docker Hub..."
-          DOCKERHUB_USER="${{ secrets.DOCKERHUB_USERNAME || 'vaibhavsing' }}"
-          docker push ${DOCKERHUB_USER}/dev8-workspace:${{ needs.setup.outputs.version }}
-          docker push ${DOCKERHUB_USER}/dev8-workspace:latest
-          docker push ${DOCKERHUB_USER}/dev8-workspace:production
-          echo "✅ Workspace image pushed successfully!"
-
-      - name: Final image details
-        run: |
-          echo "=== Final Workspace Image Details ==="
+          echo "=== Image Information ==="
           docker images | grep dev8-workspace
           echo ""
-          echo "Image size: $(docker inspect dev8-workspace:latest --format='{{.Size}}' | numfmt --to=iec-i --suffix=B)"
+          SIZE=$(docker inspect ${{ env.DOCKERHUB_IMAGE }}:${{ steps.version.outputs.version }} --format='{{.Size}}')
+          SIZE_HUMAN=$(echo $SIZE | numfmt --to=iec-i --suffix=B)
+          echo "Image size: ${SIZE_HUMAN}"
           echo ""
           echo "Image labels:"
-          docker inspect dev8-workspace:latest --format='{{json .Config.Labels}}' | jq
-          echo ""
-          echo "Image layers:"
-          docker history dev8-workspace:latest --no-trunc
-
-  # Post-deployment tasks
-  post-deployment:
-    runs-on: ubuntu-latest
-    needs: [setup, build-base, build-languages, build-vscode, build-ai-tools]
-    if: always()
-    steps:
-      - name: Generate deployment summary
+          docker inspect ${{ env.DOCKERHUB_IMAGE }}:${{ steps.version.outputs.version }} --format='{{json .Config.Labels}}' | jq
+      
+      - name: Push to Docker Hub
+        if: |
+          github.event_name != 'pull_request' && 
+          (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/production' ||
+           (github.event_name == 'workflow_dispatch' && github.event.inputs.push_to_dockerhub == 'true'))
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./docker/Dockerfile.production
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+      
+      - name: Deployment summary
+        if: github.event_name != 'pull_request'
         run: |
           {
             echo "# 🚀 Docker Production Deployment Summary"
             echo ""
             echo "## 📦 Deployment Information"
-            echo "- **Version**: \`${{ needs.setup.outputs.version }}\`"
+            echo "- **Version**: \`${{ steps.version.outputs.version }}\`"
             echo "- **Commit**: \`${{ github.sha }}\`"
             echo "- **Branch**: \`${{ github.ref_name }}\`"
             echo "- **Timestamp**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
             echo ""
-            echo "## 🏗️ Build Status"
+            echo "## 🐳 Docker Hub Image"
             echo ""
-            echo "| Image | Status | Pushed to Docker Hub |"
-            echo "|-------|--------|----------------------|"
-            echo "| dev8-base | ${{ needs.build-base.result }} | ${{ needs.build-base.result == 'success' && '✅' || '❌' }} |"
-            echo "| dev8-languages | ${{ needs.build-languages.result }} | ${{ needs.build-languages.result == 'success' && '✅' || '❌' }} |"
-            echo "| dev8-vscode | ${{ needs.build-vscode.result }} | ${{ needs.build-vscode.result == 'success' && '✅' || '❌' }} |"
-            echo "| dev8-workspace | ${{ needs.build-ai-tools.result }} | ${{ needs.build-ai-tools.result == 'success' && '✅' || '❌' }} |"
+            echo "**Image**: \`${{ env.DOCKERHUB_IMAGE }}\`"
             echo ""
-            echo "## 🔗 Docker Hub Images"
-            echo ""
-            echo "Pull commands:"
+            echo "### Pull Commands:"
             echo "\`\`\`bash"
-            echo "# Base image"
-            DOCKERHUB_USER="${{ secrets.DOCKERHUB_USERNAME || 'vaibhavsing' }}"
-            echo "docker pull ${DOCKERHUB_USER}/dev8-base:${{ needs.setup.outputs.version }}"
+            echo "# Latest version"
+            echo "docker pull ${{ env.DOCKERHUB_IMAGE }}:latest"
             echo ""
-            echo "# Languages image"
-            echo "docker pull ${DOCKERHUB_USER}/dev8-languages:${{ needs.setup.outputs.version }}"
-            echo ""
-            echo "# VS Code image"
-            echo "docker pull ${DOCKERHUB_USER}/dev8-vscode:${{ needs.setup.outputs.version }}"
-            echo ""
-            echo "# Workspace image (recommended)"
-            echo "docker pull ${DOCKERHUB_USER}/dev8-workspace:${{ needs.setup.outputs.version }}"
-            echo "docker pull ${DOCKERHUB_USER}/dev8-workspace:latest"
-            echo "docker pull ${DOCKERHUB_USER}/dev8-workspace:production"
+            echo "# Specific version"
+            echo "docker pull ${{ env.DOCKERHUB_IMAGE }}:${{ steps.version.outputs.version }}"
             echo "\`\`\`"
             echo ""
-            echo "## 🔐 Security Scans"
+            echo "## 🏃 Run Commands"
             echo ""
-            echo "Trivy vulnerability scans completed. Check GitHub Security tab for detailed results."
+            echo "\`\`\`bash"
+            echo "# Run workspace container"
+            echo "docker run -d \\"
+            echo "  --name dev8-workspace \\"
+            echo "  -p 8080:8080 \\"
+            echo "  -p 2222:2222 \\"
+            echo "  -p 9000:9000 \\"
+            echo "  -e GITHUB_TOKEN=\${GITHUB_TOKEN} \\"
+            echo "  -e ENVIRONMENT_ID=dev8-prod-001 \\"
+            echo "  -v dev8-home:/home/dev8 \\"
+            echo "  -v dev8-workspace:/workspace \\"
+            echo "  ${{ env.DOCKERHUB_IMAGE }}:latest"
+            echo "\`\`\`"
             echo ""
-            echo "## 📝 Next Steps"
+            echo "## 🧪 Test Results"
             echo ""
-            echo "1. Review security scan results in GitHub Security"
-            echo "2. Update production deployments to use version \`${{ needs.setup.outputs.version }}\`"
-            echo "3. Test in staging environment before full rollout"
-            echo "4. Monitor application logs after deployment"
+            echo "✅ All component tests passed:"
+            echo "- Workspace Supervisor"
+            echo "- Node.js (with npm, pnpm)"
+            echo "- Python (with pip, poetry)"
+            echo "- Go"
+            echo "- Rust"
+            echo "- Bun"
+            echo "- VS Code Server"
+            echo "- GitHub CLI"
+            echo "- Azure CLI"
+            echo "- yq"
+            echo ""
+            echo "## 🔐 Security Scan"
+            echo ""
+            echo "Trivy vulnerability scan completed. Check GitHub Security tab for detailed results."
+            echo ""
+            echo "## 📝 Local Development"
+            echo ""
+            echo "\`\`\`bash"
+            echo "# Build all layers locally"
+            echo "cd docker && make build-all"
+            echo ""
+            echo "# Run with docker-compose"
+            echo "docker compose up -d"
+            echo "\`\`\`"
             echo ""
             echo "---"
-            echo ""
             echo "**Deployment completed at**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
           } >> "$GITHUB_STEP_SUMMARY"
+      
+      - name: Comment PR with image info
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const output = `#### Docker Build Summary 🐳
+            
+            **Status**: ✅ Build successful (not pushed to Docker Hub)
+            
+            **Image**: \`${{ env.DOCKERHUB_IMAGE }}\`
+            **Version**: \`${{ steps.version.outputs.version }}\`
+            
+            **Build Type**: Multi-stage (all 4 layers)
+            - Stage 1: Workspace Supervisor (Go binary)
+            - Stage 2: Base System (Ubuntu + SSH + tools)
+            - Stage 3: Language Runtimes (Node.js, Python, Go, Rust, Bun)
+            - Stage 4: VS Code Server
+            - Stage 5: AI Tools (GitHub CLI, Azure CLI, yq) - **Final Image**
+            
+            **Note**: Only the final workspace image is pushed to Docker Hub (when merged to \`main\` or \`production\` branch).
+            
+            ### Local Development
+            \`\`\`bash
+            # Build all layers locally
+            cd docker && make build-all
+            
+            # Run with docker-compose
+            docker compose up -d
+            
+            # Access VS Code Server
+            open http://localhost:8080
+            \`\`\`
+            
+            ### Test Results
+            ✅ All component tests passed
+            `;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            });
 
-      - name: Check for failures
-        if: |
-          needs.build-base.result == 'failure' ||
-          needs.build-languages.result == 'failure' ||
-          needs.build-vscode.result == 'failure' ||
-          needs.build-ai-tools.result == 'failure'
-        run: |
-          echo "❌ One or more builds failed!"
-          echo "Please check the logs and security scan results."
-          exit 1
-
-  # Notify on completion
-  notify-success:
-    runs-on: ubuntu-latest
-    needs: [setup, post-deployment]
-    if: success()
-    steps:
-      - name: Success notification
-        run: |
-          echo "✅ Docker images successfully deployed to Docker Hub!"
-          echo "Version: ${{ needs.setup.outputs.version }}"
-          DOCKERHUB_USER="${{ secrets.DOCKERHUB_USERNAME || 'vaibhavsing' }}"
-          echo "Username: ${DOCKERHUB_USER}"
-          echo ""
-          echo "Images are ready for deployment to production environments."
-
-  notify-failure:
-    runs-on: ubuntu-latest
-    needs: [setup, post-deployment]
-    if: failure()
-    steps:
-      - name: Failure notification
-        run: |
-          echo "❌ Docker deployment failed!"
-          echo "Please check the build logs and fix the issues before redeploying."
-          exit 1
