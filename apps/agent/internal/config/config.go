@@ -20,6 +20,13 @@ type Config struct {
 	// Azure Configuration
 	Azure AzureConfig
 
+	// Container Image Configuration
+	ContainerImage   string
+	RegistryServer   string
+	RegistryUsername string
+	RegistryPassword string
+	AgentBaseURL     string
+
 	// CORS Configuration
 	CORSAllowedOrigins []string
 
@@ -58,6 +65,13 @@ func Load() (*Config, error) {
 		DatabaseURL: getEnv("DATABASE_URL", ""), // Optional, no error if empty
 		Environment: getEnv("ENVIRONMENT", "development"),
 		LogLevel:    getEnv("LOG_LEVEL", "info"),
+
+		// Container Image Configuration
+		ContainerImage:   getEnv("CONTAINER_IMAGE", "vaibhavsing/dev8-workspace:latest"),
+		RegistryServer:   getEnv("REGISTRY_SERVER", "index.docker.io"),
+		RegistryUsername: getEnv("REGISTRY_USERNAME", ""), // Optional
+		RegistryPassword: getEnv("REGISTRY_PASSWORD", ""), // Optional
+		AgentBaseURL:     getEnv("AGENT_BASE_URL", "http://localhost:8080"),
 	}
 
 	// Load CORS configuration
@@ -193,6 +207,19 @@ func (c *Config) Validate() error {
 
 	if len(c.Azure.Regions) == 0 {
 		return fmt.Errorf("at least one Azure region must be configured")
+	}
+
+	// Container image must be specified
+	if c.ContainerImage == "" {
+		return fmt.Errorf("CONTAINER_IMAGE is required")
+	}
+
+	if c.RegistryServer == "" {
+		return fmt.Errorf("REGISTRY_SERVER is required")
+	}
+
+	if c.AgentBaseURL == "" {
+		return fmt.Errorf("AGENT_BASE_URL is required")
 	}
 
 	return nil
