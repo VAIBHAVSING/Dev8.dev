@@ -1,7 +1,7 @@
 ################################################################################
-# Docker CD - Production Multi-Stage Build
-# Builds all 4 layers in a single multi-stage Dockerfile
-# Only uploads the final workspace image to Docker Hub
+# Docker CD - Production Layered Build
+# Builds all 4 layers separately (base → languages → vscode → ai-tools)
+# Only uploads the final workspace container to Docker Hub
 ################################################################################
 name: Docker CD - Production
 
@@ -10,7 +10,6 @@ on:
     branches:
       - main
       - production
-      
     paths:
       - 'docker/**'
       - 'apps/supervisor/**'
@@ -44,7 +43,7 @@ concurrency:
 
 jobs:
   build-and-push:
-    name: Build Multi-Stage Docker Image
+    name: Build Layered Docker Images
     runs-on: ubuntu-latest
     
     permissions:
@@ -58,11 +57,6 @@ jobs:
       
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-        with:
-          install: true
-          driver-opts: |
-            image=moby/buildkit:latest
-            network=host
       
       - name: Generate version
         id: version
@@ -80,42 +74,30 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.DOCKERHUB_IMAGE }}
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=raw,value=${{ steps.version.outputs.version }}
-          labels: |
-            org.opencontainers.image.title=Dev8.dev Workspace
-            org.opencontainers.image.description=Complete development workspace with VS Code Server and AI tools
-            org.opencontainers.image.vendor=Dev8.dev
-            org.opencontainers.image.version=${{ steps.version.outputs.version }}
-      
-      - name: Build multi-stage Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./docker/Dockerfile.production
-          push: false
-          load: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: |
-            BUILDKIT_INLINE_CACHE=1
-      
-      - name: Test final workspace image
+      - name: Build all Docker layers
         run: |
-          echo "=== Testing Final Workspace Image ==="
-          docker run --rm ${{ env.DOCKERHUB_IMAGE }}:${{ steps.version.outputs.version }} bash -c "
+          echo "🏗️ Building all Docker layers (base → languages → vscode → ai-tools)..."
+          cd docker
+          make build-all
+          echo "✅ All layers built successfully!"
+      
+      - name: Tag final workspace image for Docker Hub
+        run: |
+          echo "🏷️ Tagging final workspace image..."
+          docker tag dev8-workspace:latest ${{ env.DOCKERHUB_IMAGE }}:${{ steps.version.outputs.version }}
+          docker tag dev8-workspace:latest ${{ env.DOCKERHUB_IMAGE }}:latest
+          if [ "${{ github.ref }}" = "refs/heads/production" ]; then
+            docker tag dev8-workspace:latest ${{ env.DOCKERHUB_IMAGE }}:production
+          fi
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            docker tag dev8-workspace:latest ${{ env.DOCKERHUB_IMAGE }}:pr-${{ github.event.pull_request.number }}
+          fi
+          echo "✅ Images tagged"
+      
+      - name: Test final workspace container
+        run: |
+          echo "=== Testing Final Workspace Container ==="
+          docker run --rm dev8-workspace:latest bash -c "
             echo '--- Testing Workspace Supervisor ---' &&
             workspace-supervisor --version &&
             echo '--- Testing Node.js ---' &&
@@ -146,7 +128,7 @@ jobs:
       - name: Security scan with Trivy
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ env.DOCKERHUB_IMAGE }}:${{ steps.version.outputs.version }}
+          image-ref: dev8-workspace:latest
           format: 'sarif'
           output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH'
@@ -162,32 +144,34 @@ jobs:
       
       - name: Image size and details
         run: |
-          echo "=== Image Information ==="
-          docker images | grep dev8-workspace
+          echo "=== Final Workspace Container Information ==="
+          docker images | grep -E "(dev8-base|dev8-languages|dev8-vscode|dev8-workspace)"
           echo ""
-          SIZE=$(docker inspect ${{ env.DOCKERHUB_IMAGE }}:${{ steps.version.outputs.version }} --format='{{.Size}}')
+          echo "Final workspace size:"
+          SIZE=$(docker inspect dev8-workspace:latest --format='{{.Size}}')
           SIZE_HUMAN=$(echo $SIZE | numfmt --to=iec-i --suffix=B)
-          echo "Image size: ${SIZE_HUMAN}"
+          echo "  ${SIZE_HUMAN}"
           echo ""
-          echo "Image labels:"
-          docker inspect ${{ env.DOCKERHUB_IMAGE }}:${{ steps.version.outputs.version }} --format='{{json .Config.Labels}}' | jq
+          echo "Docker Hub tags:"
+          docker images | grep "${{ env.DOCKERHUB_IMAGE }}"
       
-      - name: Push to Docker Hub
+      - name: Push final workspace container to Docker Hub
         if: |
           github.event_name != 'pull_request' && 
           (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/production' ||
            (github.event_name == 'workflow_dispatch' && github.event.inputs.push_to_dockerhub == 'true'))
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./docker/Dockerfile.production
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: |
-            BUILDKIT_INLINE_CACHE=1
+        run: |
+          echo "🚀 Pushing final workspace container to Docker Hub..."
+          docker push ${{ env.DOCKERHUB_IMAGE }}:${{ steps.version.outputs.version }}
+          docker push ${{ env.DOCKERHUB_IMAGE }}:latest
+          if [ "${{ github.ref }}" = "refs/heads/production" ]; then
+            docker push ${{ env.DOCKERHUB_IMAGE }}:production
+          fi
+          echo "✅ Container pushed successfully to Docker Hub!"
+          echo ""
+          echo "Images available:"
+          echo "  - ${{ env.DOCKERHUB_IMAGE }}:latest"
+          echo "  - ${{ env.DOCKERHUB_IMAGE }}:${{ steps.version.outputs.version }}"
       
       - name: Deployment summary
         if: github.event_name != 'pull_request'
@@ -201,7 +185,15 @@ jobs:
             echo "- **Branch**: \`${{ github.ref_name }}\`"
             echo "- **Timestamp**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
             echo ""
-            echo "## 🐳 Docker Hub Image"
+            echo "## 🏗️ Build Approach"
+            echo ""
+            echo "Built using **layered Docker images**:"
+            echo "1. � dev8-base (Ubuntu + SSH + Supervisor)"
+            echo "2. 🔹 dev8-languages (Node.js, Python, Go, Rust, Bun)"
+            echo "3. 🔹 dev8-vscode (VS Code Server)"
+            echo "4. 🔹 **dev8-workspace** (AI Tools - Final Container)"
+            echo ""
+            echo "## �🐳 Docker Hub - Final Container Only"
             echo ""
             echo "**Image**: \`${{ env.DOCKERHUB_IMAGE }}\`"
             echo ""
@@ -214,10 +206,10 @@ jobs:
             echo "docker pull ${{ env.DOCKERHUB_IMAGE }}:${{ steps.version.outputs.version }}"
             echo "\`\`\`"
             echo ""
-            echo "## 🏃 Run Commands"
+            echo "## 🏃 Run Container (Production)"
             echo ""
             echo "\`\`\`bash"
-            echo "# Run workspace container"
+            echo "# Run workspace container with volume support"
             echo "docker run -d \\"
             echo "  --name dev8-workspace \\"
             echo "  -p 8080:8080 \\"
@@ -262,7 +254,7 @@ jobs:
             echo "**Deployment completed at**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
           } >> "$GITHUB_STEP_SUMMARY"
       
-      - name: Comment PR with image info
+      - name: Comment PR with container info
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v7
         with:
@@ -271,17 +263,15 @@ jobs:
             
             **Status**: ✅ Build successful (not pushed to Docker Hub)
             
-            **Image**: \`${{ env.DOCKERHUB_IMAGE }}\`
-            **Version**: \`${{ steps.version.outputs.version }}\`
+            **Build Approach**: Layered Docker Images
+            - 🔹 Layer 1: \`dev8-base\` (Ubuntu + SSH + Supervisor)
+            - 🔹 Layer 2: \`dev8-languages\` (Node.js, Python, Go, Rust, Bun)
+            - 🔹 Layer 3: \`dev8-vscode\` (VS Code Server)
+            - 🔹 Layer 4: \`dev8-workspace\` (**Final Container** - AI Tools)
             
-            **Build Type**: Multi-stage (all 4 layers)
-            - Stage 1: Workspace Supervisor (Go binary)
-            - Stage 2: Base System (Ubuntu + SSH + tools)
-            - Stage 3: Language Runtimes (Node.js, Python, Go, Rust, Bun)
-            - Stage 4: VS Code Server
-            - Stage 5: AI Tools (GitHub CLI, Azure CLI, yq) - **Final Image**
+            **Final Container**: \`vaibhavsing/dev8-workspace\`
             
-            **Note**: Only the final workspace image is pushed to Docker Hub (when merged to \`main\` or \`production\` branch).
+            **Note**: Only the final \`dev8-workspace\` container is pushed to Docker Hub (when merged to \`main\` or \`production\` branch).
             
             ### Local Development
             \`\`\`bash
@@ -293,6 +283,21 @@ jobs:
             
             # Access VS Code Server
             open http://localhost:8080
+            \`\`\`
+            
+            ### Production Deployment (After Merge)
+            \`\`\`bash
+            # Pull from Docker Hub
+            docker pull vaibhavsing/dev8-workspace:latest
+            
+            # Run with volume support (for ACI deployment)
+            docker run -d \\
+              --name dev8-workspace \\
+              -p 8080:8080 -p 2222:2222 -p 9000:9000 \\
+              -e GITHUB_TOKEN=\${GITHUB_TOKEN} \\
+              -v dev8-home:/home/dev8 \\
+              -v dev8-workspace:/workspace \\
+              vaibhavsing/dev8-workspace:latest
             \`\`\`
             
             ### Test Results
