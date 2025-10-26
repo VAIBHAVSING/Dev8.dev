@@ -116,7 +116,7 @@ jobs:
       - name: Test final workspace image
         run: |
           echo "=== Testing Final Workspace Image ==="
-          docker run --rm ${{ env.DOCKERHUB_IMAGE }}:${{ steps.version.outputs.version }} bash -c "
+          docker run --rm -e ENVIRONMENT_ID=ci-test ${{ env.DOCKERHUB_IMAGE }}:${{ steps.version.outputs.version }} bash -c "
             echo '--- Testing Workspace Supervisor ---' &&
             workspace-supervisor --version &&
             echo '--- Testing Node.js ---' &&
