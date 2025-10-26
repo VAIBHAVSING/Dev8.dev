@@ -237,4 +237,20 @@ type ContainerGroupSpec struct {
 	StorageAccountKey  string
 	EnvironmentID      string
 	UserID             string
+
+	// Container Registry Credentials (static from Agent config)
+	RegistryServer   string
+	RegistryUsername string
+	RegistryPassword string
+
+	// Dynamic per-workspace values (from API request)
+	AgentBaseURL       string
+	GitHubToken        string
+	GitUserName        string
+	GitUserEmail       string
+	SSHPublicKey       string
+	CodeServerPassword string
+	AnthropicAPIKey    string
+	OpenAIAPIKey       string
+	GeminiAPIKey       string
 }

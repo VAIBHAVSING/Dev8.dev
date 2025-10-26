@@ -79,6 +79,16 @@ type CreateEnvironmentRequest struct {
 	MemoryGB      int           `json:"memoryGB"`
 	StorageGB     int           `json:"storageGB"`
 	BaseImage     string        `json:"baseImage"`
+
+	// Optional per-workspace dynamic values
+	GitHubToken        string `json:"githubToken,omitempty"`
+	CodeServerPassword string `json:"codeServerPassword,omitempty"`
+	SSHPublicKey       string `json:"sshPublicKey,omitempty"`
+	GitUserName        string `json:"gitUserName,omitempty"`
+	GitUserEmail       string `json:"gitUserEmail,omitempty"`
+	AnthropicAPIKey    string `json:"anthropicApiKey,omitempty"`
+	OpenAIAPIKey       string `json:"openaiApiKey,omitempty"`
+	GeminiAPIKey       string `json:"geminiApiKey,omitempty"`
 }
 
 // UpdateEnvironmentRequest represents a request to update an environment
