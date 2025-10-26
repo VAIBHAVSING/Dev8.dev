@@ -16,12 +16,14 @@ model User {
   email         String          @unique
   emailVerified DateTime?
   image         String?
-  password      String? // For credentials authentication
+  password      String?
   accounts      Account[]
   sessions      Session[]
-  // Optional for WebAuthn support
   Authenticator Authenticator[]
   environments  Environment[]
+  sshKeys       SSHKey[]
+  secrets       Secret[]
+  workspaces    Workspace[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -98,11 +100,55 @@ enum CloudProvider {
   GCP
 }
 
+enum IDEType {
+  VSCODE
+  CURSOR
+  JUPYTER
+}
+
+enum AgentType {
+  NONE
+  COPILOT
+  CLAUDE
+  GEMINI
+  CODEX
+  COPILOT_PLUS
+}
+
+enum SecretType {
+  GITHUB_TOKEN
+  ANTHROPIC_API_KEY
+  OPENAI_API_KEY
+  GEMINI_API_KEY
+  CUSTOM_ENV_VAR
+  SSH_PRIVATE_KEY
+}
+
+enum BackupTrigger {
+  MANUAL
+  PRE_SHUTDOWN
+  SCHEDULED
+}
+
+enum BackupStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
 model Environment {
   id     String            @id @default(cuid())
   userId String
   name   String
   status EnvironmentStatus @default(CREATING)
+
+  // IDE and Agent Configuration
+  ideType         IDEType   @default(VSCODE)
+  agentType       AgentType @default(NONE)
+  dockerImage     String?
+  autoStopMinutes Int       @default(30)
+  autoStopEnabled Boolean   @default(true)
 
   // Cloud Configuration
   cloudProvider       CloudProvider @default(AZURE)
@@ -119,13 +165,13 @@ model Environment {
   cpuCores     Int    @default(2)
   memoryGB     Int    @default(4)
   storageGB    Int    @default(20)
-  instanceType String @default("balanced") // balanced, compute-optimized, memory-optimized
+  instanceType String @default("balanced")
 
   // Template and Configuration
   baseImage            String  @default("node")
   templateName         String?
-  environmentVariables Json? // Key-value pairs for env vars
-  ports                Json? // Array of port configurations
+  environmentVariables Json?
+  ports                Json?
 
   // Cost tracking
   estimatedCostPerHour Float? @default(0.0)
@@ -138,13 +184,23 @@ model Environment {
   stoppedAt      DateTime?
   deletedAt      DateTime?
 
-  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  resourceUsage ResourceUsage[]
+  user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resourceUsage   ResourceUsage[]
+  activityReports ActivityReport[]
+  sshKeys         EnvironmentSSHKey[]
+  secrets         EnvironmentSecret[]
+  workspace       Workspace?
+  backups         Backup[]
 
   @@index([userId])
   @@index([status])
   @@index([cloudProvider])
   @@index([createdAt])
+  @@index([ideType])
+  @@index([agentType])
+  @@index([aciContainerGroupId])
+  @@index([deletedAt])
+  @@index([userId, status, deletedAt])
   @@map("environments")
 }
 
@@ -192,11 +248,166 @@ model ResourceUsage {
 
   // Cost calculation
   costAmount    Float?  @default(0.0)
-  billingPeriod String? // hourly, daily, monthly
+  billingPeriod String?
 
   environment Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
 
   @@index([environmentId, timestamp])
   @@index([timestamp])
   @@map("resource_usage")
+}
+
+model ActivityReport {
+  id            String @id @default(cuid())
+  environmentId String
+
+  lastIDEActivity      DateTime?
+  lastSSHActivity      DateTime?
+  activeIDEConnections Int       @default(0)
+  activeSSHConnections Int       @default(0)
+  cpuUsagePercent      Float?
+  memoryUsageMB        Int?
+  diskUsageMB          Int?
+  networkRxMB          Float?
+  networkTxMB          Float?
+  supervisorVersion    String?
+  metadata             Json?     @default("{}")
+  reportedAt           DateTime  @default(now())
+
+  environment Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+
+  @@index([environmentId, reportedAt])
+  @@index([reportedAt])
+  @@map("activity_reports")
+}
+
+model SSHKey {
+  id          String    @id @default(cuid())
+  userId      String
+  name        String
+  publicKey   String    @db.Text
+  fingerprint String    @unique
+  keyType     String    @default("ed25519")
+  isActive    Boolean   @default(true)
+  lastUsedAt  DateTime?
+  usageCount  Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  expiresAt   DateTime?
+  revokedAt   DateTime?
+
+  user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  environmentMappings EnvironmentSSHKey[]
+
+  @@index([userId, isActive])
+  @@index([fingerprint])
+  @@index([expiresAt])
+  @@map("ssh_keys")
+}
+
+model EnvironmentSSHKey {
+  id            String   @id @default(cuid())
+  environmentId String
+  sshKeyId      String
+  addedAt       DateTime @default(now())
+
+  environment Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  sshKey      SSHKey      @relation(fields: [sshKeyId], references: [id], onDelete: Cascade)
+
+  @@unique([environmentId, sshKeyId])
+  @@index([environmentId])
+  @@index([sshKeyId])
+  @@map("environment_ssh_keys")
+}
+
+model Secret {
+  id            String     @id @default(cuid())
+  userId        String
+  environmentId String?
+  name          String
+  secretType    SecretType
+  description   String?
+  vaultName     String?
+  secretName    String?
+  secretVersion String?
+  lastRotatedAt DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  expiresAt     DateTime?
+
+  user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  environmentMappings EnvironmentSecret[]
+
+  @@unique([userId, name])
+  @@index([userId])
+  @@index([secretType])
+  @@index([expiresAt])
+  @@map("secrets")
+}
+
+model EnvironmentSecret {
+  id            String   @id @default(cuid())
+  environmentId String
+  secretId      String
+  overrideValue String?  @db.Text
+  addedAt       DateTime @default(now())
+
+  environment Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  secret      Secret      @relation(fields: [secretId], references: [id], onDelete: Cascade)
+
+  @@unique([environmentId, secretId])
+  @@index([environmentId])
+  @@index([secretId])
+  @@map("environment_secrets")
+}
+
+model Workspace {
+  id            String @id @default(cuid())
+  environmentId String @unique
+  userId        String
+
+  storagePath         String
+  storageType         String    @default("azure-blob")
+  azureStorageAccount String?
+  azureContainerName  String?
+  azureBlobPrefix     String?
+  backupEnabled       Boolean   @default(true)
+  backupRetentionDays Int       @default(30)
+  lastBackupAt        DateTime?
+  totalSizeMB         Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  environment Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  backups     Backup[]
+
+  @@index([userId])
+  @@index([environmentId])
+  @@map("workspaces")
+}
+
+model Backup {
+  id            String        @id @default(cuid())
+  workspaceId   String
+  environmentId String
+  trigger       BackupTrigger
+  status        BackupStatus  @default(PENDING)
+
+  backupPath   String?
+  backupSizeMB Int?
+  startedAt    DateTime  @default(now())
+  completedAt  DateTime?
+  errorMessage String?   @db.Text
+  metadata     Json?     @default("{}")
+
+  workspace   Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  environment Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([environmentId])
+  @@index([status])
+  @@index([startedAt])
+  @@map("backups")
 }
