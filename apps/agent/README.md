@@ -4,6 +4,8 @@ Go-based **stateless** backend service for orchestrating cloud development envir
 
 ## 🎯 Features
 
+- ✅ **Docker Hub Integration**: Uses `vaibhavsing/dev8-workspace:latest` from Docker Hub
+- ✅ **Dynamic Configuration**: Per-workspace secrets and API keys from API requests
 - ✅ **Azure ACI Integration**: Direct integration with Azure Container Instances
 - ✅ **Multi-Region Support**: Deploy environments across multiple Azure regions
 - ✅ **Persistent Storage**: Azure Files integration for workspace persistence
@@ -62,4 +64,57 @@ go run main.go
 
 **Note**: List/Get endpoints are placeholders. Next.js handles data queries from PostgreSQL.
 
-See full documentation in [ARCHITECTURE.md](./ARCHITECTURE.md).
+See full documentation in [API_DOCUMENTATION.md](./API_DOCUMENTATION.md).
+
+## 🐳 Docker Hub Configuration
+
+The Agent deploys workspaces using the Docker Hub image: `vaibhavsing/dev8-workspace:latest`
+
+### Static Configuration (Environment Variables)
+
+Set in the Agent's `.env` file:
+
+```bash
+# Container Image Configuration
+CONTAINER_IMAGE=vaibhavsing/dev8-workspace:latest
+REGISTRY_SERVER=index.docker.io
+
+# Optional: For private Docker Hub repositories
+REGISTRY_USERNAME=your-dockerhub-username
+REGISTRY_PASSWORD=your-dockerhub-token
+
+# Agent's public URL (used by workspaces for callbacks)
+AGENT_BASE_URL=http://dev8-agent.eastus.azurecontainer.io:8080
+```
+
+### Dynamic Configuration (Per-Workspace)
+
+Passed in the `POST /api/v1/environments` request body:
+
+```json
+{
+  "name": "my-workspace",
+  "cloudProvider": "AZURE",
+  "cloudRegion": "eastus",
+  "cpuCores": 2,
+  "memoryGB": 4,
+  "storageGB": 20,
+  
+  // Optional dynamic values
+  "githubToken": "ghp_xxxxxxxxxxxx",
+  "gitUserName": "John Doe",
+  "gitUserEmail": "john@example.com",
+  "sshPublicKey": "ssh-rsa AAAAB3...",
+  "codeServerPassword": "secure-password",
+  "anthropicApiKey": "sk-ant-xxx",
+  "openaiApiKey": "sk-proj-xxx",
+  "geminiApiKey": "AIza..."
+}
+```
+
+**Security:**
+- All dynamic secrets are passed as `SecureValue` to Azure Container Instances
+- Secrets are not visible in logs or container inspection
+- Each workspace can have different credentials
+
+

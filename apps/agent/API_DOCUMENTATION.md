@@ -107,7 +107,7 @@ Returns basic service information.
 
 ### POST /api/v1/environments
 
-Creates a new development environment.
+Creates a new development environment with the Docker Hub workspace image.
 
 **Request Body:**
 ```json
@@ -119,11 +119,23 @@ Creates a new development environment.
   "cpuCores": 2,
   "memoryGB": 4,
   "storageGB": 20,
-  "baseImage": "mcr.microsoft.com/devcontainers/base:ubuntu"
+  "baseImage": "node",
+  
+  // Optional: Dynamic per-workspace configuration
+  "githubToken": "ghp_xxxxxxxxxxxx",
+  "gitUserName": "John Doe",
+  "gitUserEmail": "john@example.com",
+  "sshPublicKey": "ssh-rsa AAAAB3...",
+  "codeServerPassword": "secure-password-123",
+  "anthropicApiKey": "sk-ant-xxx",
+  "openaiApiKey": "sk-proj-xxx",
+  "geminiApiKey": "AIza..."
 }
 ```
 
 **Request Fields:**
+
+**Required:**
 - `userId` (string, optional): User identifier. Defaults to "default-user" if not provided
 - `name` (string, required): Human-readable name for the environment
 - `cloudProvider` (string, required): Cloud provider. Must be one of: `AZURE`, `AWS`, or `GCP`
@@ -131,7 +143,23 @@ Creates a new development environment.
 - `cpuCores` (integer, required): Number of CPU cores (1-4)
 - `memoryGB` (integer, required): Memory in GB (1-16)
 - `storageGB` (integer, required): Storage size in GB (10-100)
-- `baseImage` (string, required): Docker base image to use. Should be a valid container registry image (e.g., from Docker Hub or Microsoft Container Registry)
+- `baseImage` (string, required): Base image type (currently unused, all workspaces use `vaibhavsing/dev8-workspace:latest`)
+
+**Optional - Dynamic Workspace Configuration:**
+- `githubToken` (string): GitHub personal access token for private repo access
+- `gitUserName` (string): Git user name for commits
+- `gitUserEmail` (string): Git user email for commits
+- `sshPublicKey` (string): SSH public key for remote access
+- `codeServerPassword` (string): Password for VS Code Server web interface
+- `anthropicApiKey` (string): Anthropic API key for Claude
+- `openaiApiKey` (string): OpenAI API key for GPT models
+- `geminiApiKey` (string): Google Gemini API key
+
+**Notes:**
+- All optional fields are passed as **secure environment variables** to the workspace container
+- Secrets are stored using Azure Container Instances SecureValue (not visible in logs)
+- The Agent uses the Docker Hub image `vaibhavsing/dev8-workspace:latest` for all workspaces
+- `baseImage` parameter is currently ignored (kept for backward compatibility)
 
 **Response:**
 ```json
