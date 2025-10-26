@@ -77,10 +77,23 @@ jobs:
       - name: Build all Docker layers
         run: |
           echo "🏗️ Building all Docker layers (base → languages → vscode → ai-tools)..."
-          cd docker
-          # Set dummy GITHUB_TOKEN for docker compose (only needed for validation, not used during build)
-          export GITHUB_TOKEN=dummy-token-for-build
-          make build-all
+          
+          # Build Layer 1: Base
+          echo "Building base layer..."
+          docker build -t dev8-base:latest -f ./docker/images/00-base/Dockerfile .
+          
+          # Build Layer 2: Languages
+          echo "Building languages layer..."
+          docker build -t dev8-languages:latest -f ./docker/images/10-languages/Dockerfile .
+          
+          # Build Layer 3: VS Code
+          echo "Building vscode layer..."
+          docker build -t dev8-vscode:latest -f ./docker/images/20-vscode/Dockerfile .
+          
+          # Build Layer 4: Workspace (Final)
+          echo "Building workspace layer..."
+          docker build -t dev8-workspace:latest -f ./docker/images/30-ai-tools/Dockerfile .
+          
           echo "✅ All layers built successfully!"
       
       - name: Tag final workspace image for Docker Hub
