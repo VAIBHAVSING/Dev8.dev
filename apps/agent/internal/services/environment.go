@@ -286,21 +286,7 @@ func generateConnectionURLs(fqdn, password string) models.ConnectionURLs {
 }
 
 func (s *EnvironmentService) getContainerImage(baseImage string) string {
-	// Map base image names to actual container registry images
-	registry := s.config.Azure.ContainerRegistry
-
-	imageMap := map[string]string{
-		"node":   fmt.Sprintf("%s/vscode-node:latest", registry),
-		"python": fmt.Sprintf("%s/vscode-python:latest", registry),
-		"go":     fmt.Sprintf("%s/vscode-go:latest", registry),
-		"rust":   fmt.Sprintf("%s/vscode-rust:latest", registry),
-		"java":   fmt.Sprintf("%s/vscode-java:latest", registry),
-	}
-
-	if image, ok := imageMap[baseImage]; ok {
-		return image
-	}
-
-	// Default to Node.js image
-	return fmt.Sprintf("%s/vscode-node:latest", registry)
+	// For MVP, all workspaces use the same Docker Hub image
+	// baseImage parameter is ignored - can be used for future customization
+	return s.config.ContainerImage
 }
