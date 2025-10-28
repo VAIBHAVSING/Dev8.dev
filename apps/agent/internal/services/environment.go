@@ -68,64 +68,123 @@ func (s *EnvironmentService) CreateEnvironment(ctx context.Context, req *models.
 	// IMPORTANT: Use workspaceId for all Azure resource names
 	workspaceID := req.WorkspaceID // UUID from database (e.g., "clxxx-yyyy-zzzz")
 
+	log.Printf("🚀 Creating workspace %s (region: %s)", workspaceID, req.CloudRegion)
+	overallStartTime := time.Now()
+
 	// Azure resource names based on UUID
-	fileShareName := fmt.Sprintf("fs-%s", workspaceID)       // fs-clxxx-yyyy-zzzz
-	containerGroupName := fmt.Sprintf("aci-%s", workspaceID) // aci-clxxx-yyyy-zzzz
-	dnsLabel := fmt.Sprintf("ws-%s", workspaceID)            // ws-clxxx-yyyy-zzzz
+	fileShareName := fmt.Sprintf("fs-%s", workspaceID)          // fs-clxxx-yyyy-zzzz (workspace files)
+	homeFileShareName := fmt.Sprintf("fs-%s-home", workspaceID) // fs-clxxx-yyyy-zzzz-home (user home)
+	containerGroupName := fmt.Sprintf("aci-%s", workspaceID)    // aci-clxxx-yyyy-zzzz
+	dnsLabel := fmt.Sprintf("ws-%s", workspaceID)               // ws-clxxx-yyyy-zzzz
 
 	resourceGroup := regionConfig.ResourceGroupName
 	if resourceGroup == "" {
 		resourceGroup = s.config.Azure.ResourceGroupName
 	}
 
-	// Create Azure File Share (named by UUID)
-	log.Printf("Creating file share: %s (workspace: %s)", fileShareName, workspaceID)
-	if err := storageClient.CreateFileShare(ctx, fileShareName, int32(req.StorageGB)); err != nil {
-		return nil, fmt.Errorf("failed to create file share: %w", err)
+	// Log image source
+	containerImage := s.getContainerImage(req.BaseImage)
+	if s.config.Azure.ContainerRegistry != "" {
+		log.Printf("🐳 Using Azure Container Registry: %s", containerImage)
+	} else {
+		log.Printf("🐳 Using Docker Hub: %s", containerImage)
 	}
 
-	// Create container spec with UUID-based names
-	containerSpec := azure.ContainerGroupSpec{
-		ContainerName:      "vscode-server",
-		Image:              s.getContainerImage(req.BaseImage),
-		CPUCores:           req.CPUCores,
-		MemoryGB:           req.MemoryGB,
-		DNSNameLabel:       dnsLabel,      // ws-clxxx-yyyy-zzzz
-		FileShareName:      fileShareName, // fs-clxxx-yyyy-zzzz
-		StorageAccountName: regionConfig.StorageAccount,
-		StorageAccountKey:  s.config.Azure.StorageAccountKey,
-		EnvironmentID:      workspaceID, // Pass UUID to container env vars
-		UserID:             req.UserID,
+	// ⚡⚡⚡ MAXIMUM CONCURRENCY: Start ALL operations in PARALLEL
+	log.Printf("⚡⚡⚡ Starting CONCURRENT creation (shares + container) for workspace %s...", workspaceID)
+	startTime := time.Now()
 
-		// Registry credentials (static from config)
-		RegistryServer:   s.config.RegistryServer,
-		RegistryUsername: s.config.RegistryUsername,
-		RegistryPassword: s.config.RegistryPassword,
-
-		// Agent URL for workspace reporting (static from config)
-		AgentBaseURL: s.config.AgentBaseURL,
-
-		// Dynamic per-workspace values (from API request)
-		GitHubToken:        req.GitHubToken,
-		CodeServerPassword: req.CodeServerPassword,
-		SSHPublicKey:       req.SSHPublicKey,
-		GitUserName:        req.GitUserName,
-		GitUserEmail:       req.GitUserEmail,
-		AnthropicAPIKey:    req.AnthropicAPIKey,
-		OpenAIAPIKey:       req.OpenAIAPIKey,
-		GeminiAPIKey:       req.GeminiAPIKey,
+	// Channels for parallel execution
+	type operationResult struct {
+		name string
+		data interface{}
+		err  error
 	}
 
-	// Create ACI Container Group (named by UUID)
-	log.Printf("Creating container group: %s (workspace: %s)", containerGroupName, workspaceID)
-	if err := s.azureClient.CreateContainerGroup(ctx, req.CloudRegion, resourceGroup, containerGroupName, containerSpec); err != nil {
-		// Cleanup file share on error
+	workspaceChan := make(chan operationResult, 1)
+	homeChan := make(chan operationResult, 1)
+	aciChan := make(chan operationResult, 1)
+
+	// Goroutine 1: Create workspace file share
+	go func() {
+		log.Printf("📁 [1/3] Creating workspace volume: %s (%dGB)", fileShareName, req.StorageGB)
+		err := storageClient.CreateFileShare(ctx, fileShareName, int32(req.StorageGB))
+		workspaceChan <- operationResult{name: "workspace-share", err: err}
+	}()
+
+	// Goroutine 2: Create home file share
+	go func() {
+		homeQuotaGB := int32(5)
+		log.Printf("📁 [2/3] Creating home volume: %s (%dGB)", homeFileShareName, homeQuotaGB)
+		err := storageClient.CreateFileShare(ctx, homeFileShareName, homeQuotaGB)
+		homeChan <- operationResult{name: "home-share", err: err}
+	}()
+
+	// Goroutine 3: Create ACI container (starts IMMEDIATELY, doesn't wait for shares)
+	go func() {
+		// Small delay to let shares start first (Azure may need them)
+		time.Sleep(500 * time.Millisecond)
+
+		containerSpec := azure.ContainerGroupSpec{
+			ContainerName:      "vscode-server",
+			Image:              containerImage,
+			CPUCores:           req.CPUCores,
+			MemoryGB:           req.MemoryGB,
+			DNSNameLabel:       dnsLabel,
+			FileShareName:      fileShareName,
+			HomeFileShareName:  homeFileShareName,
+			StorageAccountName: regionConfig.StorageAccount,
+			StorageAccountKey:  s.config.Azure.StorageAccountKey,
+			EnvironmentID:      workspaceID,
+			UserID:             req.UserID,
+			RegistryServer:     s.getRegistryServer(),
+			RegistryUsername:   s.config.RegistryUsername,
+			RegistryPassword:   s.config.RegistryPassword,
+			AgentBaseURL:       s.config.AgentBaseURL,
+			GitHubToken:        req.GitHubToken,
+			CodeServerPassword: req.CodeServerPassword,
+			SSHPublicKey:       req.SSHPublicKey,
+			GitUserName:        req.GitUserName,
+			GitUserEmail:       req.GitUserEmail,
+			AnthropicAPIKey:    req.AnthropicAPIKey,
+			OpenAIAPIKey:       req.OpenAIAPIKey,
+			GeminiAPIKey:       req.GeminiAPIKey,
+		}
+
+		log.Printf("📦 [3/3] Creating ACI container: %s", containerGroupName)
+		err := s.azureClient.CreateContainerGroup(ctx, req.CloudRegion, resourceGroup, containerGroupName, containerSpec)
+		aciChan <- operationResult{name: "aci-container", err: err}
+	}()
+
+	// Wait for ALL operations to complete
+	workspaceResult := <-workspaceChan
+	homeResult := <-homeChan
+	aciResult := <-aciChan
+
+	totalTime := time.Since(startTime)
+	log.Printf("⚡⚡⚡ ALL OPERATIONS COMPLETED in %s", totalTime)
+
+	// Check for errors (cleanup on failure)
+	if workspaceResult.err != nil {
+		// Try to cleanup what succeeded
+		_ = storageClient.DeleteFileShare(ctx, homeFileShareName)
+		_ = s.azureClient.DeleteContainerGroup(ctx, req.CloudRegion, resourceGroup, containerGroupName)
+		return nil, fmt.Errorf("failed to create workspace file share: %w", workspaceResult.err)
+	}
+	if homeResult.err != nil {
 		_ = storageClient.DeleteFileShare(ctx, fileShareName)
-		return nil, fmt.Errorf("failed to create container group: %w", err)
+		_ = s.azureClient.DeleteContainerGroup(ctx, req.CloudRegion, resourceGroup, containerGroupName)
+		return nil, fmt.Errorf("failed to create home file share: %w", homeResult.err)
+	}
+	if aciResult.err != nil {
+		// Cleanup file shares
+		_ = storageClient.DeleteFileShare(ctx, fileShareName)
+		_ = storageClient.DeleteFileShare(ctx, homeFileShareName)
+		return nil, fmt.Errorf("failed to create container group: %w", aciResult.err)
 	}
 
 	// Wait for container to get FQDN
-	time.Sleep(5 * time.Second)
+	time.Sleep(3 * time.Second)
 
 	// Get container details
 	containerDetails, err := s.azureClient.GetContainerGroup(ctx, req.CloudRegion, resourceGroup, containerGroupName)
@@ -170,45 +229,150 @@ func (s *EnvironmentService) CreateEnvironment(ctx context.Context, req *models.
 		UpdatedAt: time.Now(),
 	}
 
-	log.Printf("✅ Created workspace %s: container=%s, fileshare=%s, fqdn=%s",
-		workspaceID, containerGroupName, fileShareName, fqdn)
+	totalDuration := time.Since(overallStartTime)
+	log.Printf("⚡⚡⚡ WORKSPACE READY in %s (all operations ran concurrently!)", totalDuration)
+	log.Printf("✅ Workspace %s: %s", workspaceID, fqdn)
 
 	// ❌ NO DATABASE OPERATIONS - Next.js will update the workspace with these details
 	return env, nil
 }
 
-// StartEnvironment starts a stopped environment
-func (s *EnvironmentService) StartEnvironment(ctx context.Context, workspaceID, region string) error {
-	// Derive Azure resource names from UUID
-	regionConfig := s.config.GetRegion(region)
+// StartEnvironment recreates container with existing volumes (fast restart)
+func (s *EnvironmentService) StartEnvironment(ctx context.Context, req *models.StartEnvironmentRequest) (*models.Environment, error) {
+	// Validate region
+	regionConfig := s.config.GetRegion(req.CloudRegion)
 	if regionConfig == nil {
-		return models.ErrInternalServer("region configuration not found")
+		return nil, models.ErrNotFound(fmt.Sprintf("region %s is not available", req.CloudRegion))
 	}
+
+	storageClient, ok := s.storageClients[req.CloudRegion]
+	if !ok {
+		return nil, models.ErrInternalServer(fmt.Sprintf("storage client not found for region %s", req.CloudRegion))
+	}
+
+	workspaceID := req.WorkspaceID
+	fileShareName := fmt.Sprintf("fs-%s", workspaceID)
+	homeFileShareName := fmt.Sprintf("fs-%s-home", workspaceID)
+	containerGroupName := fmt.Sprintf("aci-%s", workspaceID)
+	dnsLabel := fmt.Sprintf("ws-%s", workspaceID)
 
 	resourceGroup := regionConfig.ResourceGroupName
 	if resourceGroup == "" {
 		resourceGroup = s.config.Azure.ResourceGroupName
 	}
 
-	containerGroupName := fmt.Sprintf("aci-%s", workspaceID) // aci-{uuid}
+	log.Printf("🚀 Starting workspace %s (checking volumes...)", workspaceID)
 
-	log.Printf("Starting workspace %s: container=%s", workspaceID, containerGroupName)
-
-	// Start the container
-	if err := s.azureClient.StartContainerGroup(ctx, region, resourceGroup, containerGroupName); err != nil {
-		return fmt.Errorf("failed to start container group: %w", err)
+	// Verify volumes exist
+	workspaceExists, err := storageClient.FileShareExists(ctx, fileShareName)
+	if err != nil {
+		return nil, models.ErrInternalServer(fmt.Sprintf("failed to check workspace volume: %v", err))
+	}
+	if !workspaceExists {
+		return nil, models.ErrNotFound(fmt.Sprintf("workspace volume not found: %s. Create environment first.", fileShareName))
 	}
 
-	log.Printf("✅ Started workspace %s", workspaceID)
-	return nil
+	homeExists, err := storageClient.FileShareExists(ctx, homeFileShareName)
+	if err != nil {
+		return nil, models.ErrInternalServer(fmt.Sprintf("failed to check home volume: %v", err))
+	}
+	if !homeExists {
+		return nil, models.ErrNotFound(fmt.Sprintf("home volume not found: %s. Create environment first.", homeFileShareName))
+	}
+
+	log.Printf("✅ Volumes verified: workspace=%s, home=%s", fileShareName, homeFileShareName)
+
+	// Check if container already exists
+	existingContainer, err := s.azureClient.GetContainerGroup(ctx, req.CloudRegion, resourceGroup, containerGroupName)
+	if err == nil && existingContainer != nil {
+		return nil, models.ErrInvalidRequest(fmt.Sprintf("container already exists for workspace %s. Use stop first if needed.", workspaceID))
+	}
+
+	// Recreate container with existing volumes (fast!)
+	log.Printf("📦 Creating new container instance with existing volumes...")
+
+	containerSpec := azure.ContainerGroupSpec{
+		ContainerName:      "vscode-server",
+		Image:              s.getContainerImage(req.BaseImage),
+		CPUCores:           req.CPUCores,
+		MemoryGB:           req.MemoryGB,
+		DNSNameLabel:       dnsLabel,
+		FileShareName:      fileShareName,
+		HomeFileShareName:  homeFileShareName,
+		StorageAccountName: regionConfig.StorageAccount,
+		StorageAccountKey:  s.config.Azure.StorageAccountKey,
+		EnvironmentID:      workspaceID,
+		UserID:             req.UserID,
+
+		// Registry credentials
+		RegistryServer:   s.getRegistryServer(),
+		RegistryUsername: s.config.RegistryUsername,
+		RegistryPassword: s.config.RegistryPassword,
+
+		// Agent URL
+		AgentBaseURL: s.config.AgentBaseURL,
+
+		// Per-workspace secrets
+		GitHubToken:        req.GitHubToken,
+		CodeServerPassword: req.CodeServerPassword,
+		SSHPublicKey:       req.SSHPublicKey,
+		GitUserName:        req.GitUserName,
+		GitUserEmail:       req.GitUserEmail,
+		AnthropicAPIKey:    req.AnthropicAPIKey,
+		OpenAIAPIKey:       req.OpenAIAPIKey,
+		GeminiAPIKey:       req.GeminiAPIKey,
+	}
+
+	if err := s.azureClient.CreateContainerGroup(ctx, req.CloudRegion, resourceGroup, containerGroupName, containerSpec); err != nil {
+		return nil, models.ErrInternalServer(fmt.Sprintf("failed to create container group: %v", err))
+	}
+
+	// Wait for FQDN
+	time.Sleep(3 * time.Second)
+
+	containerDetails, err := s.azureClient.GetContainerGroup(ctx, req.CloudRegion, resourceGroup, containerGroupName)
+	if err != nil {
+		log.Printf("Warning: failed to get container details: %v", err)
+	}
+
+	var fqdn string
+	if containerDetails != nil &&
+		containerDetails.Properties != nil &&
+		containerDetails.Properties.IPAddress != nil &&
+		containerDetails.Properties.IPAddress.Fqdn != nil {
+		fqdn = *containerDetails.Properties.IPAddress.Fqdn
+	}
+
+	connectionURLs := generateConnectionURLs(fqdn, req.CodeServerPassword)
+
+	env := &models.Environment{
+		ID:                  workspaceID,
+		Name:                req.Name,
+		UserID:              req.UserID,
+		Status:              models.StatusRunning,
+		CloudRegion:         req.CloudRegion,
+		CPUCores:            req.CPUCores,
+		MemoryGB:            req.MemoryGB,
+		StorageGB:           req.StorageGB,
+		BaseImage:           req.BaseImage,
+		AzureResourceGroup:  resourceGroup,
+		AzureContainerGroup: containerGroupName,
+		AzureFileShare:      fileShareName,
+		AzureFQDN:           fqdn,
+		ConnectionURLs:      connectionURLs,
+		CreatedAt:           time.Now(),
+		UpdatedAt:           time.Now(),
+	}
+
+	log.Printf("✅ Workspace %s started successfully (reused existing volumes)", workspaceID)
+	return env, nil
 }
 
-// StopEnvironment stops a running environment
+// StopEnvironment deletes ACI instance but KEEPS volumes (cost optimization)
 func (s *EnvironmentService) StopEnvironment(ctx context.Context, workspaceID, region string) error {
-	// Derive Azure resource names from UUID
 	regionConfig := s.config.GetRegion(region)
 	if regionConfig == nil {
-		return models.ErrInternalServer("region configuration not found")
+		return models.ErrNotFound(fmt.Sprintf("region %s is not available", region))
 	}
 
 	resourceGroup := regionConfig.ResourceGroupName
@@ -216,25 +380,30 @@ func (s *EnvironmentService) StopEnvironment(ctx context.Context, workspaceID, r
 		resourceGroup = s.config.Azure.ResourceGroupName
 	}
 
-	containerGroupName := fmt.Sprintf("aci-%s", workspaceID) // aci-{uuid}
+	containerGroupName := fmt.Sprintf("aci-%s", workspaceID)
 
-	log.Printf("Stopping workspace %s: container=%s", workspaceID, containerGroupName)
+	log.Printf("🛑 Stopping workspace %s: DELETING container (keeping volumes)", workspaceID)
 
-	// Stop the container
-	if err := s.azureClient.StopContainerGroup(ctx, region, resourceGroup, containerGroupName); err != nil {
-		return fmt.Errorf("failed to stop container group: %w", err)
+	// Check if container exists
+	_, err := s.azureClient.GetContainerGroup(ctx, region, resourceGroup, containerGroupName)
+	if err != nil {
+		return models.ErrNotFound(fmt.Sprintf("container not found for workspace %s. Already stopped?", workspaceID))
 	}
 
-	log.Printf("✅ Stopped workspace %s", workspaceID)
+	// DELETE container instance (not stop) - saves 95% of running costs
+	if err := s.azureClient.DeleteContainerGroup(ctx, region, resourceGroup, containerGroupName); err != nil {
+		return models.ErrInternalServer(fmt.Sprintf("failed to delete container group: %v", err))
+	}
+
+	log.Printf("✅ Workspace %s stopped (container deleted, volumes persisted for fast restart)", workspaceID)
 	return nil
 }
 
-// DeleteEnvironment deletes an environment and all associated resources
-func (s *EnvironmentService) DeleteEnvironment(ctx context.Context, workspaceID, region string) error {
-	// Derive Azure resource names from UUID
+// DeleteEnvironment permanently deletes environment and all resources
+func (s *EnvironmentService) DeleteEnvironment(ctx context.Context, workspaceID, region string, force bool) error {
 	regionConfig := s.config.GetRegion(region)
 	if regionConfig == nil {
-		return models.ErrInternalServer("region configuration not found")
+		return models.ErrNotFound(fmt.Sprintf("region %s is not available", region))
 	}
 
 	resourceGroup := regionConfig.ResourceGroupName
@@ -242,27 +411,46 @@ func (s *EnvironmentService) DeleteEnvironment(ctx context.Context, workspaceID,
 		resourceGroup = s.config.Azure.ResourceGroupName
 	}
 
-	containerGroupName := fmt.Sprintf("aci-%s", workspaceID) // aci-{uuid}
-	fileShareName := fmt.Sprintf("fs-%s", workspaceID)       // fs-{uuid}
+	containerGroupName := fmt.Sprintf("aci-%s", workspaceID)
+	fileShareName := fmt.Sprintf("fs-%s", workspaceID)
+	homeFileShareName := fmt.Sprintf("fs-%s-home", workspaceID)
 
-	log.Printf("Deleting workspace %s: container=%s, fileshare=%s",
-		workspaceID, containerGroupName, fileShareName)
+	log.Printf("🗑️  Deleting workspace %s permanently", workspaceID)
 
-	// Delete ACI container
-	if err := s.azureClient.DeleteContainerGroup(ctx, region, resourceGroup, containerGroupName); err != nil {
-		log.Printf("Warning: failed to delete container group %s: %v", containerGroupName, err)
-		// Continue with file share deletion even if container delete fails
-	}
-
-	// Delete file share
-	storageClient, ok := s.storageClients[region]
-	if ok && fileShareName != "" {
-		if err := storageClient.DeleteFileShare(ctx, fileShareName); err != nil {
-			log.Printf("Warning: failed to delete file share %s: %v", fileShareName, err)
+	// Check if container is running
+	container, err := s.azureClient.GetContainerGroup(ctx, region, resourceGroup, containerGroupName)
+	if err == nil && container != nil {
+		if !force {
+			return models.ErrInvalidRequest(fmt.Sprintf("workspace %s is still running. Stop it first or use force=true", workspaceID))
+		}
+		// Force delete - stop container first
+		log.Printf("⚠️  Force deleting running container for workspace %s", workspaceID)
+		if err := s.azureClient.DeleteContainerGroup(ctx, region, resourceGroup, containerGroupName); err != nil {
+			log.Printf("Warning: failed to delete container group %s: %v", containerGroupName, err)
 		}
 	}
 
-	log.Printf("✅ Deleted workspace %s", workspaceID)
+	// Delete file shares (permanent data loss!)
+	storageClient, ok := s.storageClients[region]
+	if !ok {
+		return models.ErrInternalServer(fmt.Sprintf("storage client not found for region %s", region))
+	}
+
+	// Delete workspace volume
+	if err := storageClient.DeleteFileShare(ctx, fileShareName); err != nil {
+		log.Printf("Warning: failed to delete workspace file share %s: %v", fileShareName, err)
+	} else {
+		log.Printf("✅ Deleted workspace volume: %s", fileShareName)
+	}
+
+	// Delete home volume
+	if err := storageClient.DeleteFileShare(ctx, homeFileShareName); err != nil {
+		log.Printf("Warning: failed to delete home file share %s: %v", homeFileShareName, err)
+	} else {
+		log.Printf("✅ Deleted home volume: %s", homeFileShareName)
+	}
+
+	log.Printf("✅ Workspace %s permanently deleted (all data removed)", workspaceID)
 	return nil
 }
 
@@ -304,7 +492,24 @@ func generateConnectionURLs(fqdn, password string) models.ConnectionURLs {
 }
 
 func (s *EnvironmentService) getContainerImage(baseImage string) string {
-	// For MVP, all workspaces use the same Docker Hub image
+	// If ACR is configured, use it for faster image pulls
+	if s.config.Azure.ContainerRegistry != "" {
+		// Use ACR: dev8prodcr5xv5pu3m2xjli.azurecr.io/dev8-workspace:latest
+		return fmt.Sprintf("%s/dev8-workspace:latest", s.config.Azure.ContainerRegistry)
+	}
+
+	// Fallback to Docker Hub or configured image
 	// baseImage parameter is ignored - can be used for future customization
 	return s.config.ContainerImage
+}
+
+// getRegistryServer returns the registry server to use
+func (s *EnvironmentService) getRegistryServer() string {
+	// If ACR is configured, use it
+	if s.config.Azure.ContainerRegistry != "" {
+		return s.config.Azure.ContainerRegistry
+	}
+
+	// Fallback to configured registry (Docker Hub)
+	return s.config.RegistryServer
 }

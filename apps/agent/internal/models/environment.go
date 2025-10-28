@@ -91,6 +91,60 @@ type CreateEnvironmentRequest struct {
 	GeminiAPIKey       string `json:"geminiApiKey,omitempty"`
 }
 
+// StartEnvironmentRequest represents a request to start a stopped environment
+type StartEnvironmentRequest struct {
+	WorkspaceID string `json:"workspaceId"`
+	CloudRegion string `json:"cloudRegion"`
+
+	// Required for container recreation
+	UserID    string `json:"userId"`
+	Name      string `json:"name"`
+	CPUCores  int    `json:"cpuCores"`
+	MemoryGB  int    `json:"memoryGB"`
+	StorageGB int    `json:"storageGB"`
+	BaseImage string `json:"baseImage"`
+
+	// Optional per-workspace secrets
+	GitHubToken        string `json:"githubToken,omitempty"`
+	CodeServerPassword string `json:"codeServerPassword,omitempty"`
+	SSHPublicKey       string `json:"sshPublicKey,omitempty"`
+	GitUserName        string `json:"gitUserName,omitempty"`
+	GitUserEmail       string `json:"gitUserEmail,omitempty"`
+	AnthropicAPIKey    string `json:"anthropicApiKey,omitempty"`
+	OpenAIAPIKey       string `json:"openaiApiKey,omitempty"`
+	GeminiAPIKey       string `json:"geminiApiKey,omitempty"`
+}
+
+// StopEnvironmentRequest represents a request to stop an environment
+type StopEnvironmentRequest struct {
+	WorkspaceID string `json:"workspaceId"`
+	CloudRegion string `json:"cloudRegion"`
+}
+
+// GetEnvironmentStatusRequest represents a request to check environment status
+type GetEnvironmentStatusRequest struct {
+	WorkspaceID string `json:"workspaceId"`
+	CloudRegion string `json:"cloudRegion"`
+}
+
+// Validate validates the status check request
+func (r *GetEnvironmentStatusRequest) Validate() error {
+	if r.WorkspaceID == "" {
+		return ErrInvalidRequest("workspaceId is required")
+	}
+	if r.CloudRegion == "" {
+		return ErrInvalidRequest("cloudRegion is required")
+	}
+	return nil
+}
+
+// DeleteEnvironmentRequest represents a request to delete an environment
+type DeleteEnvironmentRequest struct {
+	WorkspaceID string `json:"workspaceId"`
+	CloudRegion string `json:"cloudRegion"`
+	Force       bool   `json:"force,omitempty"` // Force delete even if running
+}
+
 // UpdateEnvironmentRequest represents a request to update an environment
 type UpdateEnvironmentRequest struct {
 	Name   string `json:"name,omitempty"`
@@ -184,11 +238,67 @@ func (r *CreateEnvironmentRequest) Validate() error {
 	return nil
 }
 
+// Validate validates the start environment request
+func (r *StartEnvironmentRequest) Validate() error {
+	if r.WorkspaceID == "" {
+		return ErrInvalidRequest("workspaceId is required")
+	}
+	if r.CloudRegion == "" {
+		return ErrInvalidRequest("cloudRegion is required")
+	}
+	if r.UserID == "" {
+		return ErrInvalidRequest("userId is required")
+	}
+	if r.Name == "" {
+		return ErrInvalidRequest("name is required")
+	}
+	if r.CPUCores < 1 || r.CPUCores > 4 {
+		return ErrInvalidRequest("cpuCores must be between 1 and 4")
+	}
+	if r.MemoryGB < 2 || r.MemoryGB > 16 {
+		return ErrInvalidRequest("memoryGB must be between 2 and 16")
+	}
+	if r.BaseImage == "" {
+		r.BaseImage = "node"
+	}
+	return nil
+}
+
+// Validate validates the stop environment request
+func (r *StopEnvironmentRequest) Validate() error {
+	if r.WorkspaceID == "" {
+		return ErrInvalidRequest("workspaceId is required")
+	}
+	if r.CloudRegion == "" {
+		return ErrInvalidRequest("cloudRegion is required")
+	}
+	return nil
+}
+
+// Validate validates the delete environment request
+func (r *DeleteEnvironmentRequest) Validate() error {
+	if r.WorkspaceID == "" {
+		return ErrInvalidRequest("workspaceId is required")
+	}
+	if r.CloudRegion == "" {
+		return ErrInvalidRequest("cloudRegion is required")
+	}
+	return nil
+}
+
 // ErrorResponse represents an error response
 type ErrorResponse struct {
+	Success bool   `json:"success"`
 	Error   string `json:"error"`
-	Message string `json:"message,omitempty"`
+	Message string `json:"message"`
 	Code    string `json:"code,omitempty"`
+}
+
+// SuccessResponse represents a successful operation response
+type SuccessResponse struct {
+	Success bool        `json:"success"`
+	Message string      `json:"message"`
+	Data    interface{} `json:"data,omitempty"`
 }
 
 // Custom error types
@@ -201,7 +311,7 @@ func (e *AppError) Error() string {
 	return e.Message
 }
 
-// Error constructors
+// Error constructors with better messages
 func ErrInvalidRequest(message string) error {
 	return &AppError{Message: message, Code: "INVALID_REQUEST"}
 }
@@ -216,4 +326,8 @@ func ErrInternalServer(message string) error {
 
 func ErrUnauthorized(message string) error {
 	return &AppError{Message: message, Code: "UNAUTHORIZED"}
+}
+
+func ErrConflict(message string) error {
+	return &AppError{Message: message, Code: "CONFLICT"}
 }

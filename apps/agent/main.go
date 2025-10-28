@@ -35,6 +35,15 @@ func main() {
 	}
 	log.Printf("🔒 CORS allowed origins: %v", cfg.CORSAllowedOrigins)
 
+	// Log container registry configuration
+	if cfg.Azure.ContainerRegistry != "" {
+		log.Printf("🐳 Container Registry: ACR (%s)", cfg.Azure.ContainerRegistry)
+		log.Printf("   Image: %s/dev8-workspace:latest", cfg.Azure.ContainerRegistry)
+	} else {
+		log.Printf("🐳 Container Registry: Docker Hub")
+		log.Printf("   Image: %s", cfg.ContainerImage)
+	}
+
 	// Initialize Azure client
 	azureClient, err := azure.NewClient(cfg)
 	if err != nil {

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -26,12 +27,11 @@ func NewEnvironmentHandler(service *services.EnvironmentService) *EnvironmentHan
 func (h *EnvironmentHandler) CreateEnvironment(w http.ResponseWriter, r *http.Request) {
 	var req models.CreateEnvironmentRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid request body", err)
+		respondWithError(w, http.StatusBadRequest, "Invalid request body", "Please check your JSON payload", err)
 		return
 	}
 
 	// TODO: Extract user ID from authentication context
-	// For now, we'll use a placeholder
 	if req.UserID == "" {
 		req.UserID = "default-user"
 	}
@@ -42,9 +42,9 @@ func (h *EnvironmentHandler) CreateEnvironment(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	respondWithJSON(w, http.StatusCreated, models.EnvironmentResponse{
-		Environment: env,
-		Message:     "Environment created successfully",
+	respondWithSuccess(w, http.StatusCreated, "Workspace created successfully", map[string]interface{}{
+		"environment": env,
+		"message":     "Your development environment is ready to use",
 	})
 }
 
@@ -52,85 +52,64 @@ func (h *EnvironmentHandler) CreateEnvironment(w http.ResponseWriter, r *http.Re
 func (h *EnvironmentHandler) GetEnvironment(w http.ResponseWriter, r *http.Request) {
 	// GetEnvironment is removed - Next.js is the source of truth
 	// Agent is stateless and doesn't store environment data
-	respondWithError(w, http.StatusNotImplemented, "Get environment not supported",
-		models.ErrInvalidRequest("Agent is stateless - query Next.js for environment details"))
+	err := models.ErrInvalidRequest("Agent is stateless - query Next.js for environment details")
+	respondWithError(w, http.StatusNotImplemented, "Get Environment Not Supported", "This agent doesn't store state. Query Next.js API for environment details.", err)
 }
 
 // ListEnvironments handles GET /api/v1/environments
 func (h *EnvironmentHandler) ListEnvironments(w http.ResponseWriter, r *http.Request) {
 	// ListEnvironments is removed - Next.js is the source of truth
 	// Agent is stateless and doesn't store environment data
-	respondWithError(w, http.StatusNotImplemented, "List environments not supported",
-		models.ErrInvalidRequest("Agent is stateless - query Next.js for environment list"))
+	err := models.ErrInvalidRequest("Agent is stateless - query Next.js for environment list")
+	respondWithError(w, http.StatusNotImplemented, "List Environments Not Supported", "This agent doesn't store state. Query Next.js API for environment list.", err)
 }
 
 // StartEnvironment handles POST /api/v1/environments/start
 func (h *EnvironmentHandler) StartEnvironment(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		WorkspaceID string `json:"workspaceId"`
-		Region      string `json:"region"`
-	}
-
+	var req models.StartEnvironmentRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid request body", err)
+		respondWithError(w, http.StatusBadRequest, "Invalid request body", "Please check your JSON payload", err)
 		return
 	}
 
-	if req.WorkspaceID == "" {
-		respondWithError(w, http.StatusBadRequest, "workspaceId is required",
-			models.ErrInvalidRequest("workspaceId is required"))
-		return
-	}
-
-	if req.Region == "" {
-		respondWithError(w, http.StatusBadRequest, "region is required",
-			models.ErrInvalidRequest("region is required"))
-		return
-	}
-
-	if err := h.service.StartEnvironment(r.Context(), req.WorkspaceID, req.Region); err != nil {
+	if err := req.Validate(); err != nil {
 		handleServiceError(w, err)
 		return
 	}
 
-	respondWithJSON(w, http.StatusOK, map[string]string{
-		"message":     "Environment started successfully",
-		"workspaceId": req.WorkspaceID,
+	env, err := h.service.StartEnvironment(r.Context(), &req)
+	if err != nil {
+		handleServiceError(w, err)
+		return
+	}
+
+	respondWithSuccess(w, http.StatusOK, "Workspace started successfully", map[string]interface{}{
+		"environment": env,
+		"message":     "Your workspace is now running with existing data",
 	})
 }
 
 // StopEnvironment handles POST /api/v1/environments/stop
 func (h *EnvironmentHandler) StopEnvironment(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		WorkspaceID string `json:"workspaceId"`
-		Region      string `json:"region"`
-	}
-
+	var req models.StopEnvironmentRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid request body", err)
+		respondWithError(w, http.StatusBadRequest, "Invalid request body", "Please check your JSON payload", err)
 		return
 	}
 
-	if req.WorkspaceID == "" {
-		respondWithError(w, http.StatusBadRequest, "workspaceId is required",
-			models.ErrInvalidRequest("workspaceId is required"))
-		return
-	}
-
-	if req.Region == "" {
-		respondWithError(w, http.StatusBadRequest, "region is required",
-			models.ErrInvalidRequest("region is required"))
-		return
-	}
-
-	if err := h.service.StopEnvironment(r.Context(), req.WorkspaceID, req.Region); err != nil {
+	if err := req.Validate(); err != nil {
 		handleServiceError(w, err)
 		return
 	}
 
-	respondWithJSON(w, http.StatusOK, map[string]string{
-		"message":     "Environment stopped successfully",
+	if err := h.service.StopEnvironment(r.Context(), req.WorkspaceID, req.CloudRegion); err != nil {
+		handleServiceError(w, err)
+		return
+	}
+
+	respondWithSuccess(w, http.StatusOK, "Workspace stopped successfully", map[string]interface{}{
 		"workspaceId": req.WorkspaceID,
+		"message":     "Container deleted, volumes preserved. Restart anytime to resume work.",
 	})
 }
 
@@ -141,7 +120,7 @@ func (h *EnvironmentHandler) ReportActivity(w http.ResponseWriter, r *http.Reque
 
 	var payload models.ActivityReport
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid request body", err)
+		respondWithError(w, http.StatusBadRequest, "Invalid Request Body", "Please check your JSON payload", err)
 		return
 	}
 
@@ -155,8 +134,7 @@ func (h *EnvironmentHandler) ReportActivity(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	respondWithJSON(w, http.StatusOK, map[string]interface{}{
-		"message":       "Activity recorded",
+	respondWithSuccess(w, http.StatusOK, "Activity recorded successfully", map[string]interface{}{
 		"environmentId": payload.EnvironmentID,
 		"snapshot":      payload.Snapshot,
 		"timestamp":     payload.Timestamp,
@@ -165,36 +143,25 @@ func (h *EnvironmentHandler) ReportActivity(w http.ResponseWriter, r *http.Reque
 
 // DeleteEnvironment handles DELETE /api/v1/environments
 func (h *EnvironmentHandler) DeleteEnvironment(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		WorkspaceID string `json:"workspaceId"`
-		Region      string `json:"region"`
-	}
-
+	var req models.DeleteEnvironmentRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid request body", err)
+		respondWithError(w, http.StatusBadRequest, "Invalid request body", "Please check your JSON payload", err)
 		return
 	}
 
-	if req.WorkspaceID == "" {
-		respondWithError(w, http.StatusBadRequest, "workspaceId is required",
-			models.ErrInvalidRequest("workspaceId is required"))
-		return
-	}
-
-	if req.Region == "" {
-		respondWithError(w, http.StatusBadRequest, "region is required",
-			models.ErrInvalidRequest("region is required"))
-		return
-	}
-
-	if err := h.service.DeleteEnvironment(r.Context(), req.WorkspaceID, req.Region); err != nil {
+	if err := req.Validate(); err != nil {
 		handleServiceError(w, err)
 		return
 	}
 
-	respondWithJSON(w, http.StatusOK, map[string]string{
-		"message":     "Environment deleted successfully",
+	if err := h.service.DeleteEnvironment(r.Context(), req.WorkspaceID, req.CloudRegion, req.Force); err != nil {
+		handleServiceError(w, err)
+		return
+	}
+
+	respondWithSuccess(w, http.StatusOK, "Workspace deleted permanently", map[string]interface{}{
 		"workspaceId": req.WorkspaceID,
+		"message":     "All data and resources have been permanently removed",
 	})
 }
 
@@ -203,7 +170,7 @@ func (h *EnvironmentHandler) DeleteEnvironment(w http.ResponseWriter, r *http.Re
 func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	response, err := json.Marshal(payload)
 	if err != nil {
-		log.Printf("Error marshaling JSON: %v", err)
+		log.Printf("❌ Error marshaling JSON: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -213,11 +180,21 @@ func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	w.Write(response)
 }
 
-func respondWithError(w http.ResponseWriter, code int, message string, err error) {
-	log.Printf("Error: %s - %v", message, err)
+func respondWithSuccess(w http.ResponseWriter, code int, message string, data interface{}) {
+	respondWithJSON(w, code, models.SuccessResponse{
+		Success: true,
+		Message: message,
+		Data:    data,
+	})
+}
+
+func respondWithError(w http.ResponseWriter, code int, error string, message string, err error) {
+	log.Printf("❌ %s: %v", error, err)
 	respondWithJSON(w, code, models.ErrorResponse{
-		Error:   message,
-		Message: err.Error(),
+		Success: false,
+		Error:   error,
+		Message: message,
+		Code:    fmt.Sprintf("ERR_%d", code),
 	})
 }
 
@@ -225,15 +202,17 @@ func handleServiceError(w http.ResponseWriter, err error) {
 	if appErr, ok := err.(*models.AppError); ok {
 		switch appErr.Code {
 		case "INVALID_REQUEST":
-			respondWithError(w, http.StatusBadRequest, "Invalid request", err)
+			respondWithError(w, http.StatusBadRequest, "Invalid Request", appErr.Message, err)
 		case "NOT_FOUND":
-			respondWithError(w, http.StatusNotFound, "Resource not found", err)
+			respondWithError(w, http.StatusNotFound, "Resource Not Found", appErr.Message, err)
 		case "UNAUTHORIZED":
-			respondWithError(w, http.StatusUnauthorized, "Unauthorized", err)
+			respondWithError(w, http.StatusUnauthorized, "Unauthorized", appErr.Message, err)
+		case "CONFLICT":
+			respondWithError(w, http.StatusConflict, "Conflict", appErr.Message, err)
 		default:
-			respondWithError(w, http.StatusInternalServerError, "Internal server error", err)
+			respondWithError(w, http.StatusInternalServerError, "Internal Server Error", "An unexpected error occurred. Please try again later.", err)
 		}
 	} else {
-		respondWithError(w, http.StatusInternalServerError, "Internal server error", err)
+		respondWithError(w, http.StatusInternalServerError, "Internal Server Error", "An unexpected error occurred. Please try again later.", err)
 	}
 }

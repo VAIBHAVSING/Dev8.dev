@@ -88,21 +88,34 @@ func (c *Client) CreateContainerGroup(ctx context.Context, region, resourceGroup
 	var volumeMounts []*armcontainerinstance.VolumeMount
 
 	if spec.FileShareName != "" && spec.StorageAccountName != "" && spec.StorageAccountKey != "" {
-		volumes = []*armcontainerinstance.Volume{
-			{
-				Name: to.Ptr("workspace"),
+		// Volume 1: Workspace directory (/workspace) - user code and projects
+		volumes = append(volumes, &armcontainerinstance.Volume{
+			Name: to.Ptr("workspace"),
+			AzureFile: &armcontainerinstance.AzureFileVolume{
+				ShareName:          to.Ptr(spec.FileShareName),
+				StorageAccountName: to.Ptr(spec.StorageAccountName),
+				StorageAccountKey:  to.Ptr(spec.StorageAccountKey),
+			},
+		})
+		volumeMounts = append(volumeMounts, &armcontainerinstance.VolumeMount{
+			Name:      to.Ptr("workspace"),
+			MountPath: to.Ptr("/workspace"),
+		})
+
+		// Volume 2: Home directory (/home/dev8) - extensions, settings, SSH keys
+		if spec.HomeFileShareName != "" {
+			volumes = append(volumes, &armcontainerinstance.Volume{
+				Name: to.Ptr("home"),
 				AzureFile: &armcontainerinstance.AzureFileVolume{
-					ShareName:          to.Ptr(spec.FileShareName),
+					ShareName:          to.Ptr(spec.HomeFileShareName),
 					StorageAccountName: to.Ptr(spec.StorageAccountName),
 					StorageAccountKey:  to.Ptr(spec.StorageAccountKey),
 				},
-			},
-		}
-		volumeMounts = []*armcontainerinstance.VolumeMount{
-			{
-				Name:      to.Ptr("workspace"),
-				MountPath: to.Ptr("/workspace"),
-			},
+			})
+			volumeMounts = append(volumeMounts, &armcontainerinstance.VolumeMount{
+				Name:      to.Ptr("home"),
+				MountPath: to.Ptr("/home/dev8"),
+			})
 		}
 	}
 
@@ -316,7 +329,8 @@ type ContainerGroupSpec struct {
 	CPUCores           int
 	MemoryGB           int
 	DNSNameLabel       string
-	FileShareName      string
+	FileShareName      string // Workspace file share (code) - mounts to /workspace
+	HomeFileShareName  string // Home file share (extensions/settings) - mounts to /home/dev8
 	StorageAccountName string
 	StorageAccountKey  string
 	EnvironmentID      string

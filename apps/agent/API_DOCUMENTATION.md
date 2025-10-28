@@ -1,613 +1,660 @@
-# Dev8 Agent API Documentation
+# Dev8 Agent API - Comprehensive Documentation
 
-## Overview
-
-The Dev8 Agent is a RESTful API service that manages cloud development environments. It provides endpoints for creating, managing, and monitoring containerized development environments across cloud providers (primarily Azure).
-
-**Base URL:** `http://<host>:<port>`  
-**Default Port:** `8080`  
-**API Version:** `v1`
-
-## Table of Contents
-
-- [Authentication](#authentication)
-- [Health Check Endpoints](#health-check-endpoints)
-- [Environment Management](#environment-management)
-- [Error Handling](#error-handling)
-- [Data Models](#data-models)
+**Created:** 2025-10-27  
+**Version:** 1.0.0  
+**Base URL:** `http://localhost:8080`
 
 ---
 
-## Authentication
+## 📋 Table of Contents
 
-Currently, the agent uses a placeholder authentication system. Future versions will implement proper JWT-based authentication.
-
-**Current Behavior:**
-- UserID defaults to `"default-user"` if not provided
-- No authentication headers required (development only)
+1. [Overview](#overview)
+2. [Architecture](#architecture)
+3. [Performance Benchmarks](#performance-benchmarks)
+4. [Cost Optimization](#cost-optimization)
+5. [API Endpoints](#api-endpoints)
+6. [Request/Response Examples](#request-response-examples)
+7. [Error Handling](#error-handling)
+8. [Workflows](#workflows)
+9. [Postman Collection](#postman-collection)
 
 ---
 
-## Health Check Endpoints
+## 🌟 Overview
 
-### GET /health
+Dev8 Agent is a stateless Go microservice that orchestrates Azure Container Instances (ACI) for cloud development environments.
 
-Returns the overall health status of the agent service.
+### Key Features
 
-**Response:**
+- ⚡ **Maximum Concurrency**: Goroutines for parallel operations
+- 🐳 **Azure Container Registry**: Fast image pulls from ACR
+- 💰 **Cost-Optimized**: 95% savings when stopped
+- 🔒 **Secure**: Per-workspace secrets (GitHub, SSH, AI keys)
+- 📊 **Observable**: Detailed performance logging
+
+### Architecture Principles
+
+- **Stateless**: No database, Next.js is source of truth
+- **Concurrent**: File shares + ACI created simultaneously
+- **Resilient**: Automatic cleanup on failures
+- **Fast Restart**: 15-20s with volume reuse
+
+---
+
+## 🏗️ Architecture
+
+### Resource Naming Convention
+
+All Azure resources use workspace UUID from Next.js database:
+
+```
+Workspace ID: clxxx-yyyy-zzzz-aaaa-bbbb
+
+Generated Resources:
+├─ ACI Container:    aci-clxxx-yyyy-zzzz-aaaa-bbbb
+├─ DNS Label:        ws-clxxx-yyyy-zzzz-aaaa-bbbb
+├─ Workspace Share:  fs-clxxx-yyyy-zzzz-aaaa-bbbb
+└─ Home Share:       fs-clxxx-yyyy-zzzz-aaaa-bbbb-home
+
+FQDN: ws-clxxx-yyyy-zzzz-aaaa-bbbb.centralindia.azurecontainer.io
+```
+
+### Concurrent Operations (Create Workspace)
+
+```
+┌─────────────────────────────────────────────────────┐
+│               START ALL 3 OPERATIONS                │
+│                   (Goroutines)                      │
+└─────────────────────────────────────────────────────┘
+                        │
+        ┌───────────────┼───────────────┐
+        │               │               │
+        ▼               ▼               ▼
+┌───────────────┐ ┌───────────────┐ ┌──────────────────┐
+│ File Share 1  │ │ File Share 2  │ │  ACI Container   │
+│  (workspace)  │ │    (home)     │ │                  │
+│     ~5s       │ │     ~5s       │ │     ~2m15s       │
+└───────────────┘ └───────────────┘ └──────────────────┘
+        │               │               │
+        └───────────────┼───────────────┘
+                        ▼
+              ⏱️ Total: ~2m15s
+        (slowest operation wins)
+```
+
+---
+
+## ⚡ Performance Benchmarks
+
+### Operation Times
+
+| Operation | Time | Notes |
+|-----------|------|-------|
+| **Create Workspace** | 2m10-2m15s | All operations concurrent |
+| **Start Workspace** | 15-20s | ⚡ Reuses existing volumes |
+| **Stop Workspace** | 2s | Deletes container only |
+| **Delete Workspace** | 5s | Removes all resources |
+
+### Create Workspace Breakdown
+
+```
+Operation                  Time        Concurrent?
+────────────────────────────────────────────────────
+Workspace File Share       ~5s         ✅ Yes
+Home File Share            ~5s         ✅ Yes  
+ACI Container Provision    ~2m15s      ✅ Yes
+FQDN Assignment           ~3s         ❌ No (sequential)
+────────────────────────────────────────────────────
+TOTAL                     ~2m18s
+```
+
+### Why 2+ Minutes?
+
+**Azure ACI provisioning is the bottleneck:**
+- VM infrastructure allocation
+- Container image pull (even from ACR)
+- Network interface creation
+- Public IP/DNS assignment
+- Container startup
+
+**This is Azure's infrastructure time - cannot be optimized further.**
+
+---
+
+## 💰 Cost Optimization
+
+### Cost Comparison
+
+| State | Monthly Cost | Annual Cost |
+|-------|-------------|-------------|
+| **Running** | $35/workspace | $420/workspace |
+| **Stopped** | $1-2/workspace | $12-24/workspace |
+| **Savings** | **95%** 🎉 | **95%** 🎉 |
+
+### Stop/Start Workflow
+
+```
+1️⃣ CREATE (First Time)
+   ↓ 2m15s
+   💰 $35/month (running)
+
+2️⃣ WORK (Active Development)
+   ↓ 
+   💰 $35/month (while running)
+
+3️⃣ STOP (End of Day)
+   ↓ 2s - Container deleted
+   💰 $1-2/month (volumes only)
+
+4️⃣ START (Next Day)
+   ↓ 15-20s - Container recreated
+   💰 $35/month (running again)
+   ✅ All files preserved!
+```
+
+### Cost Calculation Examples
+
+**Scenario 1: Always Running**
+- 1 workspace × 24/7 × 30 days = **$35/month**
+
+**Scenario 2: Work Hours Only (8h/day)**
+- 1 workspace × 8h/day × 22 workdays = **~$11/month**
+- Savings: **$24/month (69%)**
+
+**Scenario 3: Weekend Break**
+- Stop Friday → Start Monday = **$6 saved/month**
+
+---
+
+## 🔌 API Endpoints
+
+### Base URL
+
+```
+Production: https://your-agent-domain.com
+Development: http://localhost:8080
+```
+
+### Endpoint Overview
+
+| Method | Endpoint | Description | Time |
+|--------|----------|-------------|------|
+| GET | `/health` | Health check | <1s |
+| GET | `/ready` | Readiness probe | <1s |
+| GET | `/live` | Liveness probe | <1s |
+| POST | `/api/v1/environments` | Create workspace | ~2m15s |
+| POST | `/api/v1/environments/start` | Start workspace | ~15-20s |
+| POST | `/api/v1/environments/stop` | Stop workspace | ~2s |
+| DELETE | `/api/v1/environments` | Delete workspace | ~5s |
+| POST | `/api/v1/environments/{id}/activity` | Report activity | <1s |
+
+---
+
+## 📝 Request/Response Examples
+
+### 1. Health Check
+
+**Request:**
+```http
+GET /health HTTP/1.1
+Host: localhost:8080
+```
+
+**Response (200 OK):**
 ```json
 {
   "status": "healthy",
-  "uptime": "2h15m30s",
-  "service": "dev8-agent",
-  "version": "1.0.0"
+  "timestamp": "2025-10-27T14:30:00Z",
+  "uptime": "2h30m15s"
 }
 ```
 
-**Status Codes:**
-- `200 OK` - Service is healthy
-
 ---
 
-### GET /ready
+### 2. Create Workspace
 
-Returns the readiness status of the agent service.
+**Request:**
+```http
+POST /api/v1/environments HTTP/1.1
+Host: localhost:8080
+Content-Type: application/json
 
-**Response:**
-```json
 {
-  "status": "ready"
-}
-```
-
-**Status Codes:**
-- `200 OK` - Service is ready to accept requests
-
----
-
-### GET /live
-
-Returns the liveness status of the agent service.
-
-**Response:**
-```json
-{
-  "status": "alive"
-}
-```
-
-**Status Codes:**
-- `200 OK` - Service is alive
-
----
-
-### GET /
-
-Returns basic service information.
-
-**Response:**
-```json
-{
-  "service": "dev8-agent",
-  "version": "1.0.0",
-  "status": "running",
-  "endpoints": {
-    "health": "/health",
-    "api": "/api/v1"
-  }
-}
-```
-
-**Status Codes:**
-- `200 OK` - Always
-
----
-
-## Environment Management
-
-### POST /api/v1/environments
-
-Creates a new development environment with the Docker Hub workspace image.
-
-**Request Body:**
-```json
-{
-  "userId": "user-123",
-  "name": "my-dev-environment",
+  "workspaceId": "clxxx-yyyy-zzzz-aaaa-bbbb",
+  "userId": "user_12345",
+  "name": "My Development Workspace",
   "cloudProvider": "AZURE",
-  "cloudRegion": "eastus",
+  "cloudRegion": "centralindia",
   "cpuCores": 2,
   "memoryGB": 4,
   "storageGB": 20,
   "baseImage": "node",
   
-  // Optional: Dynamic per-workspace configuration
-  "githubToken": "ghp_xxxxxxxxxxxx",
+  // Optional per-workspace secrets
+  "githubToken": "ghp_xxxxxxxxxxxxxxxxxxxx",
+  "codeServerPassword": "SecurePassword123!",
+  "sshPublicKey": "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC...",
   "gitUserName": "John Doe",
   "gitUserEmail": "john@example.com",
-  "sshPublicKey": "ssh-rsa AAAAB3...",
-  "codeServerPassword": "secure-password-123",
-  "anthropicApiKey": "sk-ant-xxx",
-  "openaiApiKey": "sk-proj-xxx",
-  "geminiApiKey": "AIza..."
+  "anthropicApiKey": "sk-ant-xxxxxxxxxxxx",
+  "openaiApiKey": "sk-xxxxxxxxxxxx",
+  "geminiApiKey": "AIzaxxxxxxxxxx"
 }
 ```
 
-**Request Fields:**
-
-**Required:**
-- `userId` (string, optional): User identifier. Defaults to "default-user" if not provided
-- `name` (string, required): Human-readable name for the environment
-- `cloudProvider` (string, required): Cloud provider. Must be one of: `AZURE`, `AWS`, or `GCP`
-- `cloudRegion` (string, required): Cloud region for deployment (e.g., "eastus", "westus2")
-- `cpuCores` (integer, required): Number of CPU cores (1-4)
-- `memoryGB` (integer, required): Memory in GB (1-16)
-- `storageGB` (integer, required): Storage size in GB (10-100)
-- `baseImage` (string, required): Base image type (currently unused, all workspaces use `vaibhavsing/dev8-workspace:latest`)
-
-**Optional - Dynamic Workspace Configuration:**
-- `githubToken` (string): GitHub personal access token for private repo access
-- `gitUserName` (string): Git user name for commits
-- `gitUserEmail` (string): Git user email for commits
-- `sshPublicKey` (string): SSH public key for remote access
-- `codeServerPassword` (string): Password for VS Code Server web interface
-- `anthropicApiKey` (string): Anthropic API key for Claude
-- `openaiApiKey` (string): OpenAI API key for GPT models
-- `geminiApiKey` (string): Google Gemini API key
-
-**Notes:**
-- All optional fields are passed as **secure environment variables** to the workspace container
-- Secrets are stored using Azure Container Instances SecureValue (not visible in logs)
-- The Agent uses the Docker Hub image `vaibhavsing/dev8-workspace:latest` for all workspaces
-- `baseImage` parameter is currently ignored (kept for backward compatibility)
-
-**Response:**
+**Response (201 Created) - After ~2m15s:**
 ```json
 {
-  "environment": {
-    "id": "env-abc123",
-    "userId": "user-123",
-    "name": "my-dev-environment",
-    "status": "CREATING",
-    "cloudProvider": "AZURE",
-    "cloudRegion": "eastus",
-    "aciContainerGroupId": "/subscriptions/.../containerGroups/env-abc123",
-    "aciPublicIp": "20.185.123.45",
-    "azureFileShareName": "workspace-env-abc123",
-    "vsCodeUrl": "https://20.185.123.45:8443",
-    "cpuCores": 2,
-    "memoryGB": 4,
-    "storageGB": 20,
-    "baseImage": "mcr.microsoft.com/devcontainers/base:ubuntu",
-    "createdAt": "2025-10-24T10:30:00Z",
-    "updatedAt": "2025-10-24T10:30:00Z",
-    "lastAccessedAt": "2025-10-24T10:30:00Z"
-  },
-  "message": "Environment created successfully"
-}
-```
-
-**Status Codes:**
-- `201 Created` - Environment created successfully
-- `400 Bad Request` - Invalid request body or parameters
-- `500 Internal Server Error` - Server error during creation
-
----
-
-### GET /api/v1/environments/{id}
-
-Retrieves details of a specific environment.
-
-**Path Parameters:**
-- `id` (string, required): Environment ID
-
-**Response:**
-```json
-{
-  "environment": {
-    "id": "env-abc123",
-    "userId": "user-123",
-    "name": "my-dev-environment",
-    "status": "RUNNING",
-    "cloudProvider": "AZURE",
-    "cloudRegion": "eastus",
-    "aciContainerGroupId": "/subscriptions/.../containerGroups/env-abc123",
-    "aciPublicIp": "20.185.123.45",
-    "azureFileShareName": "workspace-env-abc123",
-    "vsCodeUrl": "https://20.185.123.45:8443",
-    "cpuCores": 2,
-    "memoryGB": 4,
-    "storageGB": 20,
-    "baseImage": "mcr.microsoft.com/devcontainers/base:ubuntu",
-    "createdAt": "2025-10-24T10:30:00Z",
-    "updatedAt": "2025-10-24T10:30:00Z",
-    "lastAccessedAt": "2025-10-24T11:00:00Z"
+  "success": true,
+  "message": "Workspace created successfully",
+  "data": {
+    "environment": {
+      "id": "clxxx-yyyy-zzzz-aaaa-bbbb",
+      "name": "My Development Workspace",
+      "userId": "user_12345",
+      "status": "RUNNING",
+      "cloudRegion": "centralindia",
+      "cpuCores": 2,
+      "memoryGB": 4,
+      "storageGB": 20,
+      "baseImage": "node",
+      "azureResourceGroup": "dev8-rg-centralindia",
+      "azureContainerGroup": "aci-clxxx-yyyy-zzzz-aaaa-bbbb",
+      "azureFileShare": "fs-clxxx-yyyy-zzzz-aaaa-bbbb",
+      "azureFqdn": "ws-clxxx-yyyy-zzzz-aaaa-bbbb.centralindia.azurecontainer.io",
+      "connectionUrls": {
+        "vscode": "https://ws-clxxx-yyyy-zzzz-aaaa-bbbb.centralindia.azurecontainer.io",
+        "ssh": "ssh dev8@ws-clxxx-yyyy-zzzz-aaaa-bbbb.centralindia.azurecontainer.io"
+      },
+      "createdAt": "2025-10-27T14:30:00Z",
+      "updatedAt": "2025-10-27T14:32:15Z"
+    },
+    "message": "Your development environment is ready to use"
   }
 }
 ```
 
-**Status Codes:**
-- `200 OK` - Environment found
-- `404 Not Found` - Environment not found
-- `401 Unauthorized` - User not authorized to access this environment
+**Agent Logs:**
+```
+2025/10/27 14:30:00 🚀 Creating workspace clxxx-yyyy-zzzz-aaaa-bbbb (region: centralindia)
+2025/10/27 14:30:00 🐳 Using Azure Container Registry: dev8prodcr.azurecr.io/dev8-workspace:latest
+2025/10/27 14:30:00 ⚡⚡⚡ Starting CONCURRENT creation (shares + container)...
+2025/10/27 14:30:00 📁 [1/3] Creating workspace volume: fs-clxxx-yyyy-zzzz-aaaa-bbbb (20GB)
+2025/10/27 14:30:00 📁 [2/3] Creating home volume: fs-clxxx-yyyy-zzzz-aaaa-bbbb-home (5GB)
+2025/10/27 14:30:00 📦 [3/3] Creating ACI container: aci-clxxx-yyyy-zzzz-aaaa-bbbb
+2025/10/27 14:32:15 ⚡⚡⚡ ALL OPERATIONS COMPLETED in 2m15s
+2025/10/27 14:32:18 ⚡⚡⚡ WORKSPACE READY in 2m18s (all operations ran concurrently!)
+2025/10/27 14:32:18 ✅ Workspace clxxx-yyyy-zzzz-aaaa-bbbb: ws-clxxx-yyyy-zzzz-aaaa-bbbb.centralindia.azurecontainer.io
+```
 
 ---
 
-### GET /api/v1/environments
+### 3. Start Workspace (Fast Restart)
 
-Lists all environments for the current user.
+**Request:**
+```http
+POST /api/v1/environments/start HTTP/1.1
+Host: localhost:8080
+Content-Type: application/json
 
-**Query Parameters:**
-- `page` (integer, optional): Page number for pagination (default: 1)
-- `pageSize` (integer, optional): Number of items per page (default: 20)
+{
+  "workspaceId": "clxxx-yyyy-zzzz-aaaa-bbbb",
+  "cloudRegion": "centralindia",
+  
+  // Required for container recreation
+  "userId": "user_12345",
+  "name": "My Development Workspace",
+  "cpuCores": 2,
+  "memoryGB": 4,
+  "storageGB": 20,
+  "baseImage": "node",
+  
+  // Secrets (same as create)
+  "codeServerPassword": "SecurePassword123!",
+  "githubToken": "ghp_xxxxxxxxxxxxxxxxxxxx"
+}
+```
 
-**Response:**
+**Response (200 OK) - After ~15-20s:**
 ```json
 {
-  "environments": [
-    {
-      "id": "env-abc123",
-      "userId": "user-123",
-      "name": "my-dev-environment",
+  "success": true,
+  "message": "Workspace started successfully",
+  "data": {
+    "environment": {
+      "id": "clxxx-yyyy-zzzz-aaaa-bbbb",
       "status": "RUNNING",
-      "cloudProvider": "AZURE",
-      "cloudRegion": "eastus",
-      "cpuCores": 2,
-      "memoryGB": 4,
-      "storageGB": 20,
-      "baseImage": "mcr.microsoft.com/devcontainers/base:ubuntu",
-      "createdAt": "2025-10-24T10:30:00Z",
-      "updatedAt": "2025-10-24T10:30:00Z",
-      "lastAccessedAt": "2025-10-24T11:00:00Z"
-    }
-  ],
-  "total": 1,
-  "page": 1,
-  "pageSize": 20
+      "azureFqdn": "ws-clxxx-yyyy-zzzz-aaaa-bbbb.centralindia.azurecontainer.io",
+      "connectionUrls": {
+        "vscode": "https://ws-clxxx-yyyy-zzzz-aaaa-bbbb.centralindia.azurecontainer.io"
+      }
+    },
+    "message": "Your workspace is now running with existing data"
+  }
 }
 ```
 
-**Status Codes:**
-- `200 OK` - List retrieved successfully
+**Agent Logs:**
+```
+2025/10/27 15:00:00 🚀 Starting workspace clxxx-yyyy-zzzz-aaaa-bbbb (checking volumes...)
+2025/10/27 15:00:01 ✅ Volumes verified: workspace=fs-clxxx-..., home=fs-clxxx-...-home
+2025/10/27 15:00:01 📦 Creating new container instance with existing volumes...
+2025/10/27 15:00:18 ✅ Workspace clxxx-yyyy-zzzz-aaaa-bbbb started successfully (reused existing volumes)
+```
 
 ---
 
-### POST /api/v1/environments/{id}/start
+### 4. Stop Workspace (Cost Savings)
 
-Starts a stopped environment.
+**Request:**
+```http
+POST /api/v1/environments/stop HTTP/1.1
+Host: localhost:8080
+Content-Type: application/json
 
-**Path Parameters:**
-- `id` (string, required): Environment ID
-
-**Response:**
-```json
 {
-  "message": "Environment started successfully",
-  "id": "env-abc123"
+  "workspaceId": "clxxx-yyyy-zzzz-aaaa-bbbb",
+  "cloudRegion": "centralindia"
 }
 ```
 
-**Status Codes:**
-- `200 OK` - Environment started successfully
-- `404 Not Found` - Environment not found
-- `400 Bad Request` - Environment cannot be started (already running or invalid state)
+**Response (200 OK) - After ~2s:**
+```json
+{
+  "success": true,
+  "message": "Workspace stopped successfully",
+  "data": {
+    "workspaceId": "clxxx-yyyy-zzzz-aaaa-bbbb",
+    "message": "Container deleted, volumes preserved. Restart anytime to resume work."
+  }
+}
+```
+
+**Agent Logs:**
+```
+2025/10/27 18:00:00 🛑 Stopping workspace clxxx-yyyy-zzzz-aaaa-bbbb: DELETING container (keeping volumes)
+2025/10/27 18:00:02 ✅ Workspace clxxx-yyyy-zzzz-aaaa-bbbb stopped (container deleted, volumes persisted for fast restart)
+```
 
 ---
 
-### POST /api/v1/environments/{id}/stop
+### 5. Delete Workspace (Permanent)
 
-Stops a running environment.
+**Request:**
+```http
+DELETE /api/v1/environments HTTP/1.1
+Host: localhost:8080
+Content-Type: application/json
 
-**Path Parameters:**
-- `id` (string, required): Environment ID
-
-**Response:**
-```json
 {
-  "message": "Environment stopped successfully",
-  "id": "env-abc123"
+  "workspaceId": "clxxx-yyyy-zzzz-aaaa-bbbb",
+  "cloudRegion": "centralindia",
+  "force": false
 }
 ```
 
-**Status Codes:**
-- `200 OK` - Environment stopped successfully
-- `404 Not Found` - Environment not found
-- `400 Bad Request` - Environment cannot be stopped (already stopped or invalid state)
+**Response (200 OK) - After ~5s:**
+```json
+{
+  "success": true,
+  "message": "Workspace deleted permanently",
+  "data": {
+    "workspaceId": "clxxx-yyyy-zzzz-aaaa-bbbb",
+    "message": "All data and resources have been permanently removed"
+  }
+}
+```
+
+**Error (409 Conflict) - If running without force:**
+```json
+{
+  "success": false,
+  "error": "Conflict",
+  "message": "workspace clxxx-yyyy-zzzz-aaaa-bbbb is still running. Stop it first or use force=true",
+  "code": "ERR_409"
+}
+```
 
 ---
 
-### POST /api/v1/environments/{id}/activity
-
-Reports activity for an environment (used by the workspace supervisor).
-
-**Path Parameters:**
-- `id` (string, required): Environment ID
-
-**Request Body:**
-```json
-{
-  "snapshot": {
-    "lastIDEActivity": "2025-10-24T11:00:00Z",
-    "lastSSHActivity": "2025-10-24T10:55:00Z",
-    "activeIDEConnections": 1,
-    "activeSSHConnections": 0
-  },
-  "timestamp": "2025-10-24T11:00:00Z"
-}
-```
-
-**Request Fields:**
-- `snapshot` (object, required): Activity snapshot data
-  - `lastIDEActivity` (timestamp): Last IDE activity timestamp
-  - `lastSSHActivity` (timestamp): Last SSH activity timestamp
-  - `activeIDEConnections` (integer): Number of active IDE connections
-  - `activeSSHConnections` (integer): Number of active SSH connections
-- `timestamp` (timestamp, required): Report timestamp
-
-**Note:** The environment ID is taken from the path parameter `{id}` and does not need to be included in the request body.
-
-**Response:**
-```json
-{
-  "message": "Activity recorded",
-  "environmentId": "env-abc123",
-  "snapshot": {
-    "lastIDEActivity": "2025-10-24T11:00:00Z",
-    "lastSSHActivity": "2025-10-24T10:55:00Z",
-    "activeIDEConnections": 1,
-    "activeSSHConnections": 0
-  },
-  "timestamp": "2025-10-24T11:00:00Z"
-}
-```
-
-**Status Codes:**
-- `200 OK` - Activity recorded successfully
-- `400 Bad Request` - Invalid activity data
-- `404 Not Found` - Environment not found
-
----
-
-### DELETE /api/v1/environments/{id}
-
-Deletes an environment and all associated resources.
-
-**Path Parameters:**
-- `id` (string, required): Environment ID
-
-**Response:**
-```json
-{
-  "message": "Environment deleted successfully",
-  "id": "env-abc123"
-}
-```
-
-**Status Codes:**
-- `200 OK` - Environment deleted successfully
-- `404 Not Found` - Environment not found
-- `401 Unauthorized` - User not authorized to delete this environment
-
----
-
-## Error Handling
-
-All errors follow a consistent format:
-
-```json
-{
-  "error": "Human-readable error message",
-  "message": "Detailed error description"
-}
-```
+## ❌ Error Handling
 
 ### HTTP Status Codes
 
-| Status Code | Description |
-|-------------|-------------|
-| 200 | OK - Request successful |
-| 201 | Created - Resource created successfully |
-| 400 | Bad Request - Invalid input parameters |
-| 401 | Unauthorized - Authentication required or failed |
-| 404 | Not Found - Resource not found |
-| 500 | Internal Server Error - Server-side error |
+| Code | Meaning | Example |
+|------|---------|---------|
+| 200 | OK | Operation successful |
+| 201 | Created | Workspace created |
+| 400 | Bad Request | Invalid input |
+| 404 | Not Found | Workspace/volume not found |
+| 409 | Conflict | Container already exists |
+| 500 | Internal Server Error | Azure API failure |
+| 501 | Not Implemented | Stateless endpoints |
 
-### Application Error Codes
+### Error Response Format
 
-In addition to HTTP status codes, the API returns specific application error codes in the response body to provide more granular error identification:
-
-| Error Code | HTTP Status | Description | Common Causes |
-|------------|-------------|-------------|---------------|
-| `INVALID_REQUEST` | 400 | Request validation failed | Missing required fields, invalid data types, values out of range |
-| `NOT_FOUND` | 404 | Resource not found | Invalid environment ID, resource deleted |
-| `UNAUTHORIZED` | 401 | User not authorized | Missing authentication, invalid permissions |
-| `ENVIRONMENT_ERROR` | 500 | Environment operation failed | Azure API errors, resource creation failures |
-| `SERVICE_ERROR` | 500 | Internal service error | Database errors, unexpected exceptions |
-
-**Example Error Response with Code:**
 ```json
 {
-  "error": "INVALID_REQUEST",
-  "message": "cpuCores must be between 1 and 4"
+  "success": false,
+  "error": "Error Category",
+  "message": "User-friendly explanation",
+  "code": "ERR_404"
 }
 ```
 
-### Error Response Examples
+### Common Error Scenarios
 
-**400 Bad Request:**
+#### 1. Create: Invalid WorkspaceID
+
+**Request:**
 ```json
 {
-  "error": "Invalid request",
-  "message": "cpuCores must be between 1 and 4"
+  "workspaceId": "short",
+  "name": "Test"
 }
 ```
 
-**404 Not Found:**
+**Response (400):**
 ```json
 {
-  "error": "Resource not found",
-  "message": "environment with ID 'env-xyz' not found"
+  "success": false,
+  "error": "Invalid Request",
+  "message": "workspaceId must be a valid UUID",
+  "code": "ERR_400"
 }
 ```
 
-**500 Internal Server Error:**
+#### 2. Start: Volumes Not Found
+
+**Response (404):**
 ```json
 {
-  "error": "Internal server error",
-  "message": "failed to create Azure Container Instance"
+  "success": false,
+  "error": "Resource Not Found",
+  "message": "workspace volume not found: fs-clxxx-yyyy-zzzz. Create environment first.",
+  "code": "ERR_404"
+}
+```
+
+#### 3. Stop: Container Not Running
+
+**Response (404):**
+```json
+{
+  "success": false,
+  "error": "Resource Not Found",
+  "message": "container not found for workspace clxxx-yyyy-zzzz. Already stopped?",
+  "code": "ERR_404"
 }
 ```
 
 ---
 
-## Data Models
+## 🔄 Workflows
 
-### Environment Status
+### Complete Lifecycle Workflow
 
-Possible environment status values:
+```mermaid
+graph TD
+    A[User Requests Workspace] --> B[POST /environments]
+    B --> C[⚡ 3 Goroutines Start]
+    C --> D[File Share 1: 5s]
+    C --> E[File Share 2: 5s]
+    C --> F[ACI Container: 2m15s]
+    D --> G[Wait for All]
+    E --> G
+    F --> G
+    G --> H[Return Environment Details]
+    
+    H --> I[User Works]
+    I --> J{End of Day?}
+    J -->|Yes| K[POST /stop - 2s]
+    K --> L[Container Deleted<br/>Volumes Kept<br/>💰 $1-2/month]
+    
+    L --> M{Next Day?}
+    M -->|Yes| N[POST /start - 15-20s]
+    N --> O[Container Recreated<br/>Volumes Attached]
+    O --> I
+    
+    J -->|Delete| P[DELETE /environments]
+    P --> Q[All Resources Deleted]
+```
 
-- `CREATING` - Environment is being created
-- `STARTING` - Environment is starting up
-- `RUNNING` - Environment is running and accessible
-- `STOPPING` - Environment is shutting down
-- `STOPPED` - Environment is stopped
-- `ERROR` - Environment encountered an error
-- `DELETING` - Environment is being deleted
+### Error Handling Workflow
 
-### Cloud Providers
-
-Supported cloud providers:
-
-- `AZURE` - Microsoft Azure
-- `AWS` - Amazon Web Services
-- `GCP` - Google Cloud Platform
-
-### Resource Limits
-
-| Resource | Minimum | Maximum | Default |
-|----------|---------|---------|---------|
-| CPU Cores | 1 | 4 | 2 |
-| Memory (GB) | 1 | 16 | 4 |
-| Storage (GB) | 10 | 100 | 20 |
+```
+CREATE Workspace
+├─ If File Share 1 fails
+│  └─ Cleanup: Delete File Share 2, Delete ACI
+├─ If File Share 2 fails
+│  └─ Cleanup: Delete File Share 1, Delete ACI
+└─ If ACI fails
+   └─ Cleanup: Delete both File Shares
+```
 
 ---
 
-## Configuration
+## 📦 Postman Collection
 
-### Environment Variables
+### Import Collection
 
-The agent can be configured using the following environment variables:
+**Collection ID:** `ebc0c5ae-d173-42f2-8497-6d3afedeacd1`
 
-- `PORT` - Server port (default: 8080)
-- `HOST` - Server host (default: 0.0.0.0)
-- `AZURE_SUBSCRIPTION_ID` - Azure subscription ID
-- `AZURE_TENANT_ID` - Azure tenant ID
-- `AZURE_CLIENT_ID` - Azure client ID
-- `AZURE_CLIENT_SECRET` - Azure client secret
-- `AZURE_RESOURCE_GROUP` - Azure resource group name
-- `AZURE_STORAGE_ACCOUNT` - Azure storage account name
-- `AZURE_STORAGE_KEY` - Azure storage account key
-- `CORS_ALLOWED_ORIGINS` - Comma-separated list of allowed CORS origins
+**Public URL:** https://www.postman.com/vpatil5212/dev8-agent-api
 
-### Example Configuration
+### Collection Structure
+
+```
+Dev8 Agent API
+├── 01 - Health & Monitoring
+│   ├── Health Check
+│   ├── Readiness Check
+│   └── Liveness Check
+├── 02 - Workspace Lifecycle
+│   ├── Create Workspace
+│   ├── Start Workspace (Fast Restart)
+│   ├── Stop Workspace (Cost Savings)
+│   ├── Delete Workspace
+│   └── Report Activity
+└── Environment Variables
+    ├── baseUrl: http://localhost:8080
+    └── workspaceId: clxxx-yyyy-zzzz-aaaa-bbbb
+```
+
+---
+
+## 🚀 Quick Start
+
+### 1. Start Agent
 
 ```bash
-PORT=8080
-HOST=0.0.0.0
-AZURE_SUBSCRIPTION_ID=your-subscription-id
-AZURE_TENANT_ID=your-tenant-id
-AZURE_CLIENT_ID=your-client-id
-AZURE_CLIENT_SECRET=your-client-secret
-AZURE_RESOURCE_GROUP=dev8-resources
-AZURE_STORAGE_ACCOUNT=dev8storage
-CORS_ALLOWED_ORIGINS=http://localhost:3000,https://dev8.dev
+cd /home/vsing/code/Dev8.dev/apps/agent
+./agent
 ```
 
----
+### 2. Test Health
 
-## Examples
+```bash
+curl http://localhost:8080/health
+```
 
-### Creating an Environment
+### 3. Create Workspace
 
 ```bash
 curl -X POST http://localhost:8080/api/v1/environments \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "My Dev Environment",
-    "cloudProvider": "AZURE",
-    "cloudRegion": "eastus",
+    "workspaceId": "test-workspace-001",
+    "userId": "user123",
+    "name": "Test Workspace",
+    "cloudRegion": "centralindia",
     "cpuCores": 2,
     "memoryGB": 4,
     "storageGB": 20,
-    "baseImage": "mcr.microsoft.com/devcontainers/base:ubuntu"
+    "baseImage": "node"
   }'
 ```
 
-### Getting Environment Details
+### 4. Stop Workspace (Save Costs)
 
 ```bash
-curl http://localhost:8080/api/v1/environments/env-abc123
-```
-
-### Starting an Environment
-
-```bash
-curl -X POST http://localhost:8080/api/v1/environments/env-abc123/start
-```
-
-### Stopping an Environment
-
-```bash
-curl -X POST http://localhost:8080/api/v1/environments/env-abc123/stop
-```
-
-### Deleting an Environment
-
-```bash
-curl -X DELETE http://localhost:8080/api/v1/environments/env-abc123
-```
-
-### Reporting Activity
-
-```bash
-curl -X POST http://localhost:8080/api/v1/environments/env-abc123/activity \
+curl -X POST http://localhost:8080/api/v1/environments/stop \
   -H "Content-Type: application/json" \
   -d '{
-    "snapshot": {
-      "lastIDEActivity": "2025-10-24T11:00:00Z",
-      "lastSSHActivity": "2025-10-24T10:55:00Z",
-      "activeIDEConnections": 1,
-      "activeSSHConnections": 0
-    },
-    "timestamp": "2025-10-24T11:00:00Z"
+    "workspaceId": "test-workspace-001",
+    "cloudRegion": "centralindia"
+  }'
+```
+
+### 5. Start Workspace (Fast!)
+
+```bash
+curl -X POST http://localhost:8080/api/v1/environments/start \
+  -H "Content-Type: application/json" \
+  -d '{
+    "workspaceId": "test-workspace-001",
+    "cloudRegion": "centralindia",
+    "userId": "user123",
+    "name": "Test Workspace",
+    "cpuCores": 2,
+    "memoryGB": 4,
+    "storageGB": 20,
+    "baseImage": "node"
   }'
 ```
 
 ---
 
-## Middleware
+## 📊 Performance Tips
 
-The agent includes the following middleware:
-
-### CORS Middleware
-
-Handles Cross-Origin Resource Sharing (CORS) requests. Configured via `CORS_ALLOWED_ORIGINS` environment variable.
-
-### Logging Middleware
-
-Logs all incoming HTTP requests with:
-- Request method
-- Request path
-- Response status code
-- Request duration
-- Client IP address
+1. **First Create**: Accept 2m15s (Azure limitation)
+2. **Use Stop/Start**: Get 15-20s restarts
+3. **Stop When Idle**: Save 95% cost
+4. **Monitor Logs**: Track concurrent operations
+5. **ACR Images**: Already optimized
 
 ---
 
-## Notes
+## 🔒 Security Best Practices
 
-- All timestamps are in ISO 8601 format (RFC3339)
-- All responses are in JSON format with `Content-Type: application/json`
-- The service uses graceful shutdown with a 30-second timeout
-- Container instances are configured with persistent storage via Azure File Shares
-- VS Code Server is automatically configured with HTTPS support
+1. **Never log secrets**: Tokens masked in logs
+2. **Per-workspace secrets**: Isolated credentials
+3. **HTTPS only**: Production connections
+4. **Volume encryption**: Azure handles it
+5. **Network isolation**: Private networking (future)
+
+---
+
+## 📞 Support
+
+- **Documentation**: This file
+- **Issues**: GitHub Issues
+- **Email**: support@dev8.dev
+- **Postman Collection**: Import for testing
+
+---
+
+**Last Updated:** 2025-10-27  
+**Agent Version:** 1.0.0  
+**API Version:** v1
+
