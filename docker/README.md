@@ -1,16 +1,10 @@
 # Dev8.dev Docker Development Environment# Dev8.dev Docker Workspace
 
-
-
 > Complete containerized development environment with VS Code Server, AI tools, and language support.Cloud development container with VS Code Server, multiple languages, and AI coding tools.
-
-
 
 ## Quick Start## 🏗️ Architecture
 
-
-
-```bash```
+`bash`
 
 # 1. Configure environment00-base → 10-languages → 20-vscode → 30-ai-tools (FINAL)
 
@@ -32,7 +26,7 @@ make up2. **10-languages** - Node.js, Python, Go, Rust
 
 # No password required by default## 🚀 Quick Start
 
-```
+````
 
 ### Build All Layers
 
@@ -72,15 +66,15 @@ make build-all
 
 docker compose up -d workspace
 
-```
+````
 
-00-base       → Ubuntu + essential tools + dev8 user# Access:
+00-base → Ubuntu + essential tools + dev8 user# Access:
 
-10-languages  → Go, Python, Node.js, Rust# - VS Code: http://localhost:8080 (password: dev8dev)
+10-languages → Go, Python, Node.js, Rust# - VS Code: http://localhost:8080 (password: dev8dev)
 
-20-vscode     → code-server (VS Code in browser)# - SSH: ssh -p 2222 dev8@localhost
+20-vscode → code-server (VS Code in browser)# - SSH: ssh -p 2222 dev8@localhost
 
-30-ai-tools   → GitHub Copilot, AI CLI tools
+30-ai-tools → GitHub Copilot, AI CLI tools
 
 ```# View logs
 
@@ -126,7 +120,7 @@ OPENAI_API_KEY=sk-xxx...
 
 **Required:**
 
-```bash## 📦 Persistent User Packages
+````bash## 📦 Persistent User Packages
 
 GITHUB_TOKEN=ghp_xxxxx  # GitHub token for Copilot
 
@@ -184,7 +178,7 @@ npm install -g typescript
 
 - **SSH**: Not required for VS Code access; only enable if needed# All persist in /home/dev8 volume!
 
-```
+````
 
 ---
 
@@ -198,7 +192,7 @@ npm install -g typescript
 
 gh copilot suggest "create a REST API in Node.js"
 
-```bashgh copilot explain "docker run -d nginx"
+````bashgh copilot explain "docker run -d nginx"
 
 # Start workspace```
 
@@ -208,7 +202,7 @@ make up
 
 # View logs- Anthropic Claude API
 
-make logs- OpenAI API  
+make logs- OpenAI API
 
 - Google Gemini API
 
@@ -266,13 +260,13 @@ ssh -p 2222 -i ~/.ssh/your_key dev8@localhost│   └── 30-ai-tools/       
 
 docker compose ps```
 
-```
+````
 
 ## 🛠️ Development
 
 **Execute command in container:**
 
-```bash### Build Individual Layers
+```````bash### Build Individual Layers
 
 docker exec -it dev8-workspace bash
 
@@ -280,27 +274,21 @@ docker exec -it dev8-workspace bash
 
 make build-base
 
-**Check container health:**make build-languages  
+**Check container health:**make build-languages
 
 ```bashmake build-vscode
 
 docker compose logs workspace | tail -50make build-ai-tools
 
-``````
-
-
+```````
 
 ---### Test
-
-
 
 ## Production Deployment```bash
 
 # Start container
 
 ### Azure Container Instances (ACI)docker compose up -d workspace
-
-
 
 **Quick Deploy:**# Check services
 
@@ -332,7 +320,7 @@ make prod-deploymake clean              # Remove images
 
 make prod-status## � Documentation
 
-```
+````
 
 - **ARCHITECTURE.md** - Architecture decisions and design
 
@@ -362,9 +350,10 @@ AZURE_STORAGE_KEY=xxxxx
 # Recommended
 CODE_SERVER_AUTH=password
 CODE_SERVER_PASSWORD=$(openssl rand -base64 32)
-```
+````
 
 **Deploy script:**
+
 ```bash
 ./deploy-to-aci.sh
 ```
@@ -388,22 +377,26 @@ docker compose build workspace
 ### Custom Configuration
 
 **Disable authentication:**
+
 ```bash
 CODE_SERVER_AUTH=none
 ```
 
 **Enable password protection:**
+
 ```bash
 CODE_SERVER_AUTH=password
 CODE_SERVER_PASSWORD=your_secure_password
 ```
 
 **SSH with password:**
+
 ```bash
 SSH_PASSWORD=your_ssh_password
 ```
 
 **SSH with public key:**
+
 ```bash
 SSH_PUBLIC_KEY="ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA..."
 ```
@@ -411,6 +404,7 @@ SSH_PUBLIC_KEY="ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA..."
 ### Troubleshooting
 
 **Container won't start:**
+
 ```bash
 # Check logs
 docker compose logs workspace
@@ -423,6 +417,7 @@ make rebuild
 ```
 
 **Port conflicts:**
+
 ```bash
 # Change ports in docker-compose.yml
 ports:
@@ -430,6 +425,7 @@ ports:
 ```
 
 **Volume issues:**
+
 ```bash
 # List volumes
 docker volume ls
@@ -449,11 +445,13 @@ make up
 ### Prerequisites
 
 1. **Azure Container Registry (ACR)**
+
    ```bash
    az acr create --name yourregistry --resource-group yourgroup --sku Basic
    ```
 
 2. **Azure Storage Account**
+
    ```bash
    az storage account create --name yourstorage --resource-group yourgroup
    ```
@@ -467,22 +465,26 @@ make up
 ### Deployment Process
 
 **1. Build production image:**
+
 ```bash
 docker build -t yourregistry.azurecr.io/dev8-workspace:latest -f images/30-ai-tools/Dockerfile .
 ```
 
 **2. Push to registry:**
+
 ```bash
 az acr login --name yourregistry
 docker push yourregistry.azurecr.io/dev8-workspace:latest
 ```
 
 **3. Deploy using script:**
+
 ```bash
 ./deploy-to-aci.sh
 ```
 
 Or manually:
+
 ```bash
 az container create \
   --resource-group yourgroup \

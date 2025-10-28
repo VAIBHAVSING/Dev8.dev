@@ -99,7 +99,7 @@ Passed in the `POST /api/v1/environments` request body:
   "cpuCores": 2,
   "memoryGB": 4,
   "storageGB": 20,
-  
+
   // Optional dynamic values
   "githubToken": "ghp_xxxxxxxxxxxx",
   "gitUserName": "John Doe",
@@ -113,8 +113,7 @@ Passed in the `POST /api/v1/environments` request body:
 ```
 
 **Security:**
+
 - All dynamic secrets are passed as `SecureValue` to Azure Container Instances
 - Secrets are not visible in logs or container inspection
 - Each workspace can have different credentials
-
-

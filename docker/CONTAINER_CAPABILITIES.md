@@ -8,22 +8,26 @@
 ## 🎯 What This Container Does
 
 ✅ **Development Environment**
+
 - VS Code Server on port 8080
-- SSH Server on port 2222  
+- SSH Server on port 2222
 - Workspace Supervisor on port 9000
 
 ✅ **Pre-installed Languages**
+
 - Node.js 20 (npm, pnpm, yarn, bun)
 - Python 3.11 (pip, poetry)
 - Go 1.21
 - Rust (stable)
 
 ✅ **User Package Managers**
+
 - **SDKMAN** - Java, Kotlin, Scala, Gradle, Maven
 - **Homebrew** - Ruby, PostgreSQL, Redis, etc.
 - All packages saved to `/home/dev8` volume
 
 ✅ **AI Coding Tools**
+
 - GitHub Copilot CLI (`gh copilot`)
 - Anthropic Claude API support
 - OpenAI API support
@@ -41,6 +45,7 @@ Two Docker volumes must be mounted:
 ```
 
 **What persists in `/home/dev8`:**
+
 ```
 .sdkman/           # Java, Kotlin, Scala
 .linuxbrew/        # Ruby, PostgreSQL, etc.
@@ -57,11 +62,13 @@ Two Docker volumes must be mounted:
 ## 🔑 Environment Variables
 
 **Required:**
+
 ```bash
 GITHUB_TOKEN=ghp_xxx...
 ```
 
 **Optional:**
+
 ```bash
 CODE_SERVER_PASSWORD=your_password
 SSH_PUBLIC_KEY="ssh-rsa AAAA..."
@@ -79,6 +86,7 @@ GEMINI_API_KEY=xxx...
 ## 🚀 How Users Install Packages
 
 ### Java/JVM Languages (SDKMAN)
+
 ```bash
 sdk install java 17.0.8-amzn
 sdk install kotlin
@@ -87,6 +95,7 @@ sdk install gradle
 ```
 
 ### System Packages (Homebrew)
+
 ```bash
 brew install ruby
 brew install postgresql
@@ -95,18 +104,21 @@ brew install redis
 ```
 
 ### Node.js Packages
+
 ```bash
 npm install -g typescript ts-node
 # Installed to /home/dev8/.npm/ → persists!
 ```
 
 ### Python Packages
+
 ```bash
 pip install --user pytest requests
 # Installed to /home/dev8/.local/ → persists!
 ```
 
 ### Rust Packages
+
 ```bash
 cargo install ripgrep bat fd-find
 # Installed to /home/dev8/.cargo/ → persists!
@@ -115,23 +127,25 @@ cargo install ripgrep bat fd-find
 ---
 
 ## 🎯 Container Architecture
-│     - Upload to Azure Blob Storage                          │
-│  4. Control Plane: Deletes ACI container (cost savings)     │
-│  5. OPTIONAL: Delete Azure Files shares (more savings)      │
-│     - Backup in Blob is source of truth                     │
+
+│ - Upload to Azure Blob Storage │
+│ 4. Control Plane: Deletes ACI container (cost savings) │
+│ 5. OPTIONAL: Delete Azure Files shares (more savings) │
+│ - Backup in Blob is source of truth │
 └─────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────┐
-│                    3. RESTART                                │
+│ 3. RESTART │
 ├─────────────────────────────────────────────────────────────┤
-│  1. User starts workspace again                             │
-│  2. Control Plane: Recreates Azure Files shares             │
-│  3. Control Plane: Downloads backup from Blob               │
-│  4. Control Plane: Extracts to Azure Files shares           │
-│  5. Control Plane: Creates ACI container with volumes       │
-│  6. Container starts → User continues seamlessly!           │
-│  7. All previous packages, configs, code intact! ✅          │
+│ 1. User starts workspace again │
+│ 2. Control Plane: Recreates Azure Files shares │
+│ 3. Control Plane: Downloads backup from Blob │
+│ 4. Control Plane: Extracts to Azure Files shares │
+│ 5. Control Plane: Creates ACI container with volumes │
+│ 6. Container starts → User continues seamlessly! │
+│ 7. All previous packages, configs, code intact! ✅ │
 └─────────────────────────────────────────────────────────────┘
+
 ```
 
 ### Key Simplification: Backup/Restore Outside Container
@@ -149,20 +163,22 @@ cargo install ripgrep bat fd-find
 - Uses Docker volume operations
 
 ```
+
 Container Layer Structure:
 ┌──────────────────────────────────────┐
-│   30-ai-tools (Final - Port 8080)   │
-│   GitHub Copilot, AI APIs            │
+│ 30-ai-tools (Final - Port 8080) │
+│ GitHub Copilot, AI APIs │
 ├──────────────────────────────────────┤
-│   20-vscode (Port 8080)              │
-│   code-server + SSH (2222)           │
+│ 20-vscode (Port 8080) │
+│ code-server + SSH (2222) │
 ├──────────────────────────────────────┤
-│   10-languages                        │
-│   Node.js, Python, Go, Rust          │
+│ 10-languages │
+│ Node.js, Python, Go, Rust │
 ├──────────────────────────────────────┤
-│   00-base                             │
-│   Ubuntu 22.04 + SDKMAN + Homebrew   │
+│ 00-base │
+│ Ubuntu 22.04 + SDKMAN + Homebrew │
 └──────────────────────────────────────┘
+
 ```
 
 ---
@@ -267,13 +283,15 @@ Your Docker containers are **fully capable** for Azure ACI deployment with:
 5. ✅ **Clean separation** - Container runs code, control plane manages lifecycle
 
 **Container is simple and focused:**
+
 - Runs VS Code Server
 - Runs SSH Server
-- Runs Workspace Supervisor  
+- Runs Workspace Supervisor
 - Mounts volumes and persists user data
 - No complex backup logic needed!
 
 **Control plane handles:**
+
 - Create/stop ACI containers
 - Backup volumes to Azure Blob (using Docker volume tar)
 - Restore volumes from Azure Blob (using Docker volume extract)

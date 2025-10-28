@@ -32,11 +32,13 @@ Developer → Feature Branch → PR to main → CI Pipeline (Build & Test)
 ## 📋 CI Pipeline (Pull Requests)
 
 ### Trigger
+
 - Pull requests to `main` branch
 - Changes to `docker/**` or `apps/supervisor/**`
 - Manual workflow dispatch
 
 ### What it does
+
 1. ✅ Detects which layers changed
 2. ✅ Builds only affected layers (optimization)
 3. ✅ Runs tests on each layer
@@ -44,9 +46,11 @@ Developer → Feature Branch → PR to main → CI Pipeline (Build & Test)
 5. ✅ Reports results in PR
 
 ### File
+
 `.github/workflows/docker-images.yml`
 
 ### Example
+
 ```bash
 # Automatically runs when you create a PR to main
 git checkout -b feature/update-nodejs
@@ -61,10 +65,12 @@ git push origin feature/update-nodejs
 ## 🚢 CD Pipeline (Production Deployment)
 
 ### Trigger
+
 - Push to `production` branch (merge from main)
 - Manual workflow dispatch with environment selection
 
 ### What it does
+
 1. ✅ Generates version tags (e.g., `v20241024-a1b2c3d`)
 2. ✅ Builds all required layers sequentially
 3. ✅ Runs comprehensive tests
@@ -75,9 +81,11 @@ git push origin feature/update-nodejs
    - `:v20241024-a1b2c3d` - Specific version
 
 ### File
+
 `.github/workflows/docker-cd-production.yml`
 
 ### Example
+
 ```bash
 # Merge main into production to trigger deployment
 git checkout production
@@ -138,12 +146,12 @@ az acr show --name dev8registry --query loginServer --output tsv
 
 The pipelines automatically detect which layers need rebuilding:
 
-| Changed Files | Layers Rebuilt |
-|---------------|----------------|
+| Changed Files                    | Layers Rebuilt                                     |
+| -------------------------------- | -------------------------------------------------- |
 | `00-base/` or `apps/supervisor/` | All layers (base → languages → vscode → workspace) |
-| `10-languages/` | languages → vscode → workspace |
-| `20-vscode/` | vscode → workspace |
-| `30-ai-tools/` | workspace only |
+| `10-languages/`                  | languages → vscode → workspace                     |
+| `20-vscode/`                     | vscode → workspace                                 |
+| `30-ai-tools/`                   | workspace only                                     |
 
 ### Build Optimization
 
@@ -244,11 +252,12 @@ Both pipelines use Trivy to scan for vulnerabilities:
 - uses: aquasecurity/trivy-action@master
   with:
     image-ref: dev8-workspace:latest
-    severity: 'CRITICAL,HIGH'
-    format: 'sarif'
+    severity: "CRITICAL,HIGH"
+    format: "sarif"
 ```
 
 Results are uploaded to GitHub Security tab:
+
 - Repository → Security → Code scanning alerts
 
 ---
@@ -260,10 +269,10 @@ Results are uploaded to GitHub Security tab:
 ```yaml
 # Go to: Actions → Docker CI - Build & Test → Run workflow
 Options:
-- build_base: true/false
-- build_languages: true/false
-- build_vscode: true/false
-- build_ai_tools: true/false
+  - build_base: true/false
+  - build_languages: true/false
+  - build_vscode: true/false
+  - build_ai_tools: true/false
 ```
 
 ### Trigger CD Manually
@@ -271,8 +280,8 @@ Options:
 ```yaml
 # Go to: Actions → Docker CD - Production Deploy → Run workflow
 Options:
-- environment: production/staging
-- force_rebuild: true/false (rebuild all layers)
+  - environment: production/staging
+  - force_rebuild: true/false (rebuild all layers)
 ```
 
 ---
@@ -282,40 +291,48 @@ Options:
 ### Common Issues
 
 #### 1. ACR Login Failed
+
 ```bash
 Error: unauthorized: authentication required
 ```
 
 **Solution:**
+
 - Check ACR_USERNAME and ACR_PASSWORD secrets
 - Verify ACR admin is enabled: `az acr update --name dev8registry --admin-enabled true`
 
 #### 2. Image Not Found
+
 ```bash
 Error: manifest for dev8-base:latest not found
 ```
 
 **Solution:**
+
 - Ensure base layer was built successfully
 - Check if previous build completed
 - Try force rebuild: Set `force_rebuild: true`
 
 #### 3. Build Timeout
+
 ```bash
 Error: The job running on runner has exceeded the maximum execution time
 ```
 
 **Solution:**
+
 - Increase timeout in workflow (default: 360 minutes)
 - Optimize Dockerfile (remove unnecessary layers)
 - Use BuildKit cache mounts
 
 #### 4. Layer Dependency Issues
+
 ```bash
 Error: failed to solve: dev8-base:latest: not found
 ```
 
 **Solution:**
+
 - Build layers in order (base → languages → vscode → ai-tools)
 - Don't skip prerequisite layers
 - Use `force_rebuild: true` to rebuild all
@@ -326,17 +343,18 @@ Error: failed to solve: dev8-base:latest: not found
 
 ### Build Times (Approximate)
 
-| Layer | CI Build | CD Build (with push) |
-|-------|----------|---------------------|
-| Base | 3-5 min | 5-7 min |
-| Languages | 5-8 min | 8-12 min |
-| VS Code | 2-3 min | 3-5 min |
-| AI Tools | 2-3 min | 4-6 min |
-| **Total** | **12-19 min** | **20-30 min** |
+| Layer     | CI Build      | CD Build (with push) |
+| --------- | ------------- | -------------------- |
+| Base      | 3-5 min       | 5-7 min              |
+| Languages | 5-8 min       | 8-12 min             |
+| VS Code   | 2-3 min       | 3-5 min              |
+| AI Tools  | 2-3 min       | 4-6 min              |
+| **Total** | **12-19 min** | **20-30 min**        |
 
 ### Success Rates
 
 Monitor in GitHub Actions:
+
 - Repository → Actions → Workflows
 - Check success/failure rate
 - Review average build times
@@ -383,12 +401,14 @@ docker run -it --rm dev8registry.azurecr.io/dev8-workspace:latest bash
 ## 📚 Additional Resources
 
 ### Related Documentation
+
 - [Docker Architecture](../../docker/ARCHITECTURE.md)
 - [Build Guide](../../docker/BUILD_GUIDE.md)
 - [Production Checklist](../../docker/PRODUCTION_CHECKLIST.md)
 - [Container Capabilities](../../docker/CONTAINER_CAPABILITIES.md)
 
 ### External Resources
+
 - [GitHub Actions Documentation](https://docs.github.com/en/actions)
 - [Azure Container Registry](https://docs.microsoft.com/en-us/azure/container-registry/)
 - [Docker BuildKit](https://docs.docker.com/build/buildkit/)
@@ -399,6 +419,7 @@ docker run -it --rm dev8registry.azurecr.io/dev8-workspace:latest bash
 ## 🎯 Best Practices
 
 1. **Always test locally first**
+
    ```bash
    cd docker
    make build-all
@@ -430,6 +451,7 @@ docker run -it --rm dev8registry.azurecr.io/dev8-workspace:latest bash
 ## 📞 Support
 
 For issues or questions:
+
 - **GitHub Issues**: [Create an issue](https://github.com/VAIBHAVSING/Dev8.dev/issues)
 - **Discord**: [Join our community](https://discord.gg/xE2u4b8S8g)
 - **Documentation**: [docs.dev8.dev](https://docs.dev8.dev)

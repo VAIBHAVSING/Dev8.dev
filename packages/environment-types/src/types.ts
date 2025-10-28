@@ -353,7 +353,9 @@ export function isValidSecretType(type: string): type is SecretType {
   ].includes(type);
 }
 
-export function isValidBackupTrigger(trigger: string): trigger is BackupTrigger {
+export function isValidBackupTrigger(
+  trigger: string,
+): trigger is BackupTrigger {
   return ["MANUAL", "PRE_SHUTDOWN", "SCHEDULED"].includes(trigger);
 }
 

@@ -37,6 +37,7 @@ The supervisor runs as a background service within each development environment 
 Returns the health status of the supervisor service.
 
 **Response:**
+
 ```json
 {
   "healthy": true,
@@ -47,15 +48,18 @@ Returns the health status of the supervisor service.
 ```
 
 **Response Fields:**
+
 - `healthy` (boolean): Overall health status
 - `uptimeSeconds` (number): Service uptime in seconds
 - `activeIDEConnections` (integer): Number of active IDE connections
 - `activeSSHConnections` (integer): Number of active SSH connections
 
 **Status Codes:**
+
 - `200 OK` - Always returns 200 if the service is running
 
 **Example:**
+
 ```bash
 curl http://localhost:9090/health
 ```
@@ -67,6 +71,7 @@ curl http://localhost:9090/health
 Returns detailed status information about the supervisor and workspace.
 
 **Response:**
+
 ```json
 {
   "uptime": "2h11m30s",
@@ -79,6 +84,7 @@ Returns detailed status information about the supervisor and workspace.
 ```
 
 **Response Fields:**
+
 - `uptime` (string): Human-readable uptime duration
 - `startedAt` (timestamp): Service start time in RFC3339 format
 - `lastIDEActivity` (timestamp): Last detected IDE activity
@@ -87,9 +93,11 @@ Returns detailed status information about the supervisor and workspace.
 - `activeSSHConnections` (integer): Number of active SSH connections
 
 **Status Codes:**
+
 - `200 OK` - Always returns 200 if the service is running
 
 **Example:**
+
 ```bash
 curl http://localhost:9090/status
 ```
@@ -103,14 +111,17 @@ The supervisor includes several internal services that operate automatically:
 ### Activity Monitor
 
 Monitors workspace activity by tracking:
+
 - IDE connections (VS Code Server processes)
 - SSH connections (active SSH sessions)
 - Connection timestamps and counts
 
 **Configuration:**
+
 - `MONITOR_INTERVAL` - Monitoring interval (default: 30s)
 
 **How it works:**
+
 1. Periodically scans for active processes
 2. Updates internal state with connection counts
 3. Tracks last activity timestamps
@@ -123,18 +134,21 @@ Monitors workspace activity by tracking:
 Manages automatic workspace backups to Azure File Share.
 
 **Configuration:**
+
 - `BACKUP_ENABLED` - Enable/disable backups (default: true)
 - `BACKUP_INTERVAL` - Backup interval (default: 1h)
 - `BACKUP_RETENTION_DAYS` - Backup retention period (default: 7)
 - `WORKSPACE_DIR` - Directory to backup (default: /workspace)
 
 **Backup Process:**
+
 1. Creates timestamped backup directory
 2. Syncs workspace files to Azure File Share
 3. Prunes old backups based on retention policy
 4. Logs backup status and errors
 
 **Backup Structure:**
+
 ```
 /mnt/workspace-backup/
 ├── backup-2025-10-24T09-00-00/
@@ -150,12 +164,14 @@ Manages automatic workspace backups to Azure File Share.
 Reports workspace activity to the Dev8 Agent.
 
 **Configuration:**
+
 - `AGENT_ENABLED` - Enable/disable agent reporting (default: true)
 - `AGENT_URL` - Agent API endpoint (e.g., http://agent:8080)
 - `AGENT_REPORT_INTERVAL` - Reporting interval (default: 60s)
 - `ENVIRONMENT_ID` - Environment identifier
 
 **Report Payload:**
+
 ```json
 {
   "environmentId": "env-abc123",
@@ -178,12 +194,14 @@ Reports workspace activity to the Dev8 Agent.
 Manages the Azure File Share mount for workspace persistence.
 
 **Configuration:**
+
 - `MOUNT_ENABLED` - Enable/disable mounting (default: true)
 - `MOUNT_STORAGE_ACCOUNT` - Azure storage account name
 - `MOUNT_FILE_SHARE` - Azure file share name
 - `MOUNT_POINT` - Local mount point (default: /mnt/workspace-backup)
 
 **Features:**
+
 - Automatic mount on startup
 - Mount health checking
 - Automatic remount on failure
@@ -198,25 +216,30 @@ Manages the Azure File Share mount for workspace persistence.
 The supervisor can be configured using the following environment variables:
 
 #### HTTP Server
+
 - `HTTP_ENABLED` - Enable HTTP status server (default: true)
 - `HTTP_ADDR` - HTTP server address (default: :9090)
 
 #### Monitoring
+
 - `MONITOR_INTERVAL` - Activity monitoring interval (default: 30s)
 
 #### Backup
+
 - `BACKUP_ENABLED` - Enable automatic backups (default: true)
 - `BACKUP_INTERVAL` - Backup interval (default: 1h)
 - `BACKUP_RETENTION_DAYS` - Days to keep backups (default: 7)
 - `WORKSPACE_DIR` - Workspace directory path (default: /workspace)
 
 #### Agent Integration
+
 - `AGENT_ENABLED` - Enable agent reporting (default: true)
 - `AGENT_URL` - Agent API base URL
 - `AGENT_REPORT_INTERVAL` - Report interval (default: 60s)
 - `ENVIRONMENT_ID` - Environment identifier
 
 #### Azure Mount
+
 - `MOUNT_ENABLED` - Enable Azure File Share mount (default: true)
 - `MOUNT_STORAGE_ACCOUNT` - Azure storage account name
 - `MOUNT_STORAGE_KEY` - Azure storage account key (**Security Note:** This is a sensitive credential. In production environments, use secure secrets management systems like Kubernetes Secrets, Azure Key Vault, or similar solutions. Never commit this value to source control.)
@@ -224,6 +247,7 @@ The supervisor can be configured using the following environment variables:
 - `MOUNT_POINT` - Mount point path (default: /mnt/workspace-backup)
 
 #### Logging
+
 - `LOG_FILE_PATH` - Log file path (default: /var/log/supervisor.log)
 - `LOG_LEVEL` - Log level: debug, info, warn, error (default: info)
 
@@ -245,6 +269,7 @@ type ActivitySnapshot struct {
 ```
 
 **Fields:**
+
 - `lastIDEActivity` - Timestamp of last IDE activity
 - `lastSSHActivity` - Timestamp of last SSH activity
 - `activeIDEConnections` - Current number of IDE connections
@@ -265,6 +290,7 @@ type ActivityReport struct {
 ```
 
 **Fields:**
+
 - `environmentId` - Unique environment identifier
 - `snapshot` - Current activity snapshot
 - `timestamp` - Report generation timestamp
@@ -361,6 +387,7 @@ The supervisor handles `SIGINT` and `SIGTERM` signals for graceful shutdown:
 All HTTP endpoints return JSON responses with appropriate status codes. For consistency with the Dev8 Agent API, error responses follow a standardized format.
 
 **Error Response Format:**
+
 ```json
 {
   "error": "Human-readable error message",
@@ -369,6 +396,7 @@ All HTTP endpoints return JSON responses with appropriate status codes. For cons
 ```
 
 **Example Error Response:**
+
 ```json
 {
   "error": "Service unavailable",
@@ -430,16 +458,19 @@ MONITOR_INTERVAL=30s
 The supervisor monitors the following processes:
 
 **IDE Connections (VS Code Server):**
+
 - Process name patterns: `code-server`, `node.*openvscode-server`
 - Connection tracking: Active WebSocket connections
 
 **SSH Connections:**
+
 - Process name patterns: `sshd.*pts`
 - Connection tracking: Active TTY sessions
 
 ### Health Checks
 
 **Kubernetes Liveness Probe:**
+
 ```yaml
 livenessProbe:
   httpGet:
@@ -450,6 +481,7 @@ livenessProbe:
 ```
 
 **Kubernetes Readiness Probe:**
+
 ```yaml
 readinessProbe:
   httpGet:
@@ -470,6 +502,7 @@ curl http://localhost:9090/health
 ```
 
 **Response:**
+
 ```json
 {
   "healthy": true,
@@ -488,6 +521,7 @@ curl http://localhost:9090/status
 ```
 
 **Response:**
+
 ```json
 {
   "uptime": "1h0m0s",
@@ -548,6 +582,7 @@ The Supervisor API **does not implement authentication** and is designed as an *
    - Log all API requests for audit purposes
 
 **Example Kubernetes NetworkPolicy:**
+
 ```yaml
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -558,15 +593,15 @@ spec:
     matchLabels:
       app: dev8-supervisor
   policyTypes:
-  - Ingress
+    - Ingress
   ingress:
-  - from:
-    - podSelector:
-        matchLabels:
-          app: dev8-agent
-    ports:
-    - protocol: TCP
-      port: 9090
+    - from:
+        - podSelector:
+            matchLabels:
+              app: dev8-agent
+      ports:
+        - protocol: TCP
+          port: 9090
 ```
 
 ### Credentials
@@ -590,11 +625,13 @@ spec:
 ### Supervisor Not Starting
 
 **Check logs:**
+
 ```bash
 tail -f /var/log/supervisor.log
 ```
 
 **Common issues:**
+
 - Invalid configuration
 - Missing environment variables
 - Azure mount failure
@@ -604,11 +641,13 @@ tail -f /var/log/supervisor.log
 ### Backups Not Working
 
 **Check mount status:**
+
 ```bash
 mount | grep workspace-backup
 ```
 
 **Verify credentials:**
+
 - `MOUNT_STORAGE_ACCOUNT`
 - `MOUNT_STORAGE_KEY`
 - `MOUNT_FILE_SHARE`
@@ -618,11 +657,13 @@ mount | grep workspace-backup
 ### Activity Not Reporting
 
 **Check agent connectivity:**
+
 ```bash
 curl -v http://$AGENT_URL/health
 ```
 
 **Verify configuration:**
+
 - `AGENT_ENABLED=true`
 - `AGENT_URL` is correct
 - `ENVIRONMENT_ID` is set

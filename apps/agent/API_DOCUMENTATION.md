@@ -88,12 +88,12 @@ FQDN: ws-clxxx-yyyy-zzzz-aaaa-bbbb.centralindia.azurecontainer.io
 
 ### Operation Times
 
-| Operation | Time | Notes |
-|-----------|------|-------|
-| **Create Workspace** | 2m10-2m15s | All operations concurrent |
-| **Start Workspace** | 15-20s | ⚡ Reuses existing volumes |
-| **Stop Workspace** | 2s | Deletes container only |
-| **Delete Workspace** | 5s | Removes all resources |
+| Operation            | Time       | Notes                      |
+| -------------------- | ---------- | -------------------------- |
+| **Create Workspace** | 2m10-2m15s | All operations concurrent  |
+| **Start Workspace**  | 15-20s     | ⚡ Reuses existing volumes |
+| **Stop Workspace**   | 2s         | Deletes container only     |
+| **Delete Workspace** | 5s         | Removes all resources      |
 
 ### Create Workspace Breakdown
 
@@ -101,7 +101,7 @@ FQDN: ws-clxxx-yyyy-zzzz-aaaa-bbbb.centralindia.azurecontainer.io
 Operation                  Time        Concurrent?
 ────────────────────────────────────────────────────
 Workspace File Share       ~5s         ✅ Yes
-Home File Share            ~5s         ✅ Yes  
+Home File Share            ~5s         ✅ Yes
 ACI Container Provision    ~2m15s      ✅ Yes
 FQDN Assignment           ~3s         ❌ No (sequential)
 ────────────────────────────────────────────────────
@@ -111,6 +111,7 @@ TOTAL                     ~2m18s
 ### Why 2+ Minutes?
 
 **Azure ACI provisioning is the bottleneck:**
+
 - VM infrastructure allocation
 - Container image pull (even from ACR)
 - Network interface creation
@@ -125,11 +126,11 @@ TOTAL                     ~2m18s
 
 ### Cost Comparison
 
-| State | Monthly Cost | Annual Cost |
-|-------|-------------|-------------|
-| **Running** | $35/workspace | $420/workspace |
+| State       | Monthly Cost   | Annual Cost      |
+| ----------- | -------------- | ---------------- |
+| **Running** | $35/workspace  | $420/workspace   |
 | **Stopped** | $1-2/workspace | $12-24/workspace |
-| **Savings** | **95%** 🎉 | **95%** 🎉 |
+| **Savings** | **95%** 🎉     | **95%** 🎉       |
 
 ### Stop/Start Workflow
 
@@ -139,7 +140,7 @@ TOTAL                     ~2m18s
    💰 $35/month (running)
 
 2️⃣ WORK (Active Development)
-   ↓ 
+   ↓
    💰 $35/month (while running)
 
 3️⃣ STOP (End of Day)
@@ -155,13 +156,16 @@ TOTAL                     ~2m18s
 ### Cost Calculation Examples
 
 **Scenario 1: Always Running**
+
 - 1 workspace × 24/7 × 30 days = **$35/month**
 
 **Scenario 2: Work Hours Only (8h/day)**
+
 - 1 workspace × 8h/day × 22 workdays = **~$11/month**
 - Savings: **$24/month (69%)**
 
 **Scenario 3: Weekend Break**
+
 - Stop Friday → Start Monday = **$6 saved/month**
 
 ---
@@ -177,16 +181,16 @@ Development: http://localhost:8080
 
 ### Endpoint Overview
 
-| Method | Endpoint | Description | Time |
-|--------|----------|-------------|------|
-| GET | `/health` | Health check | <1s |
-| GET | `/ready` | Readiness probe | <1s |
-| GET | `/live` | Liveness probe | <1s |
-| POST | `/api/v1/environments` | Create workspace | ~2m15s |
-| POST | `/api/v1/environments/start` | Start workspace | ~15-20s |
-| POST | `/api/v1/environments/stop` | Stop workspace | ~2s |
-| DELETE | `/api/v1/environments` | Delete workspace | ~5s |
-| POST | `/api/v1/environments/{id}/activity` | Report activity | <1s |
+| Method | Endpoint                             | Description      | Time    |
+| ------ | ------------------------------------ | ---------------- | ------- |
+| GET    | `/health`                            | Health check     | <1s     |
+| GET    | `/ready`                             | Readiness probe  | <1s     |
+| GET    | `/live`                              | Liveness probe   | <1s     |
+| POST   | `/api/v1/environments`               | Create workspace | ~2m15s  |
+| POST   | `/api/v1/environments/start`         | Start workspace  | ~15-20s |
+| POST   | `/api/v1/environments/stop`          | Stop workspace   | ~2s     |
+| DELETE | `/api/v1/environments`               | Delete workspace | ~5s     |
+| POST   | `/api/v1/environments/{id}/activity` | Report activity  | <1s     |
 
 ---
 
@@ -195,12 +199,14 @@ Development: http://localhost:8080
 ### 1. Health Check
 
 **Request:**
+
 ```http
 GET /health HTTP/1.1
 Host: localhost:8080
 ```
 
 **Response (200 OK):**
+
 ```json
 {
   "status": "healthy",
@@ -214,6 +220,7 @@ Host: localhost:8080
 ### 2. Create Workspace
 
 **Request:**
+
 ```http
 POST /api/v1/environments HTTP/1.1
 Host: localhost:8080
@@ -229,7 +236,7 @@ Content-Type: application/json
   "memoryGB": 4,
   "storageGB": 20,
   "baseImage": "node",
-  
+
   // Optional per-workspace secrets
   "githubToken": "ghp_xxxxxxxxxxxxxxxxxxxx",
   "codeServerPassword": "SecurePassword123!",
@@ -243,6 +250,7 @@ Content-Type: application/json
 ```
 
 **Response (201 Created) - After ~2m15s:**
+
 ```json
 {
   "success": true,
@@ -275,6 +283,7 @@ Content-Type: application/json
 ```
 
 **Agent Logs:**
+
 ```
 2025/10/27 14:30:00 🚀 Creating workspace clxxx-yyyy-zzzz-aaaa-bbbb (region: centralindia)
 2025/10/27 14:30:00 🐳 Using Azure Container Registry: dev8prodcr.azurecr.io/dev8-workspace:latest
@@ -292,6 +301,7 @@ Content-Type: application/json
 ### 3. Start Workspace (Fast Restart)
 
 **Request:**
+
 ```http
 POST /api/v1/environments/start HTTP/1.1
 Host: localhost:8080
@@ -300,7 +310,7 @@ Content-Type: application/json
 {
   "workspaceId": "clxxx-yyyy-zzzz-aaaa-bbbb",
   "cloudRegion": "centralindia",
-  
+
   // Required for container recreation
   "userId": "user_12345",
   "name": "My Development Workspace",
@@ -308,7 +318,7 @@ Content-Type: application/json
   "memoryGB": 4,
   "storageGB": 20,
   "baseImage": "node",
-  
+
   // Secrets (same as create)
   "codeServerPassword": "SecurePassword123!",
   "githubToken": "ghp_xxxxxxxxxxxxxxxxxxxx"
@@ -316,6 +326,7 @@ Content-Type: application/json
 ```
 
 **Response (200 OK) - After ~15-20s:**
+
 ```json
 {
   "success": true,
@@ -335,6 +346,7 @@ Content-Type: application/json
 ```
 
 **Agent Logs:**
+
 ```
 2025/10/27 15:00:00 🚀 Starting workspace clxxx-yyyy-zzzz-aaaa-bbbb (checking volumes...)
 2025/10/27 15:00:01 ✅ Volumes verified: workspace=fs-clxxx-..., home=fs-clxxx-...-home
@@ -347,6 +359,7 @@ Content-Type: application/json
 ### 4. Stop Workspace (Cost Savings)
 
 **Request:**
+
 ```http
 POST /api/v1/environments/stop HTTP/1.1
 Host: localhost:8080
@@ -359,6 +372,7 @@ Content-Type: application/json
 ```
 
 **Response (200 OK) - After ~2s:**
+
 ```json
 {
   "success": true,
@@ -371,6 +385,7 @@ Content-Type: application/json
 ```
 
 **Agent Logs:**
+
 ```
 2025/10/27 18:00:00 🛑 Stopping workspace clxxx-yyyy-zzzz-aaaa-bbbb: DELETING container (keeping volumes)
 2025/10/27 18:00:02 ✅ Workspace clxxx-yyyy-zzzz-aaaa-bbbb stopped (container deleted, volumes persisted for fast restart)
@@ -381,6 +396,7 @@ Content-Type: application/json
 ### 5. Delete Workspace (Permanent)
 
 **Request:**
+
 ```http
 DELETE /api/v1/environments HTTP/1.1
 Host: localhost:8080
@@ -394,6 +410,7 @@ Content-Type: application/json
 ```
 
 **Response (200 OK) - After ~5s:**
+
 ```json
 {
   "success": true,
@@ -406,6 +423,7 @@ Content-Type: application/json
 ```
 
 **Error (409 Conflict) - If running without force:**
+
 ```json
 {
   "success": false,
@@ -421,15 +439,15 @@ Content-Type: application/json
 
 ### HTTP Status Codes
 
-| Code | Meaning | Example |
-|------|---------|---------|
-| 200 | OK | Operation successful |
-| 201 | Created | Workspace created |
-| 400 | Bad Request | Invalid input |
-| 404 | Not Found | Workspace/volume not found |
-| 409 | Conflict | Container already exists |
-| 500 | Internal Server Error | Azure API failure |
-| 501 | Not Implemented | Stateless endpoints |
+| Code | Meaning               | Example                    |
+| ---- | --------------------- | -------------------------- |
+| 200  | OK                    | Operation successful       |
+| 201  | Created               | Workspace created          |
+| 400  | Bad Request           | Invalid input              |
+| 404  | Not Found             | Workspace/volume not found |
+| 409  | Conflict              | Container already exists   |
+| 500  | Internal Server Error | Azure API failure          |
+| 501  | Not Implemented       | Stateless endpoints        |
 
 ### Error Response Format
 
@@ -447,6 +465,7 @@ Content-Type: application/json
 #### 1. Create: Invalid WorkspaceID
 
 **Request:**
+
 ```json
 {
   "workspaceId": "short",
@@ -455,6 +474,7 @@ Content-Type: application/json
 ```
 
 **Response (400):**
+
 ```json
 {
   "success": false,
@@ -467,6 +487,7 @@ Content-Type: application/json
 #### 2. Start: Volumes Not Found
 
 **Response (404):**
+
 ```json
 {
   "success": false,
@@ -479,6 +500,7 @@ Content-Type: application/json
 #### 3. Stop: Container Not Running
 
 **Response (404):**
+
 ```json
 {
   "success": false,
@@ -505,17 +527,17 @@ graph TD
     E --> G
     F --> G
     G --> H[Return Environment Details]
-    
+
     H --> I[User Works]
     I --> J{End of Day?}
     J -->|Yes| K[POST /stop - 2s]
     K --> L[Container Deleted<br/>Volumes Kept<br/>💰 $1-2/month]
-    
+
     L --> M{Next Day?}
     M -->|Yes| N[POST /start - 15-20s]
     N --> O[Container Recreated<br/>Volumes Attached]
     O --> I
-    
+
     J -->|Delete| P[DELETE /environments]
     P --> Q[All Resources Deleted]
 ```
@@ -657,4 +679,3 @@ curl -X POST http://localhost:8080/api/v1/environments/start \
 **Last Updated:** 2025-10-27  
 **Agent Version:** 1.0.0  
 **API Version:** v1
-

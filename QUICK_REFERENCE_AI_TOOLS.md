@@ -21,6 +21,7 @@ docker run -it --rm \
 ```
 
 **Access:**
+
 - VS Code: http://localhost:8080
 - SSH: `ssh -p 2222 dev8@localhost`
 
@@ -29,6 +30,7 @@ docker run -it --rm \
 ## 🤖 AI Tools Quick Reference
 
 ### 1. GitHub Copilot CLI
+
 ```bash
 # Suggest commands
 gh copilot suggest "list all files"
@@ -44,6 +46,7 @@ gh copilot explain "git rebase -i HEAD~5"
 ---
 
 ### 2. Gemini CLI
+
 ```bash
 # Interactive mode
 gemini
@@ -59,6 +62,7 @@ gemini -p "Run tests" --output-format json
 ```
 
 **Auth Options:**
+
 - `GEMINI_API_KEY` - API key
 - OR `GOOGLE_CLOUD_PROJECT` - Code Assist
 - OR OAuth (browser login)
@@ -66,6 +70,7 @@ gemini -p "Run tests" --output-format json
 ---
 
 ### 3. Claude (API Wrapper)
+
 ```bash
 # Simple query
 claude "Explain this code"
@@ -82,6 +87,7 @@ CLAUDE_MODEL=claude-opus-4 claude "Complex algorithm"
 ---
 
 ### 4. OpenAI Codex CLI
+
 ```bash
 # Interactive mode
 codex
@@ -100,6 +106,7 @@ codex --model gpt-5-codex
 ```
 
 **Auth Options:**
+
 - `OPENAI_API_KEY` - API key
 - OR ChatGPT Plus/Pro account
 
@@ -107,25 +114,25 @@ codex --model gpt-5-codex
 
 ## 🔑 Environment Variables
 
-| Variable | Required? | Purpose |
-|----------|-----------|---------|
-| `GITHUB_TOKEN` | ⭐ Yes | Copilot + Copilot CLI |
-| `SSH_PUBLIC_KEY` | ⭐ Yes | SSH access |
-| `GEMINI_API_KEY` | Optional | Gemini CLI |
-| `ANTHROPIC_API_KEY` | Optional | Claude wrapper |
-| `OPENAI_API_KEY` | Optional | Codex CLI |
-| `CODE_SERVER_PASSWORD` | Optional | VS Code password |
+| Variable               | Required? | Purpose               |
+| ---------------------- | --------- | --------------------- |
+| `GITHUB_TOKEN`         | ⭐ Yes    | Copilot + Copilot CLI |
+| `SSH_PUBLIC_KEY`       | ⭐ Yes    | SSH access            |
+| `GEMINI_API_KEY`       | Optional  | Gemini CLI            |
+| `ANTHROPIC_API_KEY`    | Optional  | Claude wrapper        |
+| `OPENAI_API_KEY`       | Optional  | Codex CLI             |
+| `CODE_SERVER_PASSWORD` | Optional  | VS Code password      |
 
 ---
 
 ## 📚 Get API Keys
 
-| Service | URL |
-|---------|-----|
-| GitHub Token | https://github.com/settings/tokens |
-| Gemini API | https://aistudio.google.com/apikey |
-| Claude API | https://console.anthropic.com/settings/keys |
-| OpenAI API | https://platform.openai.com/api-keys |
+| Service      | URL                                         |
+| ------------ | ------------------------------------------- |
+| GitHub Token | https://github.com/settings/tokens          |
+| Gemini API   | https://aistudio.google.com/apikey          |
+| Claude API   | https://console.anthropic.com/settings/keys |
+| OpenAI API   | https://platform.openai.com/api-keys        |
 
 ---
 
@@ -144,6 +151,7 @@ codex --version
 ## 📖 Full Documentation
 
 See [VSCODE_SERVER_AI_CLI_INTEGRATION_PLAN.md](VSCODE_SERVER_AI_CLI_INTEGRATION_PLAN.md) for:
+
 - Complete installation guide
 - Authentication setup
 - Troubleshooting

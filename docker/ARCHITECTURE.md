@@ -69,6 +69,7 @@ COPY --from=supervisor-build /build/workspace-supervisor /usr/local/bin/
 ```
 
 **Benefits**:
+
 - ✅ Final image doesn't include Go compiler (~700MB savings)
 - ✅ Clean separation of build vs runtime
 - ✅ Supervisor binary is compiled once, inherited by all child images
@@ -76,15 +77,18 @@ COPY --from=supervisor-build /build/workspace-supervisor /usr/local/bin/
 ### Why Separate Base + Workspace Images?
 
 **Option A: Single Monolithic Image** ❌
+
 ```dockerfile
 FROM ubuntu:22.04
 # Install EVERYTHING in one Dockerfile
 ```
+
 - ❌ 30+ minute build time on every change
 - ❌ 10% cache hit rate
 - ❌ No flexibility for different language stacks
 
 **Option B: Base + Language Images** ✅
+
 ```dockerfile
 # base/Dockerfile - Foundation
 FROM ubuntu:22.04
@@ -94,6 +98,7 @@ FROM ubuntu:22.04
 FROM dev8-base:latest
 # Node.js, Python, Go, Rust, tools
 ```
+
 - ✅ 3-8 minute incremental build time
 - ✅ 80-90% cache hit rate
 - ✅ Can create specialized images (nodejs-only, python-only)
@@ -131,6 +136,7 @@ The GitHub Actions workflow (`.github/workflows/docker-images.yml`) automaticall
 5. **Scans for vulnerabilities** - Trivy security scan
 
 Example workflow:
+
 ```yaml
 - name: Build base image (with supervisor)
   run: |
@@ -153,6 +159,7 @@ Example workflow:
 ### dev8-base (~1.2GB)
 
 **System Packages**:
+
 - ca-certificates, curl, wget, git, git-lfs
 - openssh-server, openssh-client
 - vim, neovim, nano, tmux, screen, zsh
@@ -163,17 +170,20 @@ Example workflow:
 - ripgrep, fd-find, bat
 
 **Configured Services**:
+
 - SSH server on port 2222 (key-only auth, root disabled)
 - GitHub CLI (gh) installed
 - Non-root user `dev8` with sudo access
 
 **Supervisor**:
+
 - `/usr/local/bin/workspace-supervisor` binary
 - Monitors workspace activity
 - Handles backup to Azure/AWS storage
 - HTTP API on port 9000 (internal)
 
 **Entrypoint**:
+
 - `/usr/local/bin/entrypoint.sh`
 - Sets up SSH keys, GitHub auth, AI CLIs
 - Starts SSH server and supervisor daemon
@@ -183,6 +193,7 @@ Example workflow:
 **Everything from base, PLUS**:
 
 **Languages**:
+
 - Node.js 20 LTS + npm, pnpm, yarn
 - Python 3.11 + pip, poetry, pipenv, black, pytest, ipython, jupyterlab
 - Go 1.21 + GOPATH configured
@@ -190,18 +201,21 @@ Example workflow:
 - Bun (latest)
 
 **Development Tools**:
+
 - code-server (VS Code in browser)
 - AWS CLI v2
 - Azure CLI
 - Git LFS
 
 **AI Agent Scripts**:
+
 - `/home/dev8/.local/bin/claude` - Claude CLI wrapper
 - `/home/dev8/.local/bin/gemini` - Gemini CLI wrapper
 - `/home/dev8/.local/bin/gpt` - OpenAI/GPT CLI wrapper
 - GitHub Copilot CLI (via `gh copilot`)
 
 **Configuration**:
+
 - VS Code settings pre-configured for AI agents
 - Backup script at `/home/dev8/.backup-scripts/backup.sh`
 
@@ -223,6 +237,7 @@ docker run -it --rm \
 ```
 
 **Access**:
+
 - VS Code: http://localhost:8080
 - SSH: `ssh -p 2222 dev8@localhost`
 - Supervisor API: http://localhost:9000 (internal only)
@@ -230,15 +245,18 @@ docker run -it --rm \
 ### Environment Variables
 
 **Required**:
+
 - `GITHUB_TOKEN` or `GH_TOKEN` - GitHub authentication
 - `SSH_PUBLIC_KEY` - Your public key for SSH access
 
 **Optional AI Agents**:
+
 - `ANTHROPIC_API_KEY` - Claude CLI
 - `GOOGLE_API_KEY` or `GEMINI_API_KEY` - Gemini CLI
 - `OPENAI_API_KEY` - GPT CLI
 
 **Supervisor Configuration**:
+
 - `SUPERVISOR_ENABLED=true` - Enable supervisor daemon
 - `BACKUP_ENABLED=true` - Enable automatic backups
 - `SUPERVISOR_BACKUP_INTERVAL=300s` - Backup interval
@@ -247,11 +265,13 @@ docker run -it --rm \
 - `SUPERVISOR_HTTP_ADDR=127.0.0.1:9000` - API listen address
 
 **Azure Blob Storage** (for persistent backups):
+
 - `AZURE_BLOB_ACCOUNT_NAME`
 - `AZURE_BLOB_ACCOUNT_KEY`
 - `AZURE_BLOB_CONTAINER`
 
 **AWS S3** (alternative backup):
+
 - `AWS_ACCESS_KEY_ID`
 - `AWS_SECRET_ACCESS_KEY`
 - `AWS_S3_BUCKET`
@@ -292,37 +312,44 @@ docker run --rm dev8-workspace:latest az version
 ## 🔒 Security
 
 **Hardened SSH**:
+
 - Port 2222 (not default 22)
 - Key-only authentication (passwords disabled)
 - Root login disabled
 - MaxAuthTries: 3
 
 **Non-Root Execution**:
+
 - All services run as `dev8` user (UID 1000)
 - Sudo available for package installation only
 
 **Secret Management**:
+
 - Secrets passed via environment variables (never in image)
 - API keys stored in user home with 600 permissions
 - No secrets in image layers or history
 
 **Vulnerability Scanning**:
+
 - Trivy scans run in CI on every build
 - SARIF reports uploaded to GitHub Security
 
 ## 📈 Performance
 
 **Build Times** (with cache):
+
 - Base image: 3-5 minutes
 - Workspace image: 8-12 minutes
 - **Total**: ~10-15 minutes
 
 **Build Times** (clean):
+
 - Base image: 10-15 minutes
 - Workspace image: 20-25 minutes
 - **Total**: ~30-40 minutes
 
 **Runtime**:
+
 - Cold start: 30-45 seconds
 - Warm start: 8-12 seconds
 - Idle memory: 400-600MB
@@ -362,12 +389,14 @@ When supervisor code changes:
 ## 🚀 Future Enhancements
 
 **Phase 2** - Specialized images:
+
 - `dev8-nodejs` - Base + Node.js only (~1.8GB)
 - `dev8-python` - Base + Python only (~2.0GB)
 - `dev8-go` - Base + Go only (~1.5GB)
 - `dev8-rust` - Base + Rust only (~2.5GB)
 
 **Phase 3** - Advanced features:
+
 - GPU support for ML workloads
 - Kubernetes deployment configs
 - Auto-scaling based on load

@@ -26,11 +26,13 @@ make up
 ## Configuration
 
 ### Required
+
 ```bash
 GITHUB_TOKEN=ghp_xxxxx  # For GitHub Copilot
 ```
 
 ### Optional
+
 ```bash
 # Authentication (default: none)
 CODE_SERVER_AUTH=none
@@ -70,6 +72,7 @@ See [docker/README.md](docker/README.md#production-deployment) for Azure Contain
 The following sections contain the original implementation planning and architecture decisions.
 
 ---
+
 - **Day 5**: Documentation + user guide
 
 **Deliverable**: Production-ready platform
