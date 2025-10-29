@@ -21,11 +21,12 @@ type Config struct {
 	Azure AzureConfig
 
 	// Container Image Configuration
-	ContainerImage   string
-	RegistryServer   string
-	RegistryUsername string
-	RegistryPassword string
-	AgentBaseURL     string
+	ContainerImage     string
+	ContainerImageName string // Image name without registry (e.g., "dev8-workspace:latest")
+	RegistryServer     string
+	RegistryUsername   string
+	RegistryPassword   string
+	AgentBaseURL       string
 
 	// CORS Configuration
 	CORSAllowedOrigins []string
@@ -67,11 +68,12 @@ func Load() (*Config, error) {
 		LogLevel:    getEnv("LOG_LEVEL", "info"),
 
 		// Container Image Configuration
-		ContainerImage:   getEnv("CONTAINER_IMAGE", "vaibhavsing/dev8-workspace:latest"),
-		RegistryServer:   getEnv("REGISTRY_SERVER", "index.docker.io"),
-		RegistryUsername: getEnv("REGISTRY_USERNAME", ""), // Optional
-		RegistryPassword: getEnv("REGISTRY_PASSWORD", ""), // Optional
-		AgentBaseURL:     getEnv("AGENT_BASE_URL", "http://localhost:8080"),
+		ContainerImage:     getEnv("CONTAINER_IMAGE", "vaibhavsing/dev8-workspace:latest"),
+		ContainerImageName: getEnv("CONTAINER_IMAGE_NAME", "dev8-workspace:latest"),
+		RegistryServer:     getEnv("REGISTRY_SERVER", "index.docker.io"),
+		RegistryUsername:   getEnv("REGISTRY_USERNAME", ""), // Optional
+		RegistryPassword:   getEnv("REGISTRY_PASSWORD", ""), // Optional
+		AgentBaseURL:       getEnv("AGENT_BASE_URL", "http://localhost:8080"),
 	}
 
 	// Load CORS configuration

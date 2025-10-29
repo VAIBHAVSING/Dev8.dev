@@ -495,7 +495,7 @@ func (s *EnvironmentService) getContainerImage(baseImage string) string {
 	// If ACR is configured, use it for faster image pulls
 	if s.config.Azure.ContainerRegistry != "" {
 		// Use ACR: dev8prodcr5xv5pu3m2xjli.azurecr.io/dev8-workspace:latest
-		return fmt.Sprintf("%s/dev8-workspace:latest", s.config.Azure.ContainerRegistry)
+		return fmt.Sprintf("%s/%s", s.config.Azure.ContainerRegistry, s.config.ContainerImageName)
 	}
 
 	// Fallback to Docker Hub or configured image
