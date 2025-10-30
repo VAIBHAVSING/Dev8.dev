@@ -54,7 +54,7 @@ func TestRespondWithJSON(t *testing.T) {
 func TestRespondWithError(t *testing.T) {
 	w := httptest.NewRecorder()
 	err := &testError{msg: "test error"}
-	respondWithError(w, http.StatusBadRequest, "Bad request", err)
+	respondWithError(w, http.StatusBadRequest, "Bad request", "Invalid input provided", err)
 
 	if w.Code != http.StatusBadRequest {
 		t.Errorf("respondWithError() status = %v, want %v", w.Code, http.StatusBadRequest)

@@ -271,8 +271,8 @@ Content-Type: application/json
       "azureFileShare": "fs-clxxx-yyyy-zzzz-aaaa-bbbb",
       "azureFqdn": "ws-clxxx-yyyy-zzzz-aaaa-bbbb.centralindia.azurecontainer.io",
       "connectionUrls": {
-        "vscode": "http://ws-clxxx-yyyy-zzzz-aaaa-cccc.centralindia.azurecontainer.io",
-        "ssh": "ssh dev8@ws-clxxx-yyyy-zzzz-aaaa-cccc.centralindia.azurecontainer.io"
+        "vscode": "http://ws-clxxx-yyyy-zzzz-aaaa-bbbb.centralindia.azurecontainer.io:8080",
+        "ssh": "ssh -p 2222 dev8@ws-clxxx-yyyy-zzzz-aaaa-bbbb.centralindia.azurecontainer.io"
       },
       "createdAt": "2025-10-27T14:30:00Z",
       "updatedAt": "2025-10-27T14:32:15Z"
