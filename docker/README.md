@@ -98,11 +98,12 @@ Create a `.env` file in the `docker/` directory:
 
 ### Volumes
 
+- **`dev8-data`**: Single persistent volume containing:
+  - User home directory (`/home/dev8`) - configs, packages, extensions
+  - Workspace subdirectory (`/home/dev8/workspace`) - your code and projects
+
 ```bash
-
-- `dev8-home`: User home directory (~/.config, packages, etc.)# Required
-
-- `dev8-workspace`: Your code and projectsGITHUB_TOKEN=ghp_xxx...
+# Required
 
 
 
@@ -456,10 +457,10 @@ make up
    az storage account create --name yourstorage --resource-group yourgroup
    ```
 
-3. **Azure File Shares**
+3. **Azure File Share**
    ```bash
-   az storage share create --name dev8-home --account-name yourstorage
-   az storage share create --name dev8-workspace --account-name yourstorage
+   # Create single file share for all persistent data (home + workspace)
+   az storage share create --name dev8-data --account-name yourstorage --quota 200
    ```
 
 ### Deployment Process

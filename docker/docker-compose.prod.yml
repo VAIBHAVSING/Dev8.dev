@@ -70,20 +70,18 @@ services:
       - AZURE_REGION=${AZURE_REGION:-eastus}
       - AZURE_SUBSCRIPTION_ID=${AZURE_SUBSCRIPTION_ID:-}
     
-    # Azure Files volumes for persistence
-    # NOTE: You must create these Azure File Shares first!
+    # Azure Files volume for persistence
+    # NOTE: You must create this Azure File Share first!
     volumes:
-      # User home directory - Azure Files share
-      # Create with: az storage share create --name dev8-home
+      # Single persistent volume for all data
+      # Stores both user home directory and workspace in one volume
+      # Create with: az storage share create --name dev8-data
       - type: bind
-        source: /mnt/azurefiles/dev8-home
+        source: /mnt/azurefiles/dev8-data
         target: /home/dev8
       
-      # Workspace directory - Azure Files share  
-      # Create with: az storage share create --name dev8-workspace
-      - type: bind
-        source: /mnt/azurefiles/dev8-workspace
-        target: /workspace
+      # Workspace is now a subdirectory within home: /home/dev8/workspace
+      # This consolidates all persistent data into one volume
     
     # ACI restart policy
     # Options: no, on-failure, always, unless-stopped

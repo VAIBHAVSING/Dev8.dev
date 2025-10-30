@@ -88,9 +88,10 @@ func (c *Client) CreateContainerGroup(ctx context.Context, region, resourceGroup
 	var volumeMounts []*armcontainerinstance.VolumeMount
 
 	if spec.FileShareName != "" && spec.StorageAccountName != "" && spec.StorageAccountKey != "" {
-		// Volume 1: Workspace directory (/workspace) - user code and projects
+		// Single volume: Home directory (/home/dev8) - stores everything
+		// This includes: user configs, extensions, packages, AND workspace subdirectory (/home/dev8/workspace)
 		volumes = append(volumes, &armcontainerinstance.Volume{
-			Name: to.Ptr("workspace"),
+			Name: to.Ptr("dev8-data"),
 			AzureFile: &armcontainerinstance.AzureFileVolume{
 				ShareName:          to.Ptr(spec.FileShareName),
 				StorageAccountName: to.Ptr(spec.StorageAccountName),
@@ -98,25 +99,9 @@ func (c *Client) CreateContainerGroup(ctx context.Context, region, resourceGroup
 			},
 		})
 		volumeMounts = append(volumeMounts, &armcontainerinstance.VolumeMount{
-			Name:      to.Ptr("workspace"),
-			MountPath: to.Ptr("/workspace"),
+			Name:      to.Ptr("dev8-data"),
+			MountPath: to.Ptr("/home/dev8"),
 		})
-
-		// Volume 2: Home directory (/home/dev8) - extensions, settings, SSH keys
-		if spec.HomeFileShareName != "" {
-			volumes = append(volumes, &armcontainerinstance.Volume{
-				Name: to.Ptr("home"),
-				AzureFile: &armcontainerinstance.AzureFileVolume{
-					ShareName:          to.Ptr(spec.HomeFileShareName),
-					StorageAccountName: to.Ptr(spec.StorageAccountName),
-					StorageAccountKey:  to.Ptr(spec.StorageAccountKey),
-				},
-			})
-			volumeMounts = append(volumeMounts, &armcontainerinstance.VolumeMount{
-				Name:      to.Ptr("home"),
-				MountPath: to.Ptr("/home/dev8"),
-			})
-		}
 	}
 
 	// Build environment variables dynamically
@@ -124,7 +109,7 @@ func (c *Client) CreateContainerGroup(ctx context.Context, region, resourceGroup
 		// Always required
 		{Name: to.Ptr("WORKSPACE_ID"), Value: to.Ptr(spec.EnvironmentID)},
 		{Name: to.Ptr("USER_ID"), Value: to.Ptr(spec.UserID)},
-		{Name: to.Ptr("WORKSPACE_DIR"), Value: to.Ptr("/workspace")},
+		{Name: to.Ptr("WORKSPACE_DIR"), Value: to.Ptr("/home/dev8/workspace")},
 		{Name: to.Ptr("AGENT_BASE_URL"), Value: to.Ptr(spec.AgentBaseURL)},
 		{Name: to.Ptr("AGENT_ENABLED"), Value: to.Ptr("true")},
 		{Name: to.Ptr("MONITOR_INTERVAL"), Value: to.Ptr("30s")},
@@ -329,8 +314,7 @@ type ContainerGroupSpec struct {
 	CPUCores           int
 	MemoryGB           int
 	DNSNameLabel       string
-	FileShareName      string // Workspace file share (code) - mounts to /workspace
-	HomeFileShareName  string // Home file share (extensions/settings) - mounts to /home/dev8
+	FileShareName      string // Single file share for all persistent data - mounts to /home/dev8 (includes workspace subdirectory)
 	StorageAccountName string
 	StorageAccountKey  string
 	EnvironmentID      string

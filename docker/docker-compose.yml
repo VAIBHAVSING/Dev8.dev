@@ -66,16 +66,12 @@ services:
       - REPORT_INTERVAL=${REPORT_INTERVAL:-60s}
       
     volumes:
-      # CRITICAL: User's home directory for persistence
-      # This preserves: installed packages, configs, extensions, etc.
-      - dev8-home:/home/dev8
+      # Single persistent volume for all data
+      # Stores both user home directory and workspace in one volume
+      - dev8-data:/home/dev8
       
-      # User code/workspace directory (project files) - Named volume for persistence
-      - dev8-workspace:/workspace
-      
-      # Alternative: Use bind mount to sync with local directory
-      # Uncomment this and comment out the line above to use local ./workspace folder
-      # - ./workspace:/workspace
+      # Workspace is now a subdirectory within home: /home/dev8/workspace
+      # This consolidates all persistent data into one volume
       
       # Optional: SSH keys
       # - ~/.ssh:/home/dev8/.ssh-host:ro
@@ -100,27 +96,16 @@ services:
     #       memory: 4G
 
 volumes:
-  # Named volume for user home directory
-  # This is where user-installed packages, configs, extensions are stored
+  # Single named volume for all persistent data
+  # This stores user home directory (configs, extensions, packages) and workspace (project files)
   # Data persists across container restarts and rebuilds
-  dev8-home:
+  dev8-data:
     driver: local
-    # Optional: use a specific mount point for home directory
+    # Optional: use a specific mount point for persistent data
     # driver_opts:
     #   type: none
     #   o: bind
-    #   device: /path/to/persistent/storage/dev8-home
-  
-  # Named volume for user workspace/code
-  # This is where user's project files and code are stored
-  # Data persists across container restarts and rebuilds
-  dev8-workspace:
-    driver: local
-    # Optional: use a specific mount point for workspace
-    # driver_opts:
-    #   type: none
-    #   o: bind
-    #   device: /path/to/persistent/storage/dev8-workspace
+    #   device: /path/to/persistent/storage/dev8-data
 
 networks:
   default:

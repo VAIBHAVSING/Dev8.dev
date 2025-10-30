@@ -72,10 +72,9 @@ func (s *EnvironmentService) CreateEnvironment(ctx context.Context, req *models.
 	overallStartTime := time.Now()
 
 	// Azure resource names based on UUID
-	fileShareName := fmt.Sprintf("fs-%s", workspaceID)          // fs-clxxx-yyyy-zzzz (workspace files)
-	homeFileShareName := fmt.Sprintf("fs-%s-home", workspaceID) // fs-clxxx-yyyy-zzzz-home (user home)
-	containerGroupName := fmt.Sprintf("aci-%s", workspaceID)    // aci-clxxx-yyyy-zzzz
-	dnsLabel := fmt.Sprintf("ws-%s", workspaceID)               // ws-clxxx-yyyy-zzzz
+	fileShareName := fmt.Sprintf("fs-%s", workspaceID)       // fs-clxxx-yyyy-zzzz (unified volume)
+	containerGroupName := fmt.Sprintf("aci-%s", workspaceID) // aci-clxxx-yyyy-zzzz
+	dnsLabel := fmt.Sprintf("ws-%s", workspaceID)            // ws-clxxx-yyyy-zzzz
 
 	resourceGroup := regionConfig.ResourceGroupName
 	if resourceGroup == "" {
@@ -91,7 +90,7 @@ func (s *EnvironmentService) CreateEnvironment(ctx context.Context, req *models.
 	}
 
 	// ⚡⚡⚡ MAXIMUM CONCURRENCY: Start ALL operations in PARALLEL
-	log.Printf("⚡⚡⚡ Starting CONCURRENT creation (shares + container) for workspace %s...", workspaceID)
+	log.Printf("⚡⚡⚡ Starting CONCURRENT creation (unified volume + container) for workspace %s...", workspaceID)
 	startTime := time.Now()
 
 	// Channels for parallel execution
@@ -101,28 +100,20 @@ func (s *EnvironmentService) CreateEnvironment(ctx context.Context, req *models.
 		err  error
 	}
 
-	workspaceChan := make(chan operationResult, 1)
-	homeChan := make(chan operationResult, 1)
+	volumeChan := make(chan operationResult, 1)
 	aciChan := make(chan operationResult, 1)
 
-	// Goroutine 1: Create workspace file share
+	// Goroutine 1: Create unified file share (includes workspace + home subdirectories)
 	go func() {
-		log.Printf("📁 [1/3] Creating workspace volume: %s (%dGB)", fileShareName, req.StorageGB)
-		err := storageClient.CreateFileShare(ctx, fileShareName, int32(req.StorageGB))
-		workspaceChan <- operationResult{name: "workspace-share", err: err}
+		totalQuotaGB := int32(req.StorageGB + 5) // workspace quota + 5GB for home
+		log.Printf("📁 [1/2] Creating unified volume: %s (%dGB) - contains workspace/ and home/", fileShareName, totalQuotaGB)
+		err := storageClient.CreateFileShare(ctx, fileShareName, totalQuotaGB)
+		volumeChan <- operationResult{name: "unified-volume", err: err}
 	}()
 
-	// Goroutine 2: Create home file share
+	// Goroutine 2: Create ACI container (starts IMMEDIATELY, doesn't wait for share)
 	go func() {
-		homeQuotaGB := int32(5)
-		log.Printf("📁 [2/3] Creating home volume: %s (%dGB)", homeFileShareName, homeQuotaGB)
-		err := storageClient.CreateFileShare(ctx, homeFileShareName, homeQuotaGB)
-		homeChan <- operationResult{name: "home-share", err: err}
-	}()
-
-	// Goroutine 3: Create ACI container (starts IMMEDIATELY, doesn't wait for shares)
-	go func() {
-		// Small delay to let shares start first (Azure may need them)
+		// Small delay to let share start first (Azure may need it)
 		time.Sleep(500 * time.Millisecond)
 
 		containerSpec := azure.ContainerGroupSpec{
@@ -132,7 +123,6 @@ func (s *EnvironmentService) CreateEnvironment(ctx context.Context, req *models.
 			MemoryGB:           req.MemoryGB,
 			DNSNameLabel:       dnsLabel,
 			FileShareName:      fileShareName,
-			HomeFileShareName:  homeFileShareName,
 			StorageAccountName: regionConfig.StorageAccount,
 			StorageAccountKey:  s.config.Azure.StorageAccountKey,
 			EnvironmentID:      workspaceID,
@@ -151,35 +141,27 @@ func (s *EnvironmentService) CreateEnvironment(ctx context.Context, req *models.
 			GeminiAPIKey:       req.GeminiAPIKey,
 		}
 
-		log.Printf("📦 [3/3] Creating ACI container: %s", containerGroupName)
+		log.Printf("📦 [2/2] Creating ACI container: %s", containerGroupName)
 		err := s.azureClient.CreateContainerGroup(ctx, req.CloudRegion, resourceGroup, containerGroupName, containerSpec)
 		aciChan <- operationResult{name: "aci-container", err: err}
 	}()
 
 	// Wait for ALL operations to complete
-	workspaceResult := <-workspaceChan
-	homeResult := <-homeChan
+	volumeResult := <-volumeChan
 	aciResult := <-aciChan
 
 	totalTime := time.Since(startTime)
 	log.Printf("⚡⚡⚡ ALL OPERATIONS COMPLETED in %s", totalTime)
 
 	// Check for errors (cleanup on failure)
-	if workspaceResult.err != nil {
+	if volumeResult.err != nil {
 		// Try to cleanup what succeeded
-		_ = storageClient.DeleteFileShare(ctx, homeFileShareName)
 		_ = s.azureClient.DeleteContainerGroup(ctx, req.CloudRegion, resourceGroup, containerGroupName)
-		return nil, fmt.Errorf("failed to create workspace file share: %w", workspaceResult.err)
-	}
-	if homeResult.err != nil {
-		_ = storageClient.DeleteFileShare(ctx, fileShareName)
-		_ = s.azureClient.DeleteContainerGroup(ctx, req.CloudRegion, resourceGroup, containerGroupName)
-		return nil, fmt.Errorf("failed to create home file share: %w", homeResult.err)
+		return nil, fmt.Errorf("failed to create unified file share: %w", volumeResult.err)
 	}
 	if aciResult.err != nil {
-		// Cleanup file shares
+		// Cleanup file share
 		_ = storageClient.DeleteFileShare(ctx, fileShareName)
-		_ = storageClient.DeleteFileShare(ctx, homeFileShareName)
 		return nil, fmt.Errorf("failed to create container group: %w", aciResult.err)
 	}
 
@@ -252,7 +234,6 @@ func (s *EnvironmentService) StartEnvironment(ctx context.Context, req *models.S
 
 	workspaceID := req.WorkspaceID
 	fileShareName := fmt.Sprintf("fs-%s", workspaceID)
-	homeFileShareName := fmt.Sprintf("fs-%s-home", workspaceID)
 	containerGroupName := fmt.Sprintf("aci-%s", workspaceID)
 	dnsLabel := fmt.Sprintf("ws-%s", workspaceID)
 
@@ -261,26 +242,18 @@ func (s *EnvironmentService) StartEnvironment(ctx context.Context, req *models.S
 		resourceGroup = s.config.Azure.ResourceGroupName
 	}
 
-	log.Printf("🚀 Starting workspace %s (checking volumes...)", workspaceID)
+	log.Printf("🚀 Starting workspace %s (checking volume...)", workspaceID)
 
-	// Verify volumes exist
-	workspaceExists, err := storageClient.FileShareExists(ctx, fileShareName)
+	// Verify unified volume exists
+	volumeExists, err := storageClient.FileShareExists(ctx, fileShareName)
 	if err != nil {
-		return nil, models.ErrInternalServer(fmt.Sprintf("failed to check workspace volume: %v", err))
+		return nil, models.ErrInternalServer(fmt.Sprintf("failed to check volume: %v", err))
 	}
-	if !workspaceExists {
-		return nil, models.ErrNotFound(fmt.Sprintf("workspace volume not found: %s. Create environment first.", fileShareName))
-	}
-
-	homeExists, err := storageClient.FileShareExists(ctx, homeFileShareName)
-	if err != nil {
-		return nil, models.ErrInternalServer(fmt.Sprintf("failed to check home volume: %v", err))
-	}
-	if !homeExists {
-		return nil, models.ErrNotFound(fmt.Sprintf("home volume not found: %s. Create environment first.", homeFileShareName))
+	if !volumeExists {
+		return nil, models.ErrNotFound(fmt.Sprintf("unified volume not found: %s. Create environment first.", fileShareName))
 	}
 
-	log.Printf("✅ Volumes verified: workspace=%s, home=%s", fileShareName, homeFileShareName)
+	log.Printf("✅ Unified volume verified: %s", fileShareName)
 
 	// Check if container already exists
 	existingContainer, err := s.azureClient.GetContainerGroup(ctx, req.CloudRegion, resourceGroup, containerGroupName)
@@ -298,7 +271,6 @@ func (s *EnvironmentService) StartEnvironment(ctx context.Context, req *models.S
 		MemoryGB:           req.MemoryGB,
 		DNSNameLabel:       dnsLabel,
 		FileShareName:      fileShareName,
-		HomeFileShareName:  homeFileShareName,
 		StorageAccountName: regionConfig.StorageAccount,
 		StorageAccountKey:  s.config.Azure.StorageAccountKey,
 		EnvironmentID:      workspaceID,
@@ -364,7 +336,7 @@ func (s *EnvironmentService) StartEnvironment(ctx context.Context, req *models.S
 		UpdatedAt:           time.Now(),
 	}
 
-	log.Printf("✅ Workspace %s started successfully (reused existing volumes)", workspaceID)
+	log.Printf("✅ Workspace %s started successfully (reused existing unified volume)", workspaceID)
 	return env, nil
 }
 
@@ -395,7 +367,7 @@ func (s *EnvironmentService) StopEnvironment(ctx context.Context, workspaceID, r
 		return models.ErrInternalServer(fmt.Sprintf("failed to delete container group: %v", err))
 	}
 
-	log.Printf("✅ Workspace %s stopped (container deleted, volumes persisted for fast restart)", workspaceID)
+	log.Printf("✅ Workspace %s stopped (container deleted, unified volume persisted for fast restart)", workspaceID)
 	return nil
 }
 
@@ -413,7 +385,6 @@ func (s *EnvironmentService) DeleteEnvironment(ctx context.Context, workspaceID,
 
 	containerGroupName := fmt.Sprintf("aci-%s", workspaceID)
 	fileShareName := fmt.Sprintf("fs-%s", workspaceID)
-	homeFileShareName := fmt.Sprintf("fs-%s-home", workspaceID)
 
 	log.Printf("🗑️  Deleting workspace %s permanently", workspaceID)
 
@@ -430,24 +401,17 @@ func (s *EnvironmentService) DeleteEnvironment(ctx context.Context, workspaceID,
 		}
 	}
 
-	// Delete file shares (permanent data loss!)
+	// Delete unified file share (permanent data loss!)
 	storageClient, ok := s.storageClients[region]
 	if !ok {
 		return models.ErrInternalServer(fmt.Sprintf("storage client not found for region %s", region))
 	}
 
-	// Delete workspace volume
+	// Delete unified volume (contains both workspace/ and home/ subdirectories)
 	if err := storageClient.DeleteFileShare(ctx, fileShareName); err != nil {
-		log.Printf("Warning: failed to delete workspace file share %s: %v", fileShareName, err)
+		log.Printf("Warning: failed to delete unified file share %s: %v", fileShareName, err)
 	} else {
-		log.Printf("✅ Deleted workspace volume: %s", fileShareName)
-	}
-
-	// Delete home volume
-	if err := storageClient.DeleteFileShare(ctx, homeFileShareName); err != nil {
-		log.Printf("Warning: failed to delete home file share %s: %v", homeFileShareName, err)
-	} else {
-		log.Printf("✅ Deleted home volume: %s", homeFileShareName)
+		log.Printf("✅ Deleted unified volume: %s (workspace + home)", fileShareName)
 	}
 
 	log.Printf("✅ Workspace %s permanently deleted (all data removed)", workspaceID)
@@ -485,7 +449,7 @@ func generateConnectionURLs(fqdn, password string) models.ConnectionURLs {
 	return models.ConnectionURLs{
 		SSHURL:             fmt.Sprintf("ssh://user@%s:2222", fqdn),
 		VSCodeWebURL:       fmt.Sprintf("https://%s:8080", fqdn),
-		VSCodeDesktopURL:   fmt.Sprintf("vscode-remote://ssh-remote+user@%s:2222/workspace", fqdn),
+		VSCodeDesktopURL:   fmt.Sprintf("vscode-remote://ssh-remote+user@%s:2222/home/dev8/workspace", fqdn),
 		SupervisorURL:      fmt.Sprintf("http://%s:9000", fqdn),
 		CodeServerPassword: password,
 	}

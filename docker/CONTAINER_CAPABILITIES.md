@@ -244,20 +244,20 @@ docker compose -f docker/docker-compose.yml down
 
 # Backup volume (simulating control plane)
 docker run --rm \
-  -v docker_dev8-home:/source:ro \
+  -v docker_dev8-data:/source:ro \
   alpine tar czf - -C /source . > /tmp/backup.tar.gz
 
 echo "Backup size: $(du -h /tmp/backup.tar.gz | cut -f1)"
 
 # Delete volume (simulate fresh start)
-docker volume rm docker_dev8-home
+docker volume rm docker_dev8-data
 
 # Create new volume
-docker volume create docker_dev8-home
+docker volume create docker_dev8-data
 
 # Restore from backup
 docker run --rm \
-  -v docker_dev8-home:/target \
+  -v docker_dev8-data:/target \
   -v /tmp/backup.tar.gz:/backup.tar.gz:ro \
   alpine tar xzf /backup.tar.gz -C /target
 

@@ -142,21 +142,16 @@ STORAGE_KEY=$(az storage account keys list \
     --account-name "$STORAGE_ACCOUNT" \
     --query "[0].value" -o tsv)
 
-# Create file shares
-log_info "Creating Azure File shares..."
+# Create single file share for all persistent data (home + workspace)
+log_info "Creating Azure File share for all persistent data..."
 az storage share create \
-    --name dev8-home \
+    --name dev8-data \
     --account-name "$STORAGE_ACCOUNT" \
     --account-key "$STORAGE_KEY" \
-    --quota 100 \
-    || log_warn "Share dev8-home may already exist"
+    --quota 200 \
+    || log_warn "Share dev8-data may already exist"
 
-az storage share create \
-    --name dev8-workspace \
-    --account-name "$STORAGE_ACCOUNT" \
-    --account-key "$STORAGE_KEY" \
-    --quota 100 \
-    || log_warn "Share dev8-workspace may already exist"
+log_info "Note: Workspace will be stored in /home/dev8/workspace subdirectory"
 
 # Create backup container
 log_info "Creating backup container..."
@@ -218,12 +213,9 @@ az container create \
         GEMINI_API_KEY="${GEMINI_API_KEY:-}" \
     --azure-file-volume-account-name "$STORAGE_ACCOUNT" \
     --azure-file-volume-account-key "$STORAGE_KEY" \
-    --azure-file-volume-share-name dev8-home \
+    --azure-file-volume-share-name dev8-data \
     --azure-file-volume-mount-path /home/dev8 \
     --restart-policy Always
-
-# Note: ACI only supports one Azure Files mount via CLI
-# For multiple mounts, need to use ARM template or YAML
 
 ################################################################################
 # Get Deployment Info

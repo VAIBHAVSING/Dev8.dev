@@ -28,7 +28,7 @@ const (
 type ConnectionURLs struct {
 	SSHURL             string `json:"sshUrl"`             // ssh://user@ws-{uuid}.region.azurecontainer.io:2222
 	VSCodeWebURL       string `json:"vscodeWebUrl"`       // https://ws-{uuid}.region.azurecontainer.io:8080
-	VSCodeDesktopURL   string `json:"vscodeDesktopUrl"`   // vscode-remote://ssh-remote+user@ws-{uuid}...:2222/workspace
+	VSCodeDesktopURL   string `json:"vscodeDesktopUrl"`   // vscode-remote://ssh-remote+user@ws-{uuid}...:2222/home/dev8/workspace
 	SupervisorURL      string `json:"supervisorUrl"`      // http://ws-{uuid}.region.azurecontainer.io:9000
 	CodeServerPassword string `json:"codeServerPassword"` // Generated password for VS Code auth
 }
@@ -53,7 +53,7 @@ type Environment struct {
 	// Azure Resource Identifiers (all based on UUID)
 	AzureResourceGroup  string `json:"azureResourceGroup"`  // e.g., "dev8-eastus-rg"
 	AzureContainerGroup string `json:"azureContainerGroup"` // e.g., "aci-clxxx-yyyy-zzzz"
-	AzureFileShare      string `json:"azureFileShare"`      // e.g., "fs-clxxx-yyyy-zzzz"
+	AzureFileShare      string `json:"azureFileShare"`      // e.g., "fs-clxxx-yyyy-zzzz" (unified volume for home + workspace)
 	AzureFQDN           string `json:"azureFqdn"`           // e.g., "ws-clxxx-yyyy-zzzz.eastus.azurecontainer.io"
 
 	// Connection Information (all contain UUID)
