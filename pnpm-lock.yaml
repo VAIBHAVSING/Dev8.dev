@@ -139,6 +139,15 @@ importers:
         specifier: 5.9.2
         version: 5.9.2
 
+  packages/agent-client:
+    devDependencies:
+      '@repo/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
+      typescript:
+        specifier: ^5.3.3
+        version: 5.9.2
+
   packages/environment-types:
     dependencies:
       zod:
