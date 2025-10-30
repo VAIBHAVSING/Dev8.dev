@@ -96,7 +96,6 @@ func (s *EnvironmentService) CreateEnvironment(ctx context.Context, req *models.
 	// Channels for parallel execution
 	type operationResult struct {
 		name string
-		data interface{}
 		err  error
 	}
 
