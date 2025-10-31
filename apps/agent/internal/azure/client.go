@@ -7,6 +7,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/appcontainers/armappcontainers/v2"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerinstance/armcontainerinstance/v2"
 	"github.com/VAIBHAVSING/Dev8.dev/apps/agent/internal/config"
 )
@@ -16,6 +17,7 @@ type Client struct {
 	config     *config.Config
 	credential azcore.TokenCredential
 	aciClients map[string]*armcontainerinstance.ContainerGroupsClient
+	acaClients map[string]*armappcontainers.ContainerAppsClient
 }
 
 // NewClient creates a new Azure client
@@ -34,13 +36,20 @@ func NewClient(cfg *config.Config) (*Client, error) {
 		config:     cfg,
 		credential: cred,
 		aciClients: make(map[string]*armcontainerinstance.ContainerGroupsClient),
+		acaClients: make(map[string]*armappcontainers.ContainerAppsClient),
 	}
 
-	// Initialize ACI clients for all enabled regions
+	// Initialize clients based on deployment mode
 	for _, region := range cfg.Azure.Regions {
 		if region.Enabled {
-			if err := client.initACIClient(region.Name); err != nil {
-				return nil, fmt.Errorf("failed to initialize ACI client for region %s: %w", region.Name, err)
+			if cfg.Azure.DeploymentMode == "aca" {
+				if err := client.initACAClient(region.Name); err != nil {
+					return nil, fmt.Errorf("failed to initialize ACA client for region %s: %w", region.Name, err)
+				}
+			} else {
+				if err := client.initACIClient(region.Name); err != nil {
+					return nil, fmt.Errorf("failed to initialize ACI client for region %s: %w", region.Name, err)
+				}
 			}
 		}
 	}
@@ -64,6 +73,25 @@ func (c *Client) initACIClient(region string) error {
 	}
 
 	c.aciClients[region] = client
+	return nil
+}
+
+// initACAClient initializes ACA client for a specific region
+func (c *Client) initACAClient(region string) error {
+	if _, exists := c.acaClients[region]; exists {
+		return nil // Already initialized
+	}
+
+	client, err := armappcontainers.NewContainerAppsClient(
+		c.config.Azure.SubscriptionID,
+		c.credential,
+		nil,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create ACA client: %w", err)
+	}
+
+	c.acaClients[region] = client
 	return nil
 }
 
