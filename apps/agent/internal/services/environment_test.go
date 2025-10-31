@@ -8,36 +8,36 @@ import (
 
 func TestGetContainerImage(t *testing.T) {
 	tests := []struct {
-		name              string
-		containerRegistry string
-		containerImage    string
+		name               string
+		containerRegistry  string
+		containerImage     string
 		containerImageName string
-		baseImage         string
-		want              string
+		baseImage          string
+		want               string
 	}{
 		{
-			name:              "ACR configured - uses ACR path",
-			containerRegistry: "myregistry.azurecr.io",
+			name:               "ACR configured - uses ACR path",
+			containerRegistry:  "myregistry.azurecr.io",
 			containerImageName: "dev8-workspace:latest",
-			containerImage:    "vaibhavsing/dev8-workspace:latest",
-			baseImage:         "node",
-			want:              "myregistry.azurecr.io/dev8-workspace:latest",
+			containerImage:     "vaibhavsing/dev8-workspace:latest",
+			baseImage:          "node",
+			want:               "myregistry.azurecr.io/dev8-workspace:latest",
 		},
 		{
-			name:              "ACR configured - ignores baseImage parameter",
-			containerRegistry: "myregistry.azurecr.io",
+			name:               "ACR configured - ignores baseImage parameter",
+			containerRegistry:  "myregistry.azurecr.io",
 			containerImageName: "dev8-workspace:latest",
-			containerImage:    "vaibhavsing/dev8-workspace:latest",
-			baseImage:         "python",
-			want:              "myregistry.azurecr.io/dev8-workspace:latest",
+			containerImage:     "vaibhavsing/dev8-workspace:latest",
+			baseImage:          "python",
+			want:               "myregistry.azurecr.io/dev8-workspace:latest",
 		},
 		{
-			name:              "No ACR - uses Docker Hub fallback",
-			containerRegistry: "",
+			name:               "No ACR - uses Docker Hub fallback",
+			containerRegistry:  "",
 			containerImageName: "dev8-workspace:latest",
-			containerImage:    "vaibhavsing/dev8-workspace:latest",
-			baseImage:         "go",
-			want:              "vaibhavsing/dev8-workspace:latest",
+			containerImage:     "vaibhavsing/dev8-workspace:latest",
+			baseImage:          "go",
+			want:               "vaibhavsing/dev8-workspace:latest",
 		},
 	}
 
