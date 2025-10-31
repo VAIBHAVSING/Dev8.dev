@@ -183,7 +183,7 @@ func (c *Client) CreateContainerApp(ctx context.Context, region, resourceGroup, 
 		Properties: &armappcontainers.ContainerAppProperties{
 			EnvironmentID: to.Ptr(environmentID),
 			Configuration: &armappcontainers.Configuration{
-				ActiveRevisionsMode: to.Ptr(armappcontainers.ActiveRevisionsModeS ingle),
+				ActiveRevisionsMode: to.Ptr(armappcontainers.ActiveRevisionsModeSingle),
 				Ingress: &armappcontainers.Ingress{
 					External:       to.Ptr(true),
 					TargetPort:     to.Ptr(int32(8080)),
