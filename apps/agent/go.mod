@@ -1,6 +1,6 @@
 module github.com/VAIBHAVSING/Dev8.dev/apps/agent
 
-go 1.24
+go 1.23
 
 require (
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.9.2
