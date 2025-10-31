@@ -22,12 +22,13 @@ func TestLoad(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "missing database URL",
+			name: "missing database URL (now optional)",
 			envVars: map[string]string{
 				"AGENT_PORT":            "8080",
 				"AZURE_SUBSCRIPTION_ID": "test-sub-id",
+				"AZURE_DEFAULT_REGION":  "eastus",
 			},
-			wantErr: true,
+			wantErr: false, // DATABASE_URL is now optional for stateless agent
 		},
 		{
 			name: "missing subscription ID",

@@ -14,6 +14,7 @@ func TestCreateEnvironmentRequest_Validate(t *testing.T) {
 		{
 			name: "valid request",
 			req: CreateEnvironmentRequest{
+				WorkspaceID: "550e8400-e29b-41d4-a716-446655440000",
 				Name:        "test-env",
 				CloudRegion: "eastus",
 				CPUCores:    2,
@@ -90,6 +91,7 @@ func TestCreateEnvironmentRequest_Validate(t *testing.T) {
 		{
 			name: "default base image",
 			req: CreateEnvironmentRequest{
+				WorkspaceID: "550e8400-e29b-41d4-a716-446655440000",
 				Name:        "test-env",
 				CloudRegion: "eastus",
 				CPUCores:    2,
