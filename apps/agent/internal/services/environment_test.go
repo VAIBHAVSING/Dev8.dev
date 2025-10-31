@@ -6,8 +6,6 @@ import (
 	"github.com/VAIBHAVSING/Dev8.dev/apps/agent/internal/config"
 )
 
-
-
 func TestGetContainerImage(t *testing.T) {
 	service := &EnvironmentService{
 		config: &config.Config{
