@@ -104,7 +104,12 @@ func (s *EnvironmentService) CreateEnvironment(ctx context.Context, req *models.
 
 	// Goroutine 1: Create unified file share (includes workspace + home subdirectories)
 	go func() {
-		totalQuotaGB := int32(req.StorageGB + 5) // workspace quota + 5GB for home
+		// Safe conversion: validate StorageGB is non-negative and won't overflow
+		if req.StorageGB < 0 || req.StorageGB > (1<<31-1-5) {
+			volumeChan <- operationResult{name: "unified-volume", err: fmt.Errorf("invalid storage size: %d", req.StorageGB)}
+			return
+		}
+		totalQuotaGB := int32(req.StorageGB) + 5 // nolint:gosec // G115: validated above to prevent overflow
 		log.Printf("📁 [1/2] Creating unified volume: %s (%dGB) - contains workspace/ and home/", fileShareName, totalQuotaGB)
 		err := storageClient.CreateFileShare(ctx, fileShareName, totalQuotaGB)
 		volumeChan <- operationResult{name: "unified-volume", err: err}

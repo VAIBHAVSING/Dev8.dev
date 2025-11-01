@@ -123,8 +123,8 @@ func (d *DeploymentStrategy) createWithACI(ctx context.Context, workspaceID, reg
 	aciSpec := azure.ContainerGroupSpec{
 		ContainerName:      "vscode-server",
 		Image:              spec.Image,
-		CPUCores:           spec.CPUCores,
-		MemoryGB:           spec.MemoryGB,
+		CPUCores:           int(spec.CPUCores),
+		MemoryGB:           int(spec.MemoryGB),
 		DNSNameLabel:       dnsLabel,
 		FileShareName:      spec.FileShareName,
 		StorageAccountName: spec.StorageAccountName,

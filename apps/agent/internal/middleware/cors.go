@@ -22,10 +22,8 @@ func CORSMiddleware(allowedOrigins []string) func(http.Handler) http.Handler {
 				// Set CORS headers for allowed origin
 				w.Header().Set("Access-Control-Allow-Origin", origin)
 				w.Header().Set("Access-Control-Allow-Credentials", "true")
-			} else if len(allowedOrigins) == 0 {
-				// If no origins configured, deny all (secure default)
-				// Don't set Access-Control-Allow-Origin header
 			}
+			// If no origins configured or not allowed, deny all (secure default)
 
 			// Set other CORS headers
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")

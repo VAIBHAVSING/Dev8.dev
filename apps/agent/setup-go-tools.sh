@@ -15,7 +15,7 @@ echo "✅ Go $(go version | cut -d' ' -f3) found"
 # Install golangci-lint if not present
 if ! command -v golangci-lint &> /dev/null; then
     echo "📦 Installing golangci-lint..."
-    curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.55.2
+    curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin latest
     
     # Add to PATH if needed
     if [[ ":$PATH:" != *":$(go env GOPATH)/bin:"* ]]; then

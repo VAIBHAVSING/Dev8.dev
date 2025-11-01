@@ -47,7 +47,7 @@ func TestLoad(t *testing.T) {
 
 			// Set test environment variables
 			for k, v := range tt.envVars {
-				os.Setenv(k, v)
+				_ = os.Setenv(k, v)
 			}
 
 			cfg, err := Load()
@@ -159,7 +159,7 @@ func TestLoadRegions(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			os.Clearenv()
 			if tt.regionsEnv != "" {
-				os.Setenv("AZURE_REGIONS", tt.regionsEnv)
+				_ = os.Setenv("AZURE_REGIONS", tt.regionsEnv)
 			}
 
 			regions, err := loadRegions()
@@ -202,7 +202,7 @@ func TestLoadCORSAllowedOrigins(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			os.Clearenv()
 			if tt.corsEnv != "" {
-				os.Setenv("CORS_ALLOWED_ORIGINS", tt.corsEnv)
+				_ = os.Setenv("CORS_ALLOWED_ORIGINS", tt.corsEnv)
 			}
 
 			origins := loadCORSAllowedOrigins()
