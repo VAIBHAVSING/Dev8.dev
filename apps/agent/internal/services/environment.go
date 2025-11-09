@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/VAIBHAVSING/Dev8.dev/apps/agent/internal/azure"
@@ -117,8 +118,17 @@ func (s *EnvironmentService) CreateEnvironment(ctx context.Context, req *models.
 
 	// Goroutine 2: Create container using deployment strategy
 	go func() {
-		// Small delay to let share start first (Azure may need it)
-		time.Sleep(500 * time.Millisecond)
+		// Wait for volume creation to complete FIRST
+		volResult := <-volumeChan
+		if volResult.err != nil {
+			// Volume creation failed, propagate error
+			aciChan <- operationResult{name: "container", err: fmt.Errorf("volume creation failed, skipping container creation: %w", volResult.err)}
+			return
+		}
+
+		// Volume created successfully, now create container
+		// Additional delay to ensure Azure has fully propagated the file share
+		time.Sleep(2 * time.Second)
 
 		deploySpec := ContainerDeploymentSpec{
 			Image:              containerImage,
@@ -147,23 +157,25 @@ func (s *EnvironmentService) CreateEnvironment(ctx context.Context, req *models.
 		aciChan <- operationResult{name: "container", err: err}
 	}()
 
-	// Wait for ALL operations to complete
-	volumeResult := <-volumeChan
+	// Wait for container operation to complete (volume result already consumed by goroutine 2)
 	aciResult := <-aciChan
 
 	totalTime := time.Since(startTime)
 	log.Printf("⚡⚡⚡ ALL OPERATIONS COMPLETED in %s", totalTime)
 
 	// Check for errors (cleanup on failure)
-	if volumeResult.err != nil {
-		// Try to cleanup what succeeded
-		_ = s.deploymentStrategy.DeleteContainer(ctx, workspaceID, req.CloudRegion, resourceGroup)
-		return nil, fmt.Errorf("failed to create unified file share: %w", volumeResult.err)
-	}
 	if aciResult.err != nil {
-		// Cleanup file share
-		_ = storageClient.DeleteFileShare(ctx, fileShareName)
-		return nil, fmt.Errorf("failed to create container: %w", aciResult.err)
+		// Check if error was from volume creation or container creation
+		if aciResult.name == "container" {
+			// Could be volume or container error - check message
+			errMsg := aciResult.err.Error()
+			if strings.Contains(errMsg, "volume creation failed") {
+				return nil, fmt.Errorf("failed to create unified file share: %w", aciResult.err)
+			}
+			// Container creation failed - cleanup file share
+			_ = storageClient.DeleteFileShare(ctx, fileShareName)
+			return nil, fmt.Errorf("failed to create container: %w", aciResult.err)
+		}
 	}
 
 	// Wait for container to get FQDN
