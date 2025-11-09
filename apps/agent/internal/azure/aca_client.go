@@ -309,9 +309,9 @@ func (c *Client) DeleteContainerApp(ctx context.Context, resourceGroup, appName 
 	return nil
 }
 
-// StopContainerApp scales a container app to zero replicas
-// NOTE: Azure requires maxReplicas > 0, so we set minReplicas=0, maxReplicas=1
-// The container will scale to zero automatically due to no traffic (Consumption plan)
+// StopContainerApp stops a container app by scaling minReplicas to 0 while keeping maxReplicas at 1
+// NOTE: Azure Container Apps requires maxReplicas > 0, so we can't set it to 0
+// The app will scale to zero when there's no traffic (Consumption plan behavior)
 func (c *Client) StopContainerApp(ctx context.Context, resourceGroup, appName string) error {
 	client, err := armappcontainers.NewContainerAppsClient(c.config.Azure.SubscriptionID, c.credential, nil)
 	if err != nil {
@@ -324,11 +324,14 @@ func (c *Client) StopContainerApp(ctx context.Context, resourceGroup, appName st
 		return fmt.Errorf("failed to get container app: %w", err)
 	}
 
-	// Update scale: minReplicas=0, maxReplicas=1 (Azure requirement: maxReplicas > 0)
-	// Container will scale to zero automatically with no traffic (Consumption plan behavior)
+	// Stop the app by setting MinReplicas to 0, MaxReplicas to 1
+	// With minReplicas=0, the app will scale to zero with no traffic
+	// Azure requires maxReplicas > 0
 	if resp.Properties != nil && resp.Properties.Template != nil && resp.Properties.Template.Scale != nil {
 		resp.Properties.Template.Scale.MinReplicas = to.Ptr(int32(0))
-		resp.Properties.Template.Scale.MaxReplicas = to.Ptr(int32(1)) // Must be > 0 per Azure rules
+		resp.Properties.Template.Scale.MaxReplicas = to.Ptr(int32(1)) // Required by Azure
+		// Clear HTTP scaling rules to prevent auto-scaling
+		resp.Properties.Template.Scale.Rules = nil
 	}
 
 	// Update container app
@@ -345,8 +348,8 @@ func (c *Client) StopContainerApp(ctx context.Context, resourceGroup, appName st
 	return nil
 }
 
-// StartContainerApp scales a container app back to 1 replica
-// Sets minReplicas=0, maxReplicas=1 to allow auto-scaling with traffic
+// StartContainerApp starts a container app by setting minReplicas to 1
+// This ensures at least one replica is always running
 func (c *Client) StartContainerApp(ctx context.Context, resourceGroup, appName string) error {
 	client, err := armappcontainers.NewContainerAppsClient(c.config.Azure.SubscriptionID, c.credential, nil)
 	if err != nil {
@@ -359,9 +362,10 @@ func (c *Client) StartContainerApp(ctx context.Context, resourceGroup, appName s
 		return fmt.Errorf("failed to get container app: %w", err)
 	}
 
-	// Update scale: minReplicas=0, maxReplicas=1 (allows scale-to-zero with traffic-based scaling)
+	// Start the app by setting MinReplicas to 1 and MaxReplicas to 1
+	// This ensures exactly one replica is running
 	if resp.Properties != nil && resp.Properties.Template != nil && resp.Properties.Template.Scale != nil {
-		resp.Properties.Template.Scale.MinReplicas = to.Ptr(int32(0))
+		resp.Properties.Template.Scale.MinReplicas = to.Ptr(int32(1))
 		resp.Properties.Template.Scale.MaxReplicas = to.Ptr(int32(1))
 	}
 
@@ -377,7 +381,7 @@ func (c *Client) StartContainerApp(ctx context.Context, resourceGroup, appName s
 	}
 
 	// Wait a moment for the replica to start
-	time.Sleep(5 * time.Second)
+	time.Sleep(10 * time.Second)
 
 	return nil
 }
