@@ -2,7 +2,7 @@ export interface WorkspaceConfig {
   workspaceId: string;
   userId: string;
   name: string;
-  cloudProvider?: 'AZURE';
+  cloudProvider?: "AZURE";
   cloudRegion: string;
   cpuCores: number;
   memoryGB: number;
@@ -27,7 +27,7 @@ export interface Environment {
   id: string;
   name: string;
   userId: string;
-  status: 'RUNNING' | 'STOPPED' | 'CREATING' | 'DELETING';
+  status: "RUNNING" | "STOPPED" | "CREATING" | "DELETING";
   cloudRegion: string;
   cpuCores: number;
   memoryGB: number;

@@ -3,6 +3,7 @@
 ## 🚀 Infrastructure Deployment
 
 ### Development (ACI)
+
 ```bash
 cd in/azure
 make deploy-dev-quick        # Non-interactive
@@ -10,6 +11,7 @@ make deploy-dev              # Interactive (default)
 ```
 
 ### Production (ACA)
+
 ```bash
 cd in/azure
 make deploy-prod-quick       # Non-interactive
@@ -17,6 +19,7 @@ make deploy-prod             # Interactive (default)
 ```
 
 ### Non-Interactive (CI/CD)
+
 ```bash
 make deploy-dev INTERACTIVE=false
 make deploy-prod INTERACTIVE=false
@@ -73,6 +76,7 @@ make what-if
 ## 📊 Monitoring
 
 ### ACI Logs
+
 ```bash
 az container logs \
   --resource-group dev8-dev-rg \
@@ -81,6 +85,7 @@ az container logs \
 ```
 
 ### ACA Logs
+
 ```bash
 az containerapp logs show \
   --name aca-xyz \
@@ -91,6 +96,7 @@ az containerapp logs show \
 ## 🔧 Management
 
 ### Get Container Status (ACI)
+
 ```bash
 az container show \
   --resource-group dev8-dev-rg \
@@ -99,6 +105,7 @@ az container show \
 ```
 
 ### Get Container Status (ACA)
+
 ```bash
 az containerapp show \
   --name aca-xyz \
@@ -107,6 +114,7 @@ az containerapp show \
 ```
 
 ### Stop Container (ACI)
+
 ```bash
 az container stop \
   --resource-group dev8-dev-rg \
@@ -114,6 +122,7 @@ az container stop \
 ```
 
 ### Delete Container (ACI)
+
 ```bash
 az container delete \
   --resource-group dev8-dev-rg \
@@ -122,6 +131,7 @@ az container delete \
 ```
 
 ### Delete Container (ACA)
+
 ```bash
 az containerapp delete \
   --name aca-xyz \
@@ -132,6 +142,7 @@ az containerapp delete \
 ## 🧪 Testing
 
 ### Full Dev Deployment Test
+
 ```bash
 # 1. Deploy infrastructure
 cd in/azure && make deploy-dev-quick
@@ -146,6 +157,7 @@ make build-all && make prod-push && make prod-deploy
 ```
 
 ### Full Prod Deployment Test
+
 ```bash
 # 1. Deploy infrastructure (includes ACA env)
 cd in/azure && make deploy-prod-quick
@@ -163,6 +175,7 @@ make build-all && make prod-push && make prod-deploy
 ## 🗑️ Cleanup
 
 ### Delete Everything (Dev)
+
 ```bash
 cd in/azure
 make destroy
@@ -170,6 +183,7 @@ make destroy
 ```
 
 ### Delete Everything (Prod)
+
 ```bash
 cd in/azure
 make destroy
@@ -179,17 +193,20 @@ make destroy
 ## 📍 Important Files
 
 ### Configuration
+
 - `apps/agent/.env` - Agent configuration (auto-configured)
 - `docker/.env.prod` - Container deployment config
 - `in/azure/bicep/parameters/dev.bicepparam` - Dev infrastructure params
 - `in/azure/bicep/parameters/prod.bicepparam` - Prod infrastructure params
 
 ### Scripts
+
 - `in/azure/Makefile` - Infrastructure automation
 - `docker/Makefile` - Container automation
 - `docker/deploy-to-azure.sh` - Container deployment script
 
 ### Documentation
+
 - `DEPLOYMENT_GUIDE_ACI_ACA.md` - Full deployment guide
 - `IMPLEMENTATION_SUMMARY_ACI_ACA.md` - Implementation details
 - `in/azure/README.md` - Infrastructure docs
@@ -198,6 +215,7 @@ make destroy
 ## 🔐 Environment Variables
 
 ### Required (apps/agent/.env)
+
 ```bash
 AZURE_SUBSCRIPTION_ID=...
 AZURE_RESOURCE_GROUP=...
@@ -208,11 +226,13 @@ AZURE_DEPLOYMENT_MODE=aci  # or "aca"
 ```
 
 ### ACA Mode Additional (apps/agent/.env)
+
 ```bash
 AZURE_ACA_ENVIRONMENT_ID=/subscriptions/.../managedEnvironments/...
 ```
 
 ### Container Deployment (docker/.env.prod)
+
 ```bash
 AZURE_DEPLOYMENT_MODE=aca  # or "aci"
 ACA_ENVIRONMENT_ID=/subscriptions/.../managedEnvironments/...
@@ -224,12 +244,14 @@ ACR_NAME=...
 ## 🆘 Troubleshooting
 
 ### Issue: Deploy hangs
+
 ```bash
 # Use non-interactive mode
 make deploy-dev INTERACTIVE=false
 ```
 
 ### Issue: ACA_ENVIRONMENT_ID not set
+
 ```bash
 # Deploy prod first
 make deploy-prod
@@ -242,6 +264,7 @@ az containerapp env show \
 ```
 
 ### Issue: Script not found
+
 ```bash
 # Verify file exists
 ls -la docker/deploy-to-azure.sh
@@ -251,6 +274,7 @@ chmod +x docker/deploy-to-azure.sh
 ```
 
 ### Issue: Credentials missing
+
 ```bash
 # Re-run auto-config
 cd in/azure
@@ -271,6 +295,7 @@ make help
 ---
 
 **Quick Start:**
+
 1. Deploy: `cd in/azure && make deploy-dev-quick`
 2. Build: `cd ../../docker && make build-all`
 3. Deploy Container: `make prod-deploy`

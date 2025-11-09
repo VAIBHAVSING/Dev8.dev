@@ -10,6 +10,7 @@
 ### 1. ✅ Stop/Start API Failures - FIXED
 
 **Error**:
+
 ```
 ContainerAppInvalidScaleSpec
 The scale options provided for Container App is incorrect.
@@ -17,6 +18,7 @@ maxReplicas must be greater than 0
 ```
 
 **Root Cause**:
+
 - `StopContainerApp()` was setting `maxReplicas = 0`
 - Azure requires `maxReplicas > 0` at all times
 
@@ -37,6 +39,7 @@ func (c *Client) StopContainerApp(...) {
 ```
 
 **Impact**:
+
 - Stop API now works correctly
 - Container still scales to 0 automatically (via no traffic)
 - No Azure validation errors
@@ -46,6 +49,7 @@ func (c *Client) StopContainerApp(...) {
 ### 2. ✅ Create/Delete APIs - ALREADY WORKING
 
 **Tested Operations**:
+
 - ✅ `CreateContainerApp()` - Creates container with storage registration
 - ✅ `DeleteContainerApp()` - Removes container app
 
@@ -57,14 +61,15 @@ func (c *Client) StopContainerApp(...) {
 
 **Key Learnings**:
 
-| Misconception | Reality |
-|---------------|---------|
-| "Stop API stops the container" | Stop API sets scaling **policy** |
-| "Need to manually stop to save $" | Azure auto-scales to 0 (no action needed) |
-| "Start API starts the container" | Start API enables scaling **policy** |
+| Misconception                      | Reality                                      |
+| ---------------------------------- | -------------------------------------------- |
+| "Stop API stops the container"     | Stop API sets scaling **policy**             |
+| "Need to manually stop to save $"  | Azure auto-scales to 0 (no action needed)    |
+| "Start API starts the container"   | Start API enables scaling **policy**         |
 | "Supervisor should exit when idle" | Supervisor should run; Azure handles scaling |
 
 **Architecture Understanding**:
+
 ```
 User Request → Azure Ingress → Container App → Supervisor → Processes
                      ↑
@@ -82,6 +87,7 @@ User Request → Azure Ingress → Container App → Supervisor → Processes
 **Deployment Type**: **Consumption Plan** (Serverless)
 
 **Evidence** (`in/azure/bicep/modules/aca-environment.bicep`):
+
 ```bicep
 workloadProfiles: [
   {
@@ -92,6 +98,7 @@ workloadProfiles: [
 ```
 
 **Implications**:
+
 - ✅ Scale-to-zero enabled by default
 - ✅ Pay-per-second billing
 - ✅ No cost when idle (0 replicas)
@@ -101,6 +108,7 @@ workloadProfiles: [
 ### Scaling Configuration
 
 **Container App Settings** (`apps/agent/internal/azure/aca_client.go`):
+
 ```go
 Scale: &armappcontainers.Scale{
   MinReplicas: 0,  // Allow scale to zero
@@ -119,6 +127,7 @@ Scale: &armappcontainers.Scale{
 ```
 
 **Behavior**:
+
 - Container scales to **0** when no HTTP requests (2-5 min)
 - Container scales to **1** on first HTTP request
 - No manual intervention required
@@ -132,6 +141,7 @@ Scale: &armappcontainers.Scale{
 **Billing**: Pay only for **active compute time** (per second)
 
 **Rates** (Central India):
+
 - vCPU: $0.000024/vCPU-second = $0.0864/vCPU-hour
 - Memory: $0.000002667/GB-second = $0.0096/GB-hour
 - Requests: 2M free/month, then $0.40/million
@@ -142,27 +152,28 @@ Scale: &armappcontainers.Scale{
 
 **Monthly Costs by Usage**:
 
-| Usage Pattern | Active Hours | Monthly Cost | Annual Cost |
-|---------------|--------------|--------------|-------------|
-| Always On | 730 hrs | $154.18 | $1,850.16 |
-| Business Hours (8×22) | 176 hrs | $37.17 | $446.08 |
-| Part-Time (4×20) | 80 hrs | $16.90 | $202.75 |
-| On-Demand (10 hrs) | 10 hrs | $2.11 | $25.34 |
-| **Idle (scale-to-zero)** | **0 hrs** | **$0.00** | **$0.00** |
+| Usage Pattern            | Active Hours | Monthly Cost | Annual Cost |
+| ------------------------ | ------------ | ------------ | ----------- |
+| Always On                | 730 hrs      | $154.18      | $1,850.16   |
+| Business Hours (8×22)    | 176 hrs      | $37.17       | $446.08     |
+| Part-Time (4×20)         | 80 hrs       | $16.90       | $202.75     |
+| On-Demand (10 hrs)       | 10 hrs       | $2.11        | $25.34      |
+| **Idle (scale-to-zero)** | **0 hrs**    | **$0.00**    | **$0.00**   |
 
 ### Cost Comparison: ACA vs ACI
 
 **Configuration**: 2 vCPU, 4 GB RAM
 
-| Metric | ACA (Consumption) | ACI (Dedicated) |
-|--------|-------------------|-----------------|
-| Idle Cost | $0.00 | $154.18/mo |
-| Active (8hr/day) | $37.17/mo | $154.18/mo |
-| Scaling | Automatic | Manual |
-| Cold Start | 10-30 sec | Instant |
-| **Savings (8hr/day)** | **76%** | Baseline |
+| Metric                | ACA (Consumption) | ACI (Dedicated) |
+| --------------------- | ----------------- | --------------- |
+| Idle Cost             | $0.00             | $154.18/mo      |
+| Active (8hr/day)      | $37.17/mo         | $154.18/mo      |
+| Scaling               | Automatic         | Manual          |
+| Cold Start            | 10-30 sec         | Instant         |
+| **Savings (8hr/day)** | **76%**           | Baseline        |
 
-**Recommendation**: 
+**Recommendation**:
+
 - Use **ACA** for dev/test (huge cost savings)
 - Consider **ACI** for production if cold starts unacceptable
 
@@ -175,6 +186,7 @@ Scale: &armappcontainers.Scale{
 **Trigger**: No HTTP requests
 
 **Timeline**:
+
 ```
 t=0    : Last HTTP request completed
 t=2min : Azure detects no traffic pattern
@@ -182,7 +194,8 @@ t=5min : Container scales to 0 replicas
         → Billing STOPS
 ```
 
-**Important**: 
+**Important**:
+
 - NO manual action needed
 - NO supervisor involvement needed
 - Azure monitors HTTP ingress traffic automatically
@@ -192,6 +205,7 @@ t=5min : Container scales to 0 replicas
 **Trigger**: First HTTP request after scale-to-zero
 
 **Timeline**:
+
 ```
 t=0    : HTTP request arrives at Azure ingress
 t=10s  : Container starts (image pull + startup)
@@ -211,6 +225,7 @@ t=30s  : Container ready (cold start complete)
 **Answer**: **NO**
 
 **Why?**
+
 1. Supervisor runs **inside** the container (can't stop itself)
 2. Azure monitors **external HTTP traffic** (not internal processes)
 3. Supervisor exit would **break** Azure health checks
@@ -259,6 +274,7 @@ autorestart=true
 ```
 
 **Key Points**:
+
 - ✅ Supervisor runs continuously
 - ✅ Processes auto-restart if crashed
 - ✅ NO exit-on-idle logic
@@ -270,13 +286,13 @@ autorestart=true
 
 ### Working APIs
 
-| API | Status | Behavior |
-|-----|--------|----------|
-| **Create** | ✅ Working | Creates container app + registers storage |
-| **Delete** | ✅ Working | Removes container app |
-| **Stop** | ✅ Fixed | Sets scaling policy (minReplicas=0, maxReplicas=1) |
-| **Start** | ✅ Working | Sets scaling policy (minReplicas=0, maxReplicas=1) |
-| **Get** | ✅ Working | Retrieves container app details |
+| API        | Status     | Behavior                                           |
+| ---------- | ---------- | -------------------------------------------------- |
+| **Create** | ✅ Working | Creates container app + registers storage          |
+| **Delete** | ✅ Working | Removes container app                              |
+| **Stop**   | ✅ Fixed   | Sets scaling policy (minReplicas=0, maxReplicas=1) |
+| **Start**  | ✅ Working | Sets scaling policy (minReplicas=0, maxReplicas=1) |
+| **Get**    | ✅ Working | Retrieves container app details                    |
 
 ### Important Notes
 
@@ -415,20 +431,19 @@ az monitor metrics list \
 
 ## 📊 Summary
 
-| Component | Status | Notes |
-|-----------|--------|-------|
-| **Create API** | ✅ Working | Includes storage registration |
-| **Delete API** | ✅ Working | Removes container app |
-| **Stop API** | ✅ Fixed | maxReplicas=1 (was 0) |
-| **Start API** | ✅ Working | No changes needed |
-| **Auto-Scaling** | ✅ Working | Scale-to-zero enabled |
-| **Deployment** | ✅ Consumption | Serverless, pay-per-second |
-| **Idle Cost** | ✅ $0.00 | True scale-to-zero |
-| **Build** | ✅ Success | 13MB binary |
+| Component        | Status         | Notes                         |
+| ---------------- | -------------- | ----------------------------- |
+| **Create API**   | ✅ Working     | Includes storage registration |
+| **Delete API**   | ✅ Working     | Removes container app         |
+| **Stop API**     | ✅ Fixed       | maxReplicas=1 (was 0)         |
+| **Start API**    | ✅ Working     | No changes needed             |
+| **Auto-Scaling** | ✅ Working     | Scale-to-zero enabled         |
+| **Deployment**   | ✅ Consumption | Serverless, pay-per-second    |
+| **Idle Cost**    | ✅ $0.00       | True scale-to-zero            |
+| **Build**        | ✅ Success     | 13MB binary                   |
 
 ---
 
 **Status**: ✅ **ALL SYSTEMS OPERATIONAL**
 
 **Next Steps**: Deploy and test in DEV environment!
-

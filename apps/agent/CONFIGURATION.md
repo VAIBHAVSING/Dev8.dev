@@ -3,6 +3,7 @@
 ## Overview
 
 The agent can be configured to work with different Azure deployment modes:
+
 - **DEV + ACA**: Development environment using Azure Container Apps (Central India)
 - **PROD + ACI**: Production environment using Azure Container Instances (Central India) - Coming Soon
 
@@ -16,6 +17,7 @@ make config-dev-aca
 ```
 
 This will:
+
 1. Fetch all configuration from Azure
 2. Create/update `.env` file with:
    - Azure subscription and resource group info
@@ -31,6 +33,7 @@ make config-show
 ```
 
 Output:
+
 ```
 Current Agent Configuration:
 ==============================
@@ -49,6 +52,7 @@ make config-validate
 ```
 
 Checks:
+
 - ✓ All required environment variables are set
 - ✓ Deployment mode matches required variables
 - ✓ ACA environment ID is set (for ACA mode)
@@ -75,6 +79,7 @@ CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001
 ### Azure Configuration
 
 **Subscription & Authentication:**
+
 ```bash
 AZURE_SUBSCRIPTION_ID=<from Azure>
 AZURE_TENANT_ID=<from Azure>
@@ -83,6 +88,7 @@ AZURE_CLIENT_SECRET=<service principal secret>
 ```
 
 **Resource Configuration:**
+
 ```bash
 AZURE_RESOURCE_GROUP=dev8-dev-rg
 AZURE_STORAGE_ACCOUNT=dev8devst3ttnbdco3yuv6
@@ -93,6 +99,7 @@ AZURE_DEFAULT_REGION=centralindia
 ### Container Configuration
 
 **Azure Container Registry:**
+
 ```bash
 AZURE_CONTAINER_REGISTRY=dev8devcr3ttnbdco3yuv6.azurecr.io
 REGISTRY_USERNAME=dev8devcr3ttnbdco3yuv6
@@ -100,6 +107,7 @@ REGISTRY_PASSWORD=<from Azure>
 ```
 
 **Container Images:**
+
 ```bash
 CONTAINER_IMAGE_NAME=dev8-workspace:1.1
 CONTAINER_IMAGE=vaibhavsing/dev8-workspace:latest
@@ -109,12 +117,14 @@ REGISTRY_SERVER=index.docker.io
 ### Deployment Mode
 
 **For DEV (ACA):**
+
 ```bash
 AZURE_DEPLOYMENT_MODE=aca
 AZURE_ACA_ENVIRONMENT_ID=/subscriptions/.../dev8-dev-aca-env
 ```
 
 **For PROD (ACI) - Coming Soon:**
+
 ```bash
 # AZURE_DEPLOYMENT_MODE=aci
 # AZURE_RESOURCE_GROUP=dev8-prod-rg
@@ -125,12 +135,12 @@ AZURE_ACA_ENVIRONMENT_ID=/subscriptions/.../dev8-dev-aca-env
 
 ## Makefile Commands
 
-| Command | Description |
-|---------|-------------|
-| `make config-dev-aca` | Configure for DEV with ACA (fetch from Azure) |
+| Command                | Description                                     |
+| ---------------------- | ----------------------------------------------- |
+| `make config-dev-aca`  | Configure for DEV with ACA (fetch from Azure)   |
 | `make config-prod-aci` | Configure for PROD with ACI (not yet available) |
-| `make config-show` | Show current configuration |
-| `make config-validate` | Validate .env configuration |
+| `make config-show`     | Show current configuration                      |
+| `make config-validate` | Validate .env configuration                     |
 
 ---
 
@@ -139,6 +149,7 @@ AZURE_ACA_ENVIRONMENT_ID=/subscriptions/.../dev8-dev-aca-env
 If you need to manually configure the `.env` file:
 
 1. Copy from example:
+
    ```bash
    cp .env.example .env
    ```
@@ -157,6 +168,7 @@ If you need to manually configure the `.env` file:
 The agent is automatically configured when deploying infrastructure:
 
 **From Azure IaC:**
+
 ```bash
 cd ../../in/azure
 make deploy-dev-aca
@@ -189,6 +201,7 @@ Azure Infrastructure
 ### Issue: "Configuration not found"
 
 **Solution:**
+
 ```bash
 make config-dev-aca
 ```
@@ -197,11 +210,13 @@ make config-dev-aca
 
 **Solution:**
 Check which variables are missing:
+
 ```bash
 make config-validate
 ```
 
 Then run:
+
 ```bash
 make config-dev-aca
 ```
@@ -209,6 +224,7 @@ make config-dev-aca
 ### Issue: "Azure CLI not logged in"
 
 **Solution:**
+
 ```bash
 az login
 az account set --subscription 761fc168-2c81-4826-bddf-a188d01d5003
@@ -218,12 +234,14 @@ az account set --subscription 761fc168-2c81-4826-bddf-a188d01d5003
 
 **Solution:**
 Ensure infrastructure is deployed:
+
 ```bash
 cd ../../in/azure
 make status
 ```
 
 If not deployed:
+
 ```bash
 make deploy-dev-aca
 ```
@@ -241,6 +259,7 @@ make deploy-dev-aca
    - Fetches latest credentials
 
 3. **Validate before running the agent**
+
    ```bash
    make config-validate && make dev
    ```
@@ -283,11 +302,13 @@ make deploy-dev-aca
 After configuration:
 
 1. **Start the agent:**
+
    ```bash
    make dev
    ```
 
 2. **Run tests:**
+
    ```bash
    make test
    ```

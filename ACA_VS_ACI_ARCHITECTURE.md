@@ -36,6 +36,7 @@ This document explains the architectural differences between Azure Container App
 ```
 
 **Key Points:**
+
 - ✅ Environment is **shared** across all workspaces
 - ✅ Storage is **registered** with environment before creating container apps
 - ✅ Container apps **reference** storage by name (indirection)
@@ -70,6 +71,7 @@ This document explains the architectural differences between Azure Container App
 ```
 
 **Key Points:**
+
 - ✅ Each container group is **self-contained**
 - ✅ Storage credentials **embedded** directly in each container group
 - ✅ No environment-level storage registration needed
@@ -87,10 +89,10 @@ func (c *Client) RegisterStorageWithEnvironment(
     resourceGroup, environmentID, fileShareName, storageAccountName string,
 ) error {
     storageClient, _ := armappcontainers.NewManagedEnvironmentsStoragesClient(...)
-    
+
     // Fetch storage key dynamically
     storageKey, _ := c.GetStorageAccountKey(ctx, resourceGroup, storageAccountName)
-    
+
     // Configure storage on environment
     storageConfig := armappcontainers.ManagedEnvironmentStorage{
         Properties: &armappcontainers.ManagedEnvironmentStorageProperties{
@@ -102,7 +104,7 @@ func (c *Client) RegisterStorageWithEnvironment(
             },
         },
     }
-    
+
     // Register with environment
     _, err := storageClient.CreateOrUpdate(ctx, resourceGroup, envName, fileShareName, storageConfig, nil)
     return err
@@ -138,14 +140,14 @@ func (c *Client) CreateContainerGroup(...) {
             },
         },
     }
-    
+
     volumeMounts := []*armcontainerinstance.VolumeMount{
         {
             Name:      to.Ptr("dev8-data"),
             MountPath: to.Ptr("/home/dev8"),
         },
     }
-    
+
     // Everything in one call
     containerGroup := armcontainerinstance.ContainerGroup{
         Properties: &armcontainerinstance.ContainerGroupPropertiesProperties{
@@ -165,6 +167,7 @@ func (c *Client) CreateContainerGroup(...) {
 ## Deployment Order Guarantees
 
 ### ACA
+
 ```
 1. Storage Account (Bicep) ✓
 2. ACA Environment (Bicep) ✓
@@ -174,6 +177,7 @@ func (c *Client) CreateContainerGroup(...) {
 ```
 
 ### ACI
+
 ```
 1. Storage Account (Bicep) ✓
 2. File Share (Agent - concurrent) ✓
@@ -183,6 +187,7 @@ func (c *Client) CreateContainerGroup(...) {
 ## When to Use Which
 
 ### Use ACA When:
+
 - ✅ Deploying multiple workspaces in same region
 - ✅ Need centralized storage management
 - ✅ Want to scale to zero (cost savings)
@@ -190,6 +195,7 @@ func (c *Client) CreateContainerGroup(...) {
 - ✅ Prefer microservices architecture
 
 ### Use ACI When:
+
 - ✅ Simple single-container deployments
 - ✅ Want complete isolation per workspace
 - ✅ Don't need shared environment
@@ -199,12 +205,14 @@ func (c *Client) CreateContainerGroup(...) {
 ## Security Considerations
 
 ### ACA
+
 - ✅ Storage keys stored at environment level (fewer copies)
 - ✅ Container apps don't see storage credentials
 - ✅ Easier to rotate keys (update environment, not containers)
 - ⚠️ All containers in environment share storage config
 
 ### ACI
+
 - ✅ Complete isolation per container group
 - ✅ Each workspace has independent credentials
 - ⚠️ Storage keys duplicated across container groups
@@ -213,12 +221,14 @@ func (c *Client) CreateContainerGroup(...) {
 ## Cost Comparison
 
 ### ACA
+
 - 💰 Pay for what you use (scale-to-zero)
 - 💰 Shared environment (no duplication)
 - 💰 Better for variable workloads
 - 💰 Consumption plan: $0/month (pay per second)
 
 ### ACI
+
 - 💰 Pay for allocated resources (always running)
 - 💰 Each container group billed separately
 - 💰 Better for consistent workloads
@@ -226,21 +236,21 @@ func (c *Client) CreateContainerGroup(...) {
 
 ## Summary
 
-| Feature | ACA | ACI |
-|---------|-----|-----|
-| **Storage Registration** | Environment-level (2 steps) | Container-level (1 step) |
-| **Credential Storage** | Environment (centralized) | Per-container (distributed) |
-| **Complexity** | Higher (but more flexible) | Lower (simpler) |
-| **Scalability** | Excellent (scale-to-zero) | Good (manual) |
-| **Cost Efficiency** | Better (consumption) | Good (predictable) |
-| **Deployment Speed** | Slower (extra registration) | Faster (direct) |
-| **Management** | Centralized | Distributed |
+| Feature                  | ACA                         | ACI                         |
+| ------------------------ | --------------------------- | --------------------------- |
+| **Storage Registration** | Environment-level (2 steps) | Container-level (1 step)    |
+| **Credential Storage**   | Environment (centralized)   | Per-container (distributed) |
+| **Complexity**           | Higher (but more flexible)  | Lower (simpler)             |
+| **Scalability**          | Excellent (scale-to-zero)   | Good (manual)               |
+| **Cost Efficiency**      | Better (consumption)        | Good (predictable)          |
+| **Deployment Speed**     | Slower (extra registration) | Faster (direct)             |
+| **Management**           | Centralized                 | Distributed                 |
 
 ---
 
-**Recommendation**: 
+**Recommendation**:
+
 - Use **ACA** for production workspaces (cost-effective, scalable)
 - Use **ACI** for testing or single deployments (simpler)
 
 Both are now fully functional with proper Azure File Share mounting! ✅
-

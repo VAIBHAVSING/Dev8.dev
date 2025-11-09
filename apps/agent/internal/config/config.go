@@ -46,7 +46,7 @@ type AzureConfig struct {
 
 	// Deployment mode: "aci" or "aca"
 	DeploymentMode string
-	
+
 	// Azure Container Apps configuration
 	ContainerAppsEnvironmentID string
 

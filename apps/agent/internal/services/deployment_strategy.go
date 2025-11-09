@@ -33,9 +33,9 @@ func NewDeploymentStrategy(cfg *config.Config, azureClient *azure.Client) *Deplo
 // CreateContainer creates a container using the configured deployment mode (ACI or ACA)
 func (d *DeploymentStrategy) CreateContainer(ctx context.Context, workspaceID, region, resourceGroup string, spec ContainerDeploymentSpec) (*ContainerInfo, error) {
 	mode := d.config.Azure.DeploymentMode
-	
+
 	log.Printf("📦 Creating container using %s mode for workspace %s", mode, workspaceID)
-	
+
 	switch mode {
 	case "aca":
 		return d.createWithACA(ctx, workspaceID, region, resourceGroup, spec)
@@ -49,7 +49,7 @@ func (d *DeploymentStrategy) CreateContainer(ctx context.Context, workspaceID, r
 // GetContainer gets container details using the configured deployment mode
 func (d *DeploymentStrategy) GetContainer(ctx context.Context, workspaceID, region, resourceGroup string) (*ContainerInfo, error) {
 	mode := d.config.Azure.DeploymentMode
-	
+
 	switch mode {
 	case "aca":
 		return d.getWithACA(ctx, workspaceID, resourceGroup)
@@ -63,7 +63,7 @@ func (d *DeploymentStrategy) GetContainer(ctx context.Context, workspaceID, regi
 // DeleteContainer deletes a container using the configured deployment mode
 func (d *DeploymentStrategy) DeleteContainer(ctx context.Context, workspaceID, region, resourceGroup string) error {
 	mode := d.config.Azure.DeploymentMode
-	
+
 	switch mode {
 	case "aca":
 		return d.deleteWithACA(ctx, workspaceID, resourceGroup)
@@ -77,7 +77,7 @@ func (d *DeploymentStrategy) DeleteContainer(ctx context.Context, workspaceID, r
 // StopContainer stops a container using the configured deployment mode
 func (d *DeploymentStrategy) StopContainer(ctx context.Context, workspaceID, region, resourceGroup string) error {
 	mode := d.config.Azure.DeploymentMode
-	
+
 	switch mode {
 	case "aca":
 		return d.stopWithACA(ctx, workspaceID, resourceGroup)
@@ -97,12 +97,12 @@ type ContainerDeploymentSpec struct {
 	StorageAccountName string
 	StorageAccountKey  string
 	UserID             string
-	
+
 	// Registry credentials
 	RegistryServer   string
 	RegistryUsername string
 	RegistryPassword string
-	
+
 	// Environment variables
 	AgentBaseURL       string
 	GitHubToken        string
@@ -119,7 +119,7 @@ type ContainerDeploymentSpec struct {
 func (d *DeploymentStrategy) createWithACI(ctx context.Context, workspaceID, region, resourceGroup string, spec ContainerDeploymentSpec) (*ContainerInfo, error) {
 	containerGroupName := fmt.Sprintf("aci-%s", workspaceID)
 	dnsLabel := fmt.Sprintf("ws-%s", workspaceID)
-	
+
 	aciSpec := azure.ContainerGroupSpec{
 		ContainerName:      "vscode-server",
 		Image:              spec.Image,
@@ -144,18 +144,18 @@ func (d *DeploymentStrategy) createWithACI(ctx context.Context, workspaceID, reg
 		OpenAIAPIKey:       spec.OpenAIAPIKey,
 		GeminiAPIKey:       spec.GeminiAPIKey,
 	}
-	
+
 	if err := d.azureClient.CreateContainerGroup(ctx, region, resourceGroup, containerGroupName, aciSpec); err != nil {
 		return nil, err
 	}
-	
+
 	// Get details
 	containerDetails, err := d.azureClient.GetContainerGroup(ctx, region, resourceGroup, containerGroupName)
 	if err != nil {
 		log.Printf("Warning: failed to get container details: %v", err)
 		return &ContainerInfo{Name: containerGroupName}, nil
 	}
-	
+
 	// Extract FQDN
 	var fqdn string
 	if containerDetails != nil &&
@@ -164,7 +164,7 @@ func (d *DeploymentStrategy) createWithACI(ctx context.Context, workspaceID, reg
 		containerDetails.Properties.IPAddress.Fqdn != nil {
 		fqdn = *containerDetails.Properties.IPAddress.Fqdn
 	}
-	
+
 	return &ContainerInfo{
 		Name: containerGroupName,
 		FQDN: fqdn,
@@ -175,13 +175,13 @@ func (d *DeploymentStrategy) createWithACI(ctx context.Context, workspaceID, reg
 // createWithACA creates a container using Azure Container Apps
 func (d *DeploymentStrategy) createWithACA(ctx context.Context, workspaceID, region, resourceGroup string, spec ContainerDeploymentSpec) (*ContainerInfo, error) {
 	containerAppName := fmt.Sprintf("aca-%s", workspaceID)
-	
+
 	// Get ACA environment ID
 	acaEnvironmentID := d.config.Azure.ContainerAppsEnvironmentID
 	if acaEnvironmentID == "" {
 		return nil, fmt.Errorf("ACA environment ID not configured")
 	}
-	
+
 	acaSpec := azure.ContainerAppSpec{
 		WorkspaceID:        workspaceID,
 		UserID:             spec.UserID,
@@ -201,12 +201,12 @@ func (d *DeploymentStrategy) createWithACA(ctx context.Context, workspaceID, reg
 		GeminiAPIKey:       spec.GeminiAPIKey,
 		AgentBaseURL:       spec.AgentBaseURL,
 	}
-	
+
 	resp, err := d.azureClient.CreateContainerApp(ctx, region, resourceGroup, acaEnvironmentID, acaSpec)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return &ContainerInfo{
 		Name: containerAppName,
 		FQDN: resp.FQDN,
@@ -217,12 +217,12 @@ func (d *DeploymentStrategy) createWithACA(ctx context.Context, workspaceID, reg
 // getWithACI gets container details using ACI
 func (d *DeploymentStrategy) getWithACI(ctx context.Context, workspaceID, region, resourceGroup string) (*ContainerInfo, error) {
 	containerGroupName := fmt.Sprintf("aci-%s", workspaceID)
-	
+
 	containerDetails, err := d.azureClient.GetContainerGroup(ctx, region, resourceGroup, containerGroupName)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var fqdn string
 	if containerDetails != nil &&
 		containerDetails.Properties != nil &&
@@ -230,7 +230,7 @@ func (d *DeploymentStrategy) getWithACI(ctx context.Context, workspaceID, region
 		containerDetails.Properties.IPAddress.Fqdn != nil {
 		fqdn = *containerDetails.Properties.IPAddress.Fqdn
 	}
-	
+
 	return &ContainerInfo{
 		Name: containerGroupName,
 		FQDN: fqdn,
@@ -241,12 +241,12 @@ func (d *DeploymentStrategy) getWithACI(ctx context.Context, workspaceID, region
 // getWithACA gets container details using ACA
 func (d *DeploymentStrategy) getWithACA(ctx context.Context, workspaceID, resourceGroup string) (*ContainerInfo, error) {
 	containerAppName := fmt.Sprintf("aca-%s", workspaceID)
-	
+
 	containerApp, err := d.azureClient.GetContainerApp(ctx, resourceGroup, containerAppName)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var fqdn string
 	if containerApp != nil &&
 		containerApp.Properties != nil &&
@@ -255,7 +255,7 @@ func (d *DeploymentStrategy) getWithACA(ctx context.Context, workspaceID, resour
 		containerApp.Properties.Configuration.Ingress.Fqdn != nil {
 		fqdn = *containerApp.Properties.Configuration.Ingress.Fqdn
 	}
-	
+
 	return &ContainerInfo{
 		Name: containerAppName,
 		FQDN: fqdn,

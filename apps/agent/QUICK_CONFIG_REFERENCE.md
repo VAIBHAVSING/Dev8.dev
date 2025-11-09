@@ -26,16 +26,17 @@ make dev
 
 ## 🔧 Configuration Files
 
-| File | Purpose |
-|------|---------|
-| `.env` | Environment variables (auto-configured) |
-| `.env.example` | Template |
-| `configure-env.sh` | Configuration script |
-| `CONFIGURATION.md` | Full documentation |
+| File               | Purpose                                 |
+| ------------------ | --------------------------------------- |
+| `.env`             | Environment variables (auto-configured) |
+| `.env.example`     | Template                                |
+| `configure-env.sh` | Configuration script                    |
+| `CONFIGURATION.md` | Full documentation                      |
 
 ## 🎯 Key Environment Variables
 
 ### Azure Resources (Auto-configured)
+
 - `AZURE_DEPLOYMENT_MODE=aca`
 - `AZURE_RESOURCE_GROUP=dev8-dev-rg`
 - `AZURE_DEFAULT_REGION=centralindia`
@@ -44,6 +45,7 @@ make dev
 - `AZURE_ACA_ENVIRONMENT_ID=/subscriptions/.../dev8-dev-aca-env`
 
 ### PROD Configuration (Commented Out)
+
 ```bash
 # AZURE_DEPLOYMENT_MODE=aci
 # AZURE_RESOURCE_GROUP=dev8-prod-rg
@@ -53,6 +55,7 @@ make dev
 ## 🔄 Reconfiguration
 
 When infrastructure changes:
+
 ```bash
 cd apps/agent
 make config-dev-aca
@@ -69,4 +72,3 @@ make config-validate
 ## 📖 More Info
 
 See `CONFIGURATION.md` for complete documentation.
-

@@ -71,20 +71,22 @@ Template: &armappcontainers.Template{
 ### Automatic Scale-to-Zero
 
 **When does it happen?**
+
 - Container app scales to **0 replicas** when there are **no active HTTP requests**
 - Typically happens within **2-5 minutes** of last request
 - **No manual action required** (automatic via Azure platform)
 
 **Cold Start Behavior:**
+
 - First request after scale-to-zero: **~10-30 seconds** (container startup)
 - Subsequent requests: **<1 second** (container already running)
 
 ### Scale Rules
 
-| Trigger | Threshold | Action |
-|---------|-----------|--------|
-| **HTTP Traffic** | 0 requests for 2-5 min | Scale to 0 |
-| **HTTP Traffic** | >0 concurrent requests | Scale to 1 |
+| Trigger          | Threshold               | Action           |
+| ---------------- | ----------------------- | ---------------- |
+| **HTTP Traffic** | 0 requests for 2-5 min  | Scale to 0       |
+| **HTTP Traffic** | >0 concurrent requests  | Scale to 1       |
 | **HTTP Traffic** | >10 concurrent requests | Scale to 1 (max) |
 
 **Note**: With `maxReplicas: 1`, we prevent multiple instances per workspace.
@@ -97,15 +99,16 @@ Template: &armappcontainers.Template{
 
 **Pricing Model**: Pay only for **active compute time**
 
-| Resource | Rate | Calculation |
-|----------|------|-------------|
-| **vCPU** | $0.000024 per vCPU-second | $0.0864 per vCPU-hour |
-| **Memory** | $0.000002667 per GB-second | $0.009600 per GB-hour |
-| **HTTP Requests** | First 2 million FREE | Then $0.40 per million |
+| Resource          | Rate                       | Calculation            |
+| ----------------- | -------------------------- | ---------------------- |
+| **vCPU**          | $0.000024 per vCPU-second  | $0.0864 per vCPU-hour  |
+| **Memory**        | $0.000002667 per GB-second | $0.009600 per GB-hour  |
+| **HTTP Requests** | First 2 million FREE       | Then $0.40 per million |
 
 ### Example: 2 vCPU, 4GB RAM Workspace
 
 **Active Usage Costs (per hour):**
+
 ```
 CPU Cost:    2 vCPU × $0.0864/vCPU-hr  = $0.1728/hr
 Memory Cost: 4 GB   × $0.0096/GB-hr    = $0.0384/hr
@@ -115,25 +118,25 @@ Total:                                   $0.2112/hr
 
 **Monthly Costs (Different Usage Patterns):**
 
-| Usage Pattern | Hours/Month | Cost/Month | Annual Cost |
-|---------------|-------------|------------|-------------|
-| **Always On** | 730 hrs | $154.18 | $1,850.16 |
-| **Business Hours** (8hrs×22days) | 176 hrs | $37.17 | $446.08 |
-| **Part-time** (4hrs×20days) | 80 hrs | $16.90 | $202.75 |
-| **On-demand** (10hrs/mo) | 10 hrs | $2.11 | $25.34 |
-| **Idle (scale-to-zero)** | 0 hrs | **$0.00** | **$0.00** |
+| Usage Pattern                    | Hours/Month | Cost/Month | Annual Cost |
+| -------------------------------- | ----------- | ---------- | ----------- |
+| **Always On**                    | 730 hrs     | $154.18    | $1,850.16   |
+| **Business Hours** (8hrs×22days) | 176 hrs     | $37.17     | $446.08     |
+| **Part-time** (4hrs×20days)      | 80 hrs      | $16.90     | $202.75     |
+| **On-demand** (10hrs/mo)         | 10 hrs      | $2.11      | $25.34      |
+| **Idle (scale-to-zero)**         | 0 hrs       | **$0.00**  | **$0.00**   |
 
 ### Cost Comparison: ACA vs ACI
 
 **Same Config**: 2 vCPU, 4GB RAM, Central India
 
-| Metric | ACA (Consumption) | ACI (Dedicated) |
-|--------|-------------------|-----------------|
-| **Idle Cost** | $0.00/month | $154.18/month |
-| **Active (8hr/day)** | $37.17/month | $154.18/month |
-| **Scaling** | Automatic | Manual |
-| **Cold Start** | 10-30 seconds | Instant (always on) |
-| **Best For** | Variable workloads | Consistent workloads |
+| Metric               | ACA (Consumption)  | ACI (Dedicated)      |
+| -------------------- | ------------------ | -------------------- |
+| **Idle Cost**        | $0.00/month        | $154.18/month        |
+| **Active (8hr/day)** | $37.17/month       | $154.18/month        |
+| **Scaling**          | Automatic          | Manual               |
+| **Cold Start**       | 10-30 seconds      | Instant (always on)  |
+| **Best For**         | Variable workloads | Consistent workloads |
 
 ---
 
@@ -158,6 +161,7 @@ func (c *Client) StopContainerApp(...) {
 ```
 
 **Behavior**:
+
 - Sets scaling policy to allow scale-to-zero
 - Container scales to 0 **automatically** when no traffic
 - **NO immediate shutdown** (waits for no traffic)
@@ -173,21 +177,23 @@ func (c *Client) StartContainerApp(...) {
 ```
 
 **Behavior**:
+
 - Ensures scaling policy is configured
 - Container scales to 1 **on first HTTP request**
 - **NO immediate startup** (waits for traffic)
 
 ### The Truth About Scaling
 
-| Action | What Happens | When It Happens | Cost Impact |
-|--------|--------------|-----------------|-------------|
-| **Create Container** | Scales to 1 replica | Immediately | Billing starts |
-| **Send HTTP Request** | Keeps replica at 1 | While traffic exists | Billed per second |
-| **No Traffic** | Auto-scales to 0 | 2-5 min after last request | Billing stops |
-| **Call "Stop" API** | Sets scaling policy | Immediately | No immediate effect |
-| **Call "Start" API** | Sets scaling policy | Immediately | No immediate effect |
+| Action                | What Happens        | When It Happens            | Cost Impact         |
+| --------------------- | ------------------- | -------------------------- | ------------------- |
+| **Create Container**  | Scales to 1 replica | Immediately                | Billing starts      |
+| **Send HTTP Request** | Keeps replica at 1  | While traffic exists       | Billed per second   |
+| **No Traffic**        | Auto-scales to 0    | 2-5 min after last request | Billing stops       |
+| **Call "Stop" API**   | Sets scaling policy | Immediately                | No immediate effect |
+| **Call "Start" API**  | Sets scaling policy | Immediately                | No immediate effect |
 
-**Key Insight**: 
+**Key Insight**:
+
 > Stop/Start APIs **DO NOT** immediately control replicas.  
 > Azure **AUTOMATICALLY** scales based on **HTTP traffic** (or lack thereof).
 
@@ -200,6 +206,7 @@ func (c *Client) StartContainerApp(...) {
 **Short Answer**: **NO** for cost savings (auto-scaling handles it)
 
 **When to use Stop/Start**:
+
 - ✅ Pause workspace before maintenance
 - ✅ Ensure consistent scaling policy
 - ✅ Administrative purposes (mark as "stopped")
@@ -212,12 +219,14 @@ func (c *Client) StartContainerApp(...) {
 **Answer**: **NO** - Let Azure handle it
 
 **Why?**
+
 - Supervisor runs **inside** the container (can't stop itself)
 - Azure monitors **HTTP ingress traffic** (external to container)
 - Container health checks keep it alive (defeats scale-to-zero)
 - Supervisor should manage **internal processes**, not scaling
 
 **Correct Architecture**:
+
 ```
 User Request → Azure Ingress → Container → Supervisor → code-server/SSH
                     ↑
@@ -281,6 +290,7 @@ MaxReplicas: -1  // ERROR: must be > 0
 ```
 
 **Azure Error**:
+
 ```
 ContainerAppInvalidScaleSpec
 The scale options provided for Container App is incorrect.
@@ -296,12 +306,14 @@ maxReplicas must not be less than minReplicas.
 ### Issue 1: Stop API Failed
 
 **Problem**:
+
 ```go
 // ✗ WRONG
 Scale.MaxReplicas = to.Ptr(int32(0))  // Violates Azure rules
 ```
 
 **Fix**:
+
 ```go
 // ✓ CORRECT
 Scale.MaxReplicas = to.Ptr(int32(1))  // Must be > 0
@@ -355,11 +367,13 @@ MaxReplicas: 1  // Single instance sufficient
 ```
 
 **Benefits**:
+
 - Zero cost when idle
 - Automatic startup on first request
 - Good for dev/test environments
 
 **Drawbacks**:
+
 - 10-30s cold start
 - Not suitable for production APIs
 
@@ -371,11 +385,13 @@ MaxReplicas: 3  // Auto-scale under load
 ```
 
 **Benefits**:
+
 - Instant response times
 - High availability
 - Better user experience
 
 **Drawbacks**:
+
 - Always incurs costs
 - Higher monthly bill
 
@@ -398,12 +414,12 @@ MaxReplicas: 3  // Auto-scale under load
 
 ### Resource Limits
 
-| Resource | Consumption Plan Limit |
-|----------|------------------------|
-| **CPU** | 4 vCPU max per container |
-| **Memory** | 8 GB max per container |
-| **Storage** | 10 GB ephemeral |
-| **Persistent Storage** | Azure Files (unlimited) |
+| Resource               | Consumption Plan Limit   |
+| ---------------------- | ------------------------ |
+| **CPU**                | 4 vCPU max per container |
+| **Memory**             | 8 GB max per container   |
+| **Storage**            | 10 GB ephemeral          |
+| **Persistent Storage** | Azure Files (unlimited)  |
 
 ---
 
@@ -417,6 +433,7 @@ MaxReplicas: 3  // Auto-scale under load
 ### 2. Right-Size Resources
 
 **Before**:
+
 ```go
 CPUCores: 4.0    // $0.3456/hr
 MemoryGB: 8.0    // $0.0768/hr
@@ -424,6 +441,7 @@ Total:            $0.4224/hr
 ```
 
 **After** (right-sized):
+
 ```go
 CPUCores: 2.0    // $0.1728/hr
 MemoryGB: 4.0    // $0.0384/hr
@@ -456,18 +474,17 @@ az containerapp delete \
 
 ## 🎯 Summary
 
-| Question | Answer |
-|----------|--------|
-| **Deployment Mode** | Consumption Plan (Serverless) |
-| **Auto-Scaling** | Enabled (scale-to-zero) |
-| **Idle Cost** | $0.00/month |
-| **Active Cost** | $0.2112/hour (2vCPU, 4GB) |
-| **Cold Start** | 10-30 seconds |
-| **Need Manual Stop?** | NO (automatic) |
-| **Supervisor Exit?** | NO (let Azure scale) |
-| **Best For** | Dev/test, variable workloads |
+| Question              | Answer                        |
+| --------------------- | ----------------------------- |
+| **Deployment Mode**   | Consumption Plan (Serverless) |
+| **Auto-Scaling**      | Enabled (scale-to-zero)       |
+| **Idle Cost**         | $0.00/month                   |
+| **Active Cost**       | $0.2112/hour (2vCPU, 4GB)     |
+| **Cold Start**        | 10-30 seconds                 |
+| **Need Manual Stop?** | NO (automatic)                |
+| **Supervisor Exit?**  | NO (let Azure scale)          |
+| **Best For**          | Dev/test, variable workloads  |
 
 ---
 
 **Recommendation**: Keep current configuration (scale-to-zero enabled). Remove manual stop/start logic and trust Azure's automatic scaling.
-

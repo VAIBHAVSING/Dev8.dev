@@ -11,22 +11,25 @@ All Azure Container Instance (ACI) deployment components are correctly configure
 ## ✅ Infrastructure Validation
 
 ### 1. Bicep Template Validation
+
 ```bash
 ✅ PASSED: az deployment group validate --template-file bicep/main.bicep
 ```
 
 **Results:**
+
 - ✅ Template syntax valid
 - ✅ Parameters correctly defined
 - ✅ deployACAEnvironment = false (ACI mode)
 - ✅ Storage module configured
 - ✅ Registry module configured
 - ✅ Monitoring module configured
-- ⚠️  Warnings (non-blocking): Secret outputs (expected for registry credentials)
+- ⚠️ Warnings (non-blocking): Secret outputs (expected for registry credentials)
 
 ### 2. Parameter Files
 
 **Dev Environment (`bicep/parameters/dev.bicepparam`):**
+
 ```bicep
 ✅ environment = 'dev'
 ✅ location = 'eastus'
@@ -36,6 +39,7 @@ All Azure Container Instance (ACI) deployment components are correctly configure
 ```
 
 **Prod Environment (`bicep/parameters/prod.bicepparam`):**
+
 ```bicep
 ✅ environment = 'prod'
 ✅ location = 'centralindia'
@@ -51,6 +55,7 @@ All Azure Container Instance (ACI) deployment components are correctly configure
 ### 1. Azure Client (`internal/azure/client.go`)
 
 **ACI Client Initialization:**
+
 ```go
 ✅ initACIClient() - Correctly initializes ACI client
 ✅ GetACIClient() - Retrieves ACI client by region
@@ -59,6 +64,7 @@ All Azure Container Instance (ACI) deployment components are correctly configure
 ```
 
 **Key Functions:**
+
 - ✅ `NewClient()` - Creates client with DefaultAzureCredential
 - ✅ `initACIClient()` - Initializes per-region ACI clients
 - ✅ `GetACIClient()` - Region-specific client retrieval
@@ -66,6 +72,7 @@ All Azure Container Instance (ACI) deployment components are correctly configure
 ### 2. ACI Container Group Creation (`client.go`)
 
 **CreateContainerGroup() Validation:**
+
 ```go
 ✅ Volume mounting (Azure File Share)
 ✅ Environment variables (workspace, user, agent config)
@@ -79,6 +86,7 @@ All Azure Container Instance (ACI) deployment components are correctly configure
 ```
 
 **Environment Variables Configured:**
+
 - ✅ WORKSPACE_ID, USER_ID
 - ✅ WORKSPACE_DIR, AGENT_BASE_URL
 - ✅ GITHUB_TOKEN (secure)
@@ -86,11 +94,12 @@ All Azure Container Instance (ACI) deployment components are correctly configure
 - ✅ SSH_PUBLIC_KEY
 - ✅ GIT_USER_NAME, GIT_USER_EMAIL
 - ✅ ANTHROPIC_API_KEY, OPENAI_API_KEY, GEMINI_API_KEY (secure)
-- ✅ BACKUP_* configuration
+- ✅ BACKUP\_\* configuration
 
 ### 3. Provider Abstraction (`provider.go`)
 
 **CreateContainer() - Mode Detection:**
+
 ```go
 ✅ Supports "aci" mode (default)
 ✅ Supports empty mode (defaults to ACI)
@@ -100,11 +109,13 @@ All Azure Container Instance (ACI) deployment components are correctly configure
 ```
 
 **DeleteContainer():**
+
 ```go
 ✅ Correctly routes to DeleteContainerGroup() for ACI
 ```
 
 **GetContainer():**
+
 ```go
 ✅ Correctly routes to GetContainerGroup() for ACI
 ✅ Extracts FQDN and provisioning state
@@ -117,6 +128,7 @@ All Azure Container Instance (ACI) deployment components are correctly configure
 ### Agent Environment Variables
 
 **`.env.example` Configuration:**
+
 ```bash
 ✅ AZURE_DEPLOYMENT_MODE=aci  ← DEFAULT MODE
 ✅ AZURE_SUBSCRIPTION_ID
@@ -130,6 +142,7 @@ All Azure Container Instance (ACI) deployment components are correctly configure
 ```
 
 **ACA Variables (not required for ACI):**
+
 ```bash
 ✅ AZURE_ACA_ENVIRONMENT_ID=  ← Empty (not used in ACI mode)
 ```
@@ -154,6 +167,7 @@ All Azure Container Instance (ACI) deployment components are correctly configure
 ### Deployment Steps
 
 **Infrastructure Deployment:**
+
 ```bash
 1. ✅ Check Azure CLI authentication
 2. ✅ Validate Bicep template
@@ -165,6 +179,7 @@ All Azure Container Instance (ACI) deployment components are correctly configure
 ```
 
 **Container Deployment:**
+
 ```bash
 1. ✅ Agent reads AZURE_DEPLOYMENT_MODE=aci
 2. ✅ Agent initializes ACI client for region
@@ -210,6 +225,7 @@ All Azure Container Instance (ACI) deployment components are correctly configure
 ### ACI Container Specifications
 
 **Default Configuration:**
+
 ```bash
 ✅ OS: Linux
 ✅ CPU: Configurable (default: 2 cores)
@@ -221,6 +237,7 @@ All Azure Container Instance (ACI) deployment components are correctly configure
 ```
 
 **Storage:**
+
 ```bash
 ✅ Volume: Azure File Share
 ✅ Mount Path: /home/dev8
@@ -229,6 +246,7 @@ All Azure Container Instance (ACI) deployment components are correctly configure
 ```
 
 **Networking:**
+
 ```bash
 ✅ Public IP address assigned
 ✅ DNS name: <label>.region.azurecontainer.io
@@ -241,6 +259,7 @@ All Azure Container Instance (ACI) deployment components are correctly configure
 ## ✅ Error Handling
 
 ### Client Initialization
+
 ```go
 ✅ Credential creation failure → clear error
 ✅ Region client init failure → error with region name
@@ -248,6 +267,7 @@ All Azure Container Instance (ACI) deployment components are correctly configure
 ```
 
 ### Container Operations
+
 ```go
 ✅ Create failure → descriptive error message
 ✅ Get failure → propagated with context
@@ -260,6 +280,7 @@ All Azure Container Instance (ACI) deployment components are correctly configure
 ## 🧪 Test Scenarios
 
 ### Scenario 1: Fresh ACI Deployment
+
 ```bash
 cd in/azure
 make deploy-dev-aci
@@ -271,6 +292,7 @@ Expected:
 ```
 
 ### Scenario 2: Container Creation
+
 ```bash
 # Agent automatically uses ACI mode
 POST /api/workspaces
@@ -287,6 +309,7 @@ Expected:
 ```
 
 ### Scenario 3: Mode Verification
+
 ```bash
 cd apps/agent
 grep AZURE_DEPLOYMENT_MODE .env
@@ -299,14 +322,14 @@ Expected Output:
 
 ## 📊 Comparison: ACI vs ACA
 
-| Feature | ACI (Current) | ACA |
-|---------|---------------|-----|
-| Deployment | ✅ Working | ✅ Working |
-| Cost | Fixed (24/7) | Variable (scale-to-zero) |
-| Startup | ~30 seconds | ~45 seconds |
-| Networking | Public IP + DNS | Ingress + FQDN |
-| Storage | Azure File Share | Azure File Share |
-| Mode Switch | `set-mode-aci` | `set-mode-aca` |
+| Feature     | ACI (Current)    | ACA                      |
+| ----------- | ---------------- | ------------------------ |
+| Deployment  | ✅ Working       | ✅ Working               |
+| Cost        | Fixed (24/7)     | Variable (scale-to-zero) |
+| Startup     | ~30 seconds      | ~45 seconds              |
+| Networking  | Public IP + DNS  | Ingress + FQDN           |
+| Storage     | Azure File Share | Azure File Share         |
+| Mode Switch | `set-mode-aci`   | `set-mode-aca`           |
 
 ---
 
@@ -330,6 +353,7 @@ Expected Output:
 ### Quick Start Commands
 
 **Deploy Infrastructure (ACI Mode):**
+
 ```bash
 cd in/azure
 make deploy-dev-aci      # Dev environment
@@ -337,6 +361,7 @@ make deploy-prod-aci     # Prod environment
 ```
 
 **Verify Configuration:**
+
 ```bash
 cd apps/agent
 grep AZURE_DEPLOYMENT_MODE .env
@@ -344,6 +369,7 @@ grep AZURE_DEPLOYMENT_MODE .env
 ```
 
 **Deploy Containers:**
+
 ```bash
 cd docker
 make prod-deploy
@@ -357,6 +383,7 @@ make prod-deploy
 **✅ Azure ACI deployment is 100% functional and ready to use.**
 
 **No issues found. All components validated:**
+
 1. ✅ Infrastructure (Bicep templates)
 2. ✅ Agent code (Go)
 3. ✅ Configuration (environment variables)

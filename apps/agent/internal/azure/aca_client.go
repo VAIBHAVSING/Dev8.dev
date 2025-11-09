@@ -21,7 +21,7 @@ type ContainerAppSpec struct {
 	MemoryGB           float64
 	FileShareName      string
 	StorageAccountName string
-	
+
 	// Optional secrets
 	GitHubToken        string
 	CodeServerPassword string
@@ -31,9 +31,9 @@ type ContainerAppSpec struct {
 	AnthropicAPIKey    string
 	OpenAIAPIKey       string
 	GeminiAPIKey       string
-	
+
 	// Agent configuration
-	AgentBaseURL       string
+	AgentBaseURL string
 }
 
 // ContainerAppResponse contains the created container app details
@@ -195,10 +195,10 @@ func (c *Client) CreateContainerApp(ctx context.Context, region, resourceGroup, 
 			Configuration: &armappcontainers.Configuration{
 				ActiveRevisionsMode: to.Ptr(armappcontainers.ActiveRevisionsModeSingle),
 				Ingress: &armappcontainers.Ingress{
-					External:       to.Ptr(true),
-					TargetPort:     to.Ptr(int32(8080)),
-					Transport:      to.Ptr(armappcontainers.IngressTransportMethodHTTP),
-					AllowInsecure:  to.Ptr(false),
+					External:      to.Ptr(true),
+					TargetPort:    to.Ptr(int32(8080)),
+					Transport:     to.Ptr(armappcontainers.IngressTransportMethodHTTP),
+					AllowInsecure: to.Ptr(false),
 					Traffic: []*armappcontainers.TrafficWeight{
 						{
 							LatestRevision: to.Ptr(true),
@@ -410,10 +410,10 @@ func (c *Client) RegisterStorageWithEnvironment(ctx context.Context, resourceGro
 	storageConfig := armappcontainers.ManagedEnvironmentStorage{
 		Properties: &armappcontainers.ManagedEnvironmentStorageProperties{
 			AzureFile: &armappcontainers.AzureFileProperties{
-				AccountName:  to.Ptr(storageAccountName),
-				AccountKey:   to.Ptr(storageKey),
-				ShareName:    to.Ptr(fileShareName),
-				AccessMode:   to.Ptr(armappcontainers.AccessModeReadWrite),
+				AccountName: to.Ptr(storageAccountName),
+				AccountKey:  to.Ptr(storageKey),
+				ShareName:   to.Ptr(fileShareName),
+				AccessMode:  to.Ptr(armappcontainers.AccessModeReadWrite),
 			},
 		},
 	}
@@ -446,4 +446,3 @@ func (c *Client) GetStorageAccountKey(ctx context.Context, resourceGroup, storag
 
 	return *keys.Keys[0].Value, nil
 }
-

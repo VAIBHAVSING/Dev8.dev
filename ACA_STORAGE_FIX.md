@@ -95,13 +95,13 @@ if spec.FileShareName != "" && spec.StorageAccountName != "" {
 func (c *Client) RegisterStorageWithEnvironment(ctx context.Context, resourceGroup, environmentID, fileShareName, storageAccountName string) error {
     // Parse environment name from ID
     envName := extractEnvNameFromID(environmentID)
-    
+
     // Get storage account key
     storageKey, err := c.GetStorageAccountKey(ctx, resourceGroup, storageAccountName)
     if err != nil {
         return fmt.Errorf("failed to get storage account key: %w", err)
     }
-    
+
     // Storage configuration for the environment
     storageConfig := armappcontainers.ManagedEnvironmentStorage{
         Properties: &armappcontainers.ManagedEnvironmentStorageProperties{
@@ -113,7 +113,7 @@ func (c *Client) RegisterStorageWithEnvironment(ctx context.Context, resourceGro
             },
         },
     }
-    
+
     // Register storage with environment
     // The storageName parameter is what container apps will reference
     _, err = envClient.CreateOrUpdateManagedEnvironmentStorage(ctx, resourceGroup, envName, fileShareName, storageConfig, nil)
@@ -129,16 +129,16 @@ func (c *Client) GetStorageAccountKey(ctx context.Context, resourceGroup, storag
     if err != nil {
         return "", fmt.Errorf("failed to create storage client: %w", err)
     }
-    
+
     keys, err := storageClient.ListKeys(ctx, resourceGroup, storageAccountName, nil)
     if err != nil {
         return "", fmt.Errorf("failed to list storage keys: %w", err)
     }
-    
+
     if len(keys.Keys) == 0 {
         return "", fmt.Errorf("no keys found for storage account %s", storageAccountName)
     }
-    
+
     return *keys.Keys[0].Value, nil
 }
 ```
@@ -234,6 +234,7 @@ resource environment 'Microsoft.App/managedEnvironments@2023-05-01' = {
 ```
 
 **Why NO Bicep changes?**
+
 - The environment is shared across ALL workspaces
 - Each workspace creates its own file share dynamically
 - Storage is registered per-workspace via the Azure SDK at runtime
@@ -346,4 +347,3 @@ make dev
 **Date**: 2025-11-09  
 **Impact**: ACA deployments now work correctly with Azure File Share volumes  
 **Breaking Changes**: None (ACI continues to work as before)
-

@@ -27,10 +27,10 @@ This package is internal to the Dev8 monorepo and used via workspace protocol:
 ### Initialize the Client
 
 ```typescript
-import { AgentClient } from '@repo/agent-client';
+import { AgentClient } from "@repo/agent-client";
 
 // First initialization requires base URL
-const client = AgentClient.getInstance('http://localhost:8080');
+const client = AgentClient.getInstance("http://localhost:8080");
 
 // Subsequent calls don't need the URL
 const sameClient = AgentClient.getInstance();
@@ -54,20 +54,23 @@ const live = await client.live();
 
 ```typescript
 const response = await client.createWorkspace({
-  workspaceId: 'unique-workspace-id',
-  userId: 'user-123',
-  name: 'My Workspace',
-  cloudRegion: 'centralindia',
+  workspaceId: "unique-workspace-id",
+  userId: "user-123",
+  name: "My Workspace",
+  cloudRegion: "centralindia",
   cpuCores: 2,
   memoryGB: 4,
   storageGB: 20,
-  baseImage: 'node',
-  githubToken: 'ghp_xxx',
-  codeServerPassword: 'secure-password',
+  baseImage: "node",
+  githubToken: "ghp_xxx",
+  codeServerPassword: "secure-password",
 });
 
 if (response.success) {
-  console.log('Workspace URL:', response.data?.environment.connectionUrls?.vscode);
+  console.log(
+    "Workspace URL:",
+    response.data?.environment.connectionUrls?.vscode,
+  );
 }
 ```
 
@@ -75,18 +78,18 @@ if (response.success) {
 
 ```typescript
 const response = await client.startWorkspace({
-  workspaceId: 'unique-workspace-id',
-  cloudRegion: 'centralindia',
-  userId: 'user-123',
-  name: 'My Workspace',
+  workspaceId: "unique-workspace-id",
+  cloudRegion: "centralindia",
+  userId: "user-123",
+  name: "My Workspace",
   cpuCores: 2,
   memoryGB: 4,
   storageGB: 20,
-  baseImage: 'node',
+  baseImage: "node",
 });
 
 if (response.success) {
-  console.log('Workspace started:', response.data?.environment.status);
+  console.log("Workspace started:", response.data?.environment.status);
 }
 ```
 
@@ -94,12 +97,12 @@ if (response.success) {
 
 ```typescript
 const response = await client.stopWorkspace({
-  workspaceId: 'unique-workspace-id',
-  cloudRegion: 'centralindia',
+  workspaceId: "unique-workspace-id",
+  cloudRegion: "centralindia",
 });
 
 if (response.success) {
-  console.log('Workspace stopped, volumes preserved');
+  console.log("Workspace stopped, volumes preserved");
 }
 ```
 
@@ -107,20 +110,20 @@ if (response.success) {
 
 ```typescript
 const response = await client.deleteWorkspace({
-  workspaceId: 'unique-workspace-id',
-  cloudRegion: 'centralindia',
+  workspaceId: "unique-workspace-id",
+  cloudRegion: "centralindia",
   force: false, // Set to true to force delete running workspace
 });
 
 if (response.success) {
-  console.log('Workspace permanently deleted');
+  console.log("Workspace permanently deleted");
 }
 ```
 
 ### Report Activity
 
 ```typescript
-const response = await client.reportActivity('unique-workspace-id');
+const response = await client.reportActivity("unique-workspace-id");
 ```
 
 ## API Response Format
@@ -143,9 +146,9 @@ All methods return a standard response structure:
 const response = await client.createWorkspace(config);
 
 if (!response.success) {
-  console.error('Error:', response.error);
-  console.error('Message:', response.message);
-  console.error('Code:', response.code);
+  console.error("Error:", response.error);
+  console.error("Message:", response.message);
+  console.error("Code:", response.code);
 }
 ```
 
@@ -162,7 +165,7 @@ import type {
   StopWorkspaceRequest,
   DeleteWorkspaceRequest,
   ApiResponse,
-} from '@repo/agent-client';
+} from "@repo/agent-client";
 ```
 
 ## Notes

@@ -1,4 +1,4 @@
-export { AgentClient } from './client.js';
+export { AgentClient } from "./client.js";
 export type {
   WorkspaceConfig,
   ConnectionUrls,
@@ -9,4 +9,4 @@ export type {
   StopWorkspaceRequest,
   DeleteWorkspaceRequest,
   HealthResponse,
-} from './types.js';
+} from "./types.js";
