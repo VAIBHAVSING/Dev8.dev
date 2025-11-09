@@ -3,10 +3,12 @@ package azure
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	armappcontainers "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/appcontainers/armappcontainers/v2"
+	armstorage "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage"
 )
 
 // ContainerAppSpec defines the specification for creating a container app
@@ -49,6 +51,14 @@ func (c *Client) CreateContainerApp(ctx context.Context, region, resourceGroup, 
 	client, err := armappcontainers.NewContainerAppsClient(c.config.Azure.SubscriptionID, c.credential, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create container apps client: %w", err)
+	}
+
+	// Register storage with ACA environment FIRST (if file share is specified)
+	if spec.FileShareName != "" && spec.StorageAccountName != "" {
+		err = c.RegisterStorageWithEnvironment(ctx, resourceGroup, environmentID, spec.FileShareName, spec.StorageAccountName)
+		if err != nil {
+			return nil, fmt.Errorf("failed to register storage with ACA environment: %w", err)
+		}
 	}
 
 	// Container App name (same naming convention as ACI)
@@ -300,6 +310,8 @@ func (c *Client) DeleteContainerApp(ctx context.Context, resourceGroup, appName 
 }
 
 // StopContainerApp scales a container app to zero replicas
+// NOTE: Azure requires maxReplicas > 0, so we set minReplicas=0, maxReplicas=1
+// The container will scale to zero automatically due to no traffic (Consumption plan)
 func (c *Client) StopContainerApp(ctx context.Context, resourceGroup, appName string) error {
 	client, err := armappcontainers.NewContainerAppsClient(c.config.Azure.SubscriptionID, c.credential, nil)
 	if err != nil {
@@ -312,10 +324,11 @@ func (c *Client) StopContainerApp(ctx context.Context, resourceGroup, appName st
 		return fmt.Errorf("failed to get container app: %w", err)
 	}
 
-	// Update scale to 0 replicas
+	// Update scale: minReplicas=0, maxReplicas=1 (Azure requirement: maxReplicas > 0)
+	// Container will scale to zero automatically with no traffic (Consumption plan behavior)
 	if resp.Properties != nil && resp.Properties.Template != nil && resp.Properties.Template.Scale != nil {
 		resp.Properties.Template.Scale.MinReplicas = to.Ptr(int32(0))
-		resp.Properties.Template.Scale.MaxReplicas = to.Ptr(int32(0))
+		resp.Properties.Template.Scale.MaxReplicas = to.Ptr(int32(1)) // Must be > 0 per Azure rules
 	}
 
 	// Update container app
@@ -333,6 +346,7 @@ func (c *Client) StopContainerApp(ctx context.Context, resourceGroup, appName st
 }
 
 // StartContainerApp scales a container app back to 1 replica
+// Sets minReplicas=0, maxReplicas=1 to allow auto-scaling with traffic
 func (c *Client) StartContainerApp(ctx context.Context, resourceGroup, appName string) error {
 	client, err := armappcontainers.NewContainerAppsClient(c.config.Azure.SubscriptionID, c.credential, nil)
 	if err != nil {
@@ -345,7 +359,7 @@ func (c *Client) StartContainerApp(ctx context.Context, resourceGroup, appName s
 		return fmt.Errorf("failed to get container app: %w", err)
 	}
 
-	// Update scale to 1 replica
+	// Update scale: minReplicas=0, maxReplicas=1 (allows scale-to-zero with traffic-based scaling)
 	if resp.Properties != nil && resp.Properties.Template != nil && resp.Properties.Template.Scale != nil {
 		resp.Properties.Template.Scale.MinReplicas = to.Ptr(int32(0))
 		resp.Properties.Template.Scale.MaxReplicas = to.Ptr(int32(1))
@@ -367,3 +381,69 @@ func (c *Client) StartContainerApp(ctx context.Context, resourceGroup, appName s
 
 	return nil
 }
+
+// RegisterStorageWithEnvironment registers an Azure File Share with an ACA managed environment
+// This MUST be called before creating container apps that reference the storage
+func (c *Client) RegisterStorageWithEnvironment(ctx context.Context, resourceGroup, environmentID, fileShareName, storageAccountName string) error {
+	// Parse environment name from ID
+	// environmentID format: /subscriptions/{sub}/resourceGroups/{rg}/providers/Microsoft.App/managedEnvironments/{name}
+	envName := environmentID
+	if strings.Contains(environmentID, "/") {
+		parts := strings.Split(environmentID, "/")
+		envName = parts[len(parts)-1]
+	}
+
+	// Initialize Managed Environments Storages client (dedicated client for storage operations)
+	storageClient, err := armappcontainers.NewManagedEnvironmentsStoragesClient(c.config.Azure.SubscriptionID, c.credential, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create managed environments storages client: %w", err)
+	}
+
+	// Get storage account key
+	storageKey, err := c.GetStorageAccountKey(ctx, resourceGroup, storageAccountName)
+	if err != nil {
+		return fmt.Errorf("failed to get storage account key: %w", err)
+	}
+
+	// Storage configuration for the environment
+	// The storageName (fileShareName) will be referenced by container apps
+	storageConfig := armappcontainers.ManagedEnvironmentStorage{
+		Properties: &armappcontainers.ManagedEnvironmentStorageProperties{
+			AzureFile: &armappcontainers.AzureFileProperties{
+				AccountName:  to.Ptr(storageAccountName),
+				AccountKey:   to.Ptr(storageKey),
+				ShareName:    to.Ptr(fileShareName),
+				AccessMode:   to.Ptr(armappcontainers.AccessModeReadWrite),
+			},
+		},
+	}
+
+	// Register storage with environment
+	// The storageName parameter (fileShareName) is what container apps will reference in volumes
+	_, err = storageClient.CreateOrUpdate(ctx, resourceGroup, envName, fileShareName, storageConfig, nil)
+	if err != nil {
+		return fmt.Errorf("failed to register storage %s with environment: %w", fileShareName, err)
+	}
+
+	return nil
+}
+
+// GetStorageAccountKey retrieves the primary key for a storage account
+func (c *Client) GetStorageAccountKey(ctx context.Context, resourceGroup, storageAccountName string) (string, error) {
+	storageClient, err := armstorage.NewAccountsClient(c.config.Azure.SubscriptionID, c.credential, nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to create storage client: %w", err)
+	}
+
+	keys, err := storageClient.ListKeys(ctx, resourceGroup, storageAccountName, nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to list storage keys: %w", err)
+	}
+
+	if len(keys.Keys) == 0 {
+		return "", fmt.Errorf("no keys found for storage account %s", storageAccountName)
+	}
+
+	return *keys.Keys[0].Value, nil
+}
+

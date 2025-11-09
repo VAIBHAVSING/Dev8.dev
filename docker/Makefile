@@ -126,10 +126,10 @@ prod-push:  ## Push images to container registry
 		docker push $$ACR_LOGIN_SERVER/dev8-workspace:$(VERSION) && \
 		echo "✅ Images pushed successfully"
 
-prod-deploy:  ## Deploy to Azure Container Instances
-	@echo "🚀 Deploying to Azure Container Instances..."
-	@chmod +x deploy-to-aci.sh
-	@./deploy-to-aci.sh
+prod-deploy:  ## Deploy to Azure (ACI or ACA based on .env.prod)
+	@echo "🚀 Deploying to Azure..."
+	@chmod +x deploy-to-azure.sh
+	@./deploy-to-azure.sh
 
 prod-logs:  ## View production container logs
 	@source .env.prod && \
