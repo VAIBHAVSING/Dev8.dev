@@ -50,14 +50,14 @@ func (c *Client) CreateContainerApp(ctx context.Context, region, resourceGroup, 
 	// Initialize Container Apps client
 	client, err := armappcontainers.NewContainerAppsClient(c.config.Azure.SubscriptionID, c.credential, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create container apps client: %w", err)
+		return nil, fmt.Errorf("workspace %s: failed to create container apps client: %w", spec.WorkspaceID, err)
 	}
 
 	// Register storage with ACA environment FIRST (if file share is specified)
 	if spec.FileShareName != "" && spec.StorageAccountName != "" {
 		err = c.RegisterStorageWithEnvironment(ctx, resourceGroup, environmentID, spec.FileShareName, spec.StorageAccountName)
 		if err != nil {
-			return nil, fmt.Errorf("failed to register storage with ACA environment: %w", err)
+			return nil, fmt.Errorf("workspace %s: failed to register storage with ACA environment: %w", spec.WorkspaceID, err)
 		}
 	}
 
@@ -243,13 +243,13 @@ func (c *Client) CreateContainerApp(ctx context.Context, region, resourceGroup, 
 	// Start creation
 	poller, err := client.BeginCreateOrUpdate(ctx, resourceGroup, appName, containerApp, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to begin container app creation: %w", err)
+		return nil, fmt.Errorf("workspace %s: failed to begin container app creation: %w", spec.WorkspaceID, err)
 	}
 
 	// Wait for completion (typically 30-60 seconds)
 	resp, err := poller.PollUntilDone(ctx, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create container app: %w", err)
+		return nil, fmt.Errorf("workspace %s: failed to create container app: %w", spec.WorkspaceID, err)
 	}
 
 	// Extract FQDN
@@ -282,7 +282,7 @@ func (c *Client) GetContainerApp(ctx context.Context, resourceGroup, appName str
 
 	resp, err := client.Get(ctx, resourceGroup, appName, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get container app: %w", err)
+		return nil, fmt.Errorf("failed to get container app %s: %w", appName, err)
 	}
 
 	return &resp.ContainerApp, nil
@@ -297,13 +297,13 @@ func (c *Client) DeleteContainerApp(ctx context.Context, resourceGroup, appName 
 
 	poller, err := client.BeginDelete(ctx, resourceGroup, appName, nil)
 	if err != nil {
-		return fmt.Errorf("failed to begin container app deletion: %w", err)
+		return fmt.Errorf("failed to begin container app deletion for %s: %w", appName, err)
 	}
 
 	// Wait for deletion (typically 10-30 seconds)
 	_, err = poller.PollUntilDone(ctx, nil)
 	if err != nil {
-		return fmt.Errorf("failed to delete container app: %w", err)
+		return fmt.Errorf("failed to delete container app %s: %w", appName, err)
 	}
 
 	return nil
@@ -321,7 +321,7 @@ func (c *Client) StopContainerApp(ctx context.Context, resourceGroup, appName st
 	// Get current container app
 	resp, err := client.Get(ctx, resourceGroup, appName, nil)
 	if err != nil {
-		return fmt.Errorf("failed to get container app: %w", err)
+		return fmt.Errorf("failed to get container app %s: %w", appName, err)
 	}
 
 	// Stop the app by setting MinReplicas to 0, MaxReplicas to 1
@@ -337,12 +337,12 @@ func (c *Client) StopContainerApp(ctx context.Context, resourceGroup, appName st
 	// Update container app
 	poller, err := client.BeginUpdate(ctx, resourceGroup, appName, resp.ContainerApp, nil)
 	if err != nil {
-		return fmt.Errorf("failed to begin container app update: %w", err)
+		return fmt.Errorf("failed to begin container app update for %s: %w", appName, err)
 	}
 
 	_, err = poller.PollUntilDone(ctx, nil)
 	if err != nil {
-		return fmt.Errorf("failed to stop container app: %w", err)
+		return fmt.Errorf("failed to stop container app %s: %w", appName, err)
 	}
 
 	return nil
@@ -359,7 +359,7 @@ func (c *Client) StartContainerApp(ctx context.Context, resourceGroup, appName s
 	// Get current container app
 	resp, err := client.Get(ctx, resourceGroup, appName, nil)
 	if err != nil {
-		return fmt.Errorf("failed to get container app: %w", err)
+		return fmt.Errorf("failed to get container app %s: %w", appName, err)
 	}
 
 	// Start the app by setting MinReplicas to 1 and MaxReplicas to 1
@@ -372,12 +372,12 @@ func (c *Client) StartContainerApp(ctx context.Context, resourceGroup, appName s
 	// Update container app
 	poller, err := client.BeginUpdate(ctx, resourceGroup, appName, resp.ContainerApp, nil)
 	if err != nil {
-		return fmt.Errorf("failed to begin container app update: %w", err)
+		return fmt.Errorf("failed to begin container app update for %s: %w", appName, err)
 	}
 
 	_, err = poller.PollUntilDone(ctx, nil)
 	if err != nil {
-		return fmt.Errorf("failed to start container app: %w", err)
+		return fmt.Errorf("failed to start container app %s: %w", appName, err)
 	}
 
 	// Wait a moment for the replica to start
@@ -406,7 +406,7 @@ func (c *Client) RegisterStorageWithEnvironment(ctx context.Context, resourceGro
 	// Get storage account key
 	storageKey, err := c.GetStorageAccountKey(ctx, resourceGroup, storageAccountName)
 	if err != nil {
-		return fmt.Errorf("failed to get storage account key: %w", err)
+		return fmt.Errorf("file share %s: failed to get storage account key: %w", fileShareName, err)
 	}
 
 	// Storage configuration for the environment
@@ -426,7 +426,7 @@ func (c *Client) RegisterStorageWithEnvironment(ctx context.Context, resourceGro
 	// The storageName parameter (fileShareName) is what container apps will reference in volumes
 	_, err = storageClient.CreateOrUpdate(ctx, resourceGroup, envName, fileShareName, storageConfig, nil)
 	if err != nil {
-		return fmt.Errorf("failed to register storage %s with environment: %w", fileShareName, err)
+		return fmt.Errorf("file share %s: failed to register storage with environment: %w", fileShareName, err)
 	}
 
 	return nil

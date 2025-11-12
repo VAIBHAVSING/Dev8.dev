@@ -42,7 +42,7 @@ func (d *DeploymentStrategy) CreateContainer(ctx context.Context, workspaceID, r
 	case "aci":
 		return d.createWithACI(ctx, workspaceID, region, resourceGroup, spec)
 	default:
-		return nil, fmt.Errorf("invalid deployment mode: %s (must be 'aci' or 'aca')", mode)
+		return nil, fmt.Errorf("workspace %s: invalid deployment mode: %s (must be 'aci' or 'aca')", workspaceID, mode)
 	}
 }
 
@@ -56,7 +56,7 @@ func (d *DeploymentStrategy) GetContainer(ctx context.Context, workspaceID, regi
 	case "aci":
 		return d.getWithACI(ctx, workspaceID, region, resourceGroup)
 	default:
-		return nil, fmt.Errorf("invalid deployment mode: %s", mode)
+		return nil, fmt.Errorf("workspace %s: invalid deployment mode: %s", workspaceID, mode)
 	}
 }
 
@@ -70,7 +70,7 @@ func (d *DeploymentStrategy) DeleteContainer(ctx context.Context, workspaceID, r
 	case "aci":
 		return d.deleteWithACI(ctx, workspaceID, region, resourceGroup)
 	default:
-		return fmt.Errorf("invalid deployment mode: %s", mode)
+		return fmt.Errorf("workspace %s: invalid deployment mode: %s", workspaceID, mode)
 	}
 }
 
@@ -84,7 +84,7 @@ func (d *DeploymentStrategy) StopContainer(ctx context.Context, workspaceID, reg
 	case "aci":
 		return d.stopWithACI(ctx, workspaceID, region, resourceGroup)
 	default:
-		return fmt.Errorf("invalid deployment mode: %s", mode)
+		return fmt.Errorf("workspace %s: invalid deployment mode: %s", workspaceID, mode)
 	}
 }
 
@@ -152,7 +152,7 @@ func (d *DeploymentStrategy) createWithACI(ctx context.Context, workspaceID, reg
 	// Get details
 	containerDetails, err := d.azureClient.GetContainerGroup(ctx, region, resourceGroup, containerGroupName)
 	if err != nil {
-		log.Printf("Warning: failed to get container details: %v", err)
+		log.Printf("Warning: workspace %s: failed to get container details: %v", workspaceID, err)
 		return &ContainerInfo{Name: containerGroupName}, nil
 	}
 
@@ -179,7 +179,7 @@ func (d *DeploymentStrategy) createWithACA(ctx context.Context, workspaceID, reg
 	// Get ACA environment ID
 	acaEnvironmentID := d.config.Azure.ContainerAppsEnvironmentID
 	if acaEnvironmentID == "" {
-		return nil, fmt.Errorf("ACA environment ID not configured")
+		return nil, fmt.Errorf("workspace %s: ACA environment ID not configured", workspaceID)
 	}
 
 	acaSpec := azure.ContainerAppSpec{

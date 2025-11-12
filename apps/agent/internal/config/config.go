@@ -232,6 +232,16 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("AGENT_BASE_URL is required")
 	}
 
+	// Validate deployment mode
+	if c.Azure.DeploymentMode != "" && c.Azure.DeploymentMode != "aci" && c.Azure.DeploymentMode != "aca" {
+		return fmt.Errorf("AZURE_DEPLOYMENT_MODE must be either 'aci' or 'aca', got '%s'", c.Azure.DeploymentMode)
+	}
+
+	// If ACA mode is enabled, environment ID is required
+	if c.Azure.DeploymentMode == "aca" && c.Azure.ContainerAppsEnvironmentID == "" {
+		return fmt.Errorf("AZURE_ACA_ENVIRONMENT_ID is required when AZURE_DEPLOYMENT_MODE is 'aca'")
+	}
+
 	return nil
 }
 
