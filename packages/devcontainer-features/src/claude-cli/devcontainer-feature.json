@@ -1,0 +1,25 @@
+{
+  "id": "claude-cli",
+  "version": "1.0.0",
+  "name": "Claude CLI",
+  "description": "Installs Claude CLI - a command-line interface for interacting with Anthropic's Claude AI",
+  "documentationURL": "https://github.com/Dev8-Community/Dev8.dev/tree/main/packages/devcontainer-features/src/claude-cli",
+  "options": {
+    "version": {
+      "type": "string",
+      "default": "1.0.0",
+      "description": "Version of Claude CLI to install"
+    },
+    "installPath": {
+      "type": "string",
+      "default": "/usr/local/bin",
+      "description": "Installation path for Claude CLI"
+    },
+    "installShellCompletion": {
+      "type": "boolean",
+      "default": true,
+      "description": "Install shell completion for bash and zsh"
+    }
+  },
+  "installsAfter": ["ghcr.io/devcontainers/features/common-utils"]
+}
