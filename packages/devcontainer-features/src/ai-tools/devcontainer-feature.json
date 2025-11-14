@@ -1,0 +1,40 @@
+{
+  "id": "ai-tools",
+  "version": "1.0.0",
+  "name": "Dev8 AI Tools Bundle",
+  "description": "Installs a comprehensive bundle of AI development tools including GitHub CLI, Copilot, Azure CLI, and productivity utilities",
+  "documentationURL": "https://github.com/Dev8-Community/Dev8.dev/tree/main/packages/devcontainer-features/src/ai-tools",
+  "options": {
+    "installGithubCLI": {
+      "type": "boolean",
+      "default": true,
+      "description": "Install GitHub CLI (gh)"
+    },
+    "installCopilot": {
+      "type": "boolean",
+      "default": true,
+      "description": "Install GitHub Copilot CLI extension"
+    },
+    "installAzureCLI": {
+      "type": "boolean",
+      "default": true,
+      "description": "Install Azure CLI (az)"
+    },
+    "installYq": {
+      "type": "boolean",
+      "default": true,
+      "description": "Install yq YAML processor"
+    },
+    "installTmux": {
+      "type": "boolean",
+      "default": true,
+      "description": "Install tmux with custom configuration"
+    },
+    "setupShellAliases": {
+      "type": "boolean",
+      "default": true,
+      "description": "Setup convenient shell aliases for AI tools"
+    }
+  },
+  "installsAfter": ["ghcr.io/devcontainers/features/common-utils"]
+}
