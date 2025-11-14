@@ -1,0 +1,20 @@
+{
+  "id": "supervisor",
+  "version": "1.0.0",
+  "name": "Dev8 Workspace Supervisor",
+  "description": "Installs the Dev8 workspace supervisor for monitoring, backups, and health checks",
+  "documentationURL": "https://github.com/Dev8-Community/Dev8.dev/tree/main/apps/supervisor",
+  "options": {
+    "version": {
+      "type": "string",
+      "default": "latest",
+      "description": "Version of supervisor to install"
+    },
+    "installPath": {
+      "type": "string",
+      "default": "/usr/local/bin",
+      "description": "Installation path for supervisor binary"
+    }
+  },
+  "installsAfter": ["ghcr.io/devcontainers/features/common-utils"]
+}
