@@ -1,0 +1,189 @@
+name: Build Supervisor Binary
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "apps/supervisor/**"
+      - ".github/workflows/build-supervisor.yml"
+  pull_request:
+    paths:
+      - "apps/supervisor/**"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  build:
+    name: Build Supervisor
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - os: linux
+            arch: amd64
+            goos: linux
+            goarch: amd64
+          - os: linux
+            arch: arm64
+            goos: linux
+            goarch: arm64
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+          cache-dependency-path: apps/supervisor/go.sum
+
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            VERSION="${{ github.sha }}"
+            SHORT_SHA=$(echo $VERSION | cut -c1-7)
+            echo "version=$SHORT_SHA" >> $GITHUB_OUTPUT
+            echo "full_version=$VERSION" >> $GITHUB_OUTPUT
+          else
+            VERSION="pr-${{ github.event.pull_request.number }}"
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "full_version=$VERSION" >> $GITHUB_OUTPUT
+          fi
+          echo "Building version: $(cat $GITHUB_OUTPUT)"
+
+      - name: Install dependencies
+        working-directory: apps/supervisor
+        run: go mod download
+
+      - name: Run tests
+        working-directory: apps/supervisor
+        run: go test -v ./...
+
+      - name: Build binary
+        working-directory: apps/supervisor
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 0
+        run: |
+          cd cmd/supervisor
+          go build \
+            -ldflags="-s -w -X main.version=${{ steps.version.outputs.full_version }}" \
+            -o supervisor-${{ matrix.os }}-${{ matrix.arch }} \
+            .
+
+          # Verify the binary
+          file supervisor-${{ matrix.os }}-${{ matrix.arch }}
+          ls -lh supervisor-${{ matrix.os }}-${{ matrix.arch }}
+
+      - name: Create artifact directory
+        run: |
+          mkdir -p dist/${{ steps.version.outputs.version }}
+          cp apps/supervisor/cmd/supervisor/supervisor-${{ matrix.os }}-${{ matrix.arch }} \
+             dist/${{ steps.version.outputs.version }}/supervisor-${{ matrix.os }}-${{ matrix.arch }}
+
+          # Create checksum
+          cd dist/${{ steps.version.outputs.version }}
+          sha256sum supervisor-${{ matrix.os }}-${{ matrix.arch }} > supervisor-${{ matrix.os }}-${{ matrix.arch }}.sha256
+          cat supervisor-${{ matrix.os }}-${{ matrix.arch }}.sha256
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: supervisor-${{ matrix.os }}-${{ matrix.arch }}-${{ steps.version.outputs.version }}
+          path: dist/${{ steps.version.outputs.version }}/*
+          retention-days: 90
+          if-no-files-found: error
+
+  create-manifest:
+    name: Create Version Manifest
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        run: |
+          VERSION="${{ github.sha }}"
+          SHORT_SHA=$(echo $VERSION | cut -c1-7)
+          echo "version=$SHORT_SHA" >> $GITHUB_OUTPUT
+          echo "full_version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create manifest
+        run: |
+          mkdir -p dist
+
+          cat > dist/manifest.json << EOF
+          {
+            "version": "${{ steps.version.outputs.full_version }}",
+            "short_version": "${{ steps.version.outputs.version }}",
+            "build_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "commit": "${{ github.sha }}",
+            "repository": "${{ github.repository }}",
+            "binaries": {
+              "linux-amd64": {
+                "filename": "supervisor-linux-amd64",
+                "download_url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts",
+                "platform": "linux",
+                "architecture": "amd64"
+              },
+              "linux-arm64": {
+                "filename": "supervisor-linux-arm64",
+                "download_url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts",
+                "platform": "linux",
+                "architecture": "arm64"
+              }
+            }
+          }
+          EOF
+
+          cat dist/manifest.json
+
+      - name: Upload manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: supervisor-manifest-${{ steps.version.outputs.version }}
+          path: dist/manifest.json
+          retention-days: 90
+
+  summary:
+    name: Build Summary
+    needs: [build, create-manifest]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Create summary
+        run: |
+          echo "# Supervisor Build Complete ✓" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Build Information:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Commit: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Branch: \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Workflow Run: [${{ github.run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Built Binaries:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Linux AMD64" >> $GITHUB_STEP_SUMMARY
+          echo "- Linux ARM64" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Download:**" >> $GITHUB_STEP_SUMMARY
+          echo "Artifacts are available in the [workflow run artifacts](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Usage:**" >> $GITHUB_STEP_SUMMARY
+          echo "The supervisor binary is used internally by the DevContainer feature installation." >> $GITHUB_STEP_SUMMARY
+          echo "Artifacts are retained for 90 days and are accessible only to repository contributors." >> $GITHUB_STEP_SUMMARY
