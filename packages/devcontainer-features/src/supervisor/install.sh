@@ -2,12 +2,10 @@
 set -e
 
 # Dev8 Workspace Supervisor Installation Script
-# This script downloads the pre-built supervisor binary from GitHub Actions artifacts
-# The binary is built by the CI pipeline and stored as workflow artifacts
+# Downloads pre-built supervisor binary from consistent GitHub release URL
 
 VERSION=${VERSION:-"latest"}
 INSTALL_PATH=${INSTALLPATH:-"/usr/local/bin"}
-GITHUB_TOKEN=${GITHUB_TOKEN:-""}
 
 echo "Installing Dev8 Workspace Supervisor..."
 
@@ -36,57 +34,47 @@ REPO="VAIBHAVSING/Dev8.dev"
 BINARY_NAME="supervisor"
 PLATFORM="${OS}-${ARCH}"
 
-# Function to download from GitHub Actions artifacts
-download_from_artifacts() {
-    local run_id=$1
-    local artifact_name="supervisor-${PLATFORM}-${VERSION}"
-    
-    echo "Attempting to download from GitHub Actions artifacts..."
-    echo "Run ID: $run_id"
-    echo "Artifact: $artifact_name"
-    
-    # If GITHUB_TOKEN is not provided, try to build from source as fallback
-    if [ -z "$GITHUB_TOKEN" ]; then
-        echo "Warning: GITHUB_TOKEN not set. Cannot download from private artifacts."
-        echo "Falling back to building from source..."
-        return 1
-    fi
-    
-    # Get artifact download URL using GitHub API
-    ARTIFACT_URL=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
-        "https://api.github.com/repos/${REPO}/actions/runs/${run_id}/artifacts" \
-        | grep -o "\"archive_download_url\".*\"https://[^\"]*\"" \
-        | grep "$artifact_name" \
-        | cut -d'"' -f4 \
-        | head -1)
-    
-    if [ -z "$ARTIFACT_URL" ]; then
-        echo "Error: Could not find artifact ${artifact_name}"
-        return 1
-    fi
-    
-    # Download and extract artifact
+# Consistent release URL (never changes!)
+RELEASE_TAG="supervisor-latest"
+DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${RELEASE_TAG}/supervisor-${PLATFORM}"
+CHECKSUM_URL="https://github.com/${REPO}/releases/download/${RELEASE_TAG}/supervisor-${PLATFORM}.sha256"
+
+echo "Downloading supervisor from consistent release URL..."
+echo "URL: $DOWNLOAD_URL"
+
+# Function to download from GitHub release
+download_from_release() {
     TEMP_DIR=$(mktemp -d)
     cd "$TEMP_DIR"
     
-    curl -L -H "Authorization: Bearer $GITHUB_TOKEN" \
-        -o artifact.zip \
-        "$ARTIFACT_URL"
-    
-    unzip -q artifact.zip
-    
-    # Install the binary
-    if [ -f "supervisor-${PLATFORM}" ]; then
-        install -m 755 "supervisor-${PLATFORM}" "$INSTALL_PATH/$BINARY_NAME"
-        cd /
-        rm -rf "$TEMP_DIR"
-        return 0
+    # Download binary
+    if wget -q --show-progress "$DOWNLOAD_URL" -O "$BINARY_NAME" 2>/dev/null; then
+        echo "✓ Binary downloaded successfully"
     else
-        echo "Error: Binary not found in artifact"
+        echo "✗ Failed to download binary"
         cd /
         rm -rf "$TEMP_DIR"
         return 1
     fi
+    
+    # Download and verify checksum if available
+    if wget -q "$CHECKSUM_URL" -O checksum.sha256 2>/dev/null; then
+        echo "Verifying checksum..."
+        if sha256sum -c checksum.sha256 2>/dev/null; then
+            echo "✓ Checksum verification passed"
+        else
+            echo "⚠ Checksum verification failed, but continuing..."
+        fi
+    else
+        echo "⚠ Checksum not available, skipping verification"
+    fi
+    
+    # Install the binary
+    install -m 755 "$BINARY_NAME" "$INSTALL_PATH/$BINARY_NAME"
+    
+    cd /
+    rm -rf "$TEMP_DIR"
+    return 0
 }
 
 # Function to build from source (fallback)
@@ -97,7 +85,7 @@ build_from_source() {
     if ! command -v go &> /dev/null; then
         echo "Go is not installed. Installing Go..."
         GO_VERSION="1.22.0"
-        wget -q "https://go.dev/dl/go${GO_VERSION}.linux-${ARCH}.tar.gz"
+        wget -q --show-progress "https://go.dev/dl/go${GO_VERSION}.linux-${ARCH}.tar.gz"
         tar -C /usr/local -xzf "go${GO_VERSION}.linux-${ARCH}.tar.gz"
         export PATH=$PATH:/usr/local/go/bin
         rm "go${GO_VERSION}.linux-${ARCH}.tar.gz"
@@ -131,45 +119,11 @@ build_from_source() {
 }
 
 # Main installation logic
-if [ "$VERSION" = "latest" ]; then
-    # Try to get the latest successful workflow run
-    if [ -n "$GITHUB_TOKEN" ]; then
-        echo "Fetching latest successful build from GitHub Actions..."
-        LATEST_RUN_ID=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
-            "https://api.github.com/repos/${REPO}/actions/workflows/build-supervisor.yml/runs?status=success&per_page=1" \
-            | grep -o '"id":[0-9]*' \
-            | head -1 \
-            | cut -d':' -f2)
-        
-        if [ -n "$LATEST_RUN_ID" ]; then
-            echo "Found latest run: $LATEST_RUN_ID"
-            if download_from_artifacts "$LATEST_RUN_ID"; then
-                echo "✓ Downloaded pre-built binary from GitHub Actions"
-            else
-                build_from_source
-            fi
-        else
-            echo "No successful workflow runs found, building from source..."
-            build_from_source
-        fi
-    else
-        # No token provided, build from source
-        build_from_source
-    fi
+if download_from_release; then
+    echo "✓ Installed supervisor from GitHub release"
 else
-    # Specific version requested
-    # For now, treat as build from source or specific run ID
-    if [[ "$VERSION" =~ ^[0-9]+$ ]]; then
-        # Version is a run ID
-        if download_from_artifacts "$VERSION"; then
-            echo "✓ Downloaded pre-built binary from GitHub Actions"
-        else
-            build_from_source
-        fi
-    else
-        # Try to find a run with this version
-        build_from_source
-    fi
+    echo "Failed to download from release, falling back to build from source..."
+    build_from_source
 fi
 
 # Verify installation
@@ -185,4 +139,7 @@ fi
 mkdir -p /etc/dev8/supervisor
 echo "✓ Created configuration directory at /etc/dev8/supervisor"
 
+echo ""
 echo "Installation complete!"
+echo "Binary location: $INSTALL_PATH/$BINARY_NAME"
+echo "Downloaded from: $DOWNLOAD_URL"

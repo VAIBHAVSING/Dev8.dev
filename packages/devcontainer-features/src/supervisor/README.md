@@ -34,13 +34,15 @@ The supervisor provides:
 
 The feature supports multiple installation methods:
 
-1. **Pre-built Binaries (Preferred)**: Downloads pre-built binaries from GitHub Actions artifacts
-   - Requires `GITHUB_TOKEN` environment variable for private repositories
+1. **Pre-built Binaries (Preferred)**: Downloads from consistent GitHub release URL
+   - **Consistent URL**: Always downloads from `supervisor-latest` release tag
+   - **No authentication required**: Public release URLs
    - Fast installation (<10 seconds)
    - Multi-architecture support (amd64, arm64)
+   - URLs never change between builds
 
 2. **Build from Source (Fallback)**: Compiles supervisor from source code
-   - Used when GitHub token is not available
+   - Used when download fails
    - Requires Go 1.22+ (automatically installed if missing)
    - Takes 2-3 minutes
 
@@ -68,45 +70,32 @@ The supervisor is typically started automatically by the Dev8 platform. To run m
 supervisor
 ```
 
-## Authentication
-
-For private repositories, the installation requires a GitHub token with artifact read access:
-
-```json
-{
-  "containerEnv": {
-    "GITHUB_TOKEN": "${localEnv:GITHUB_TOKEN}"
-  },
-  "features": {
-    "ghcr.io/dev8-community/devcontainer-features/supervisor:1": {}
-  }
-}
-```
-
 ## Binary Distribution
 
 The supervisor binaries are built automatically by GitHub Actions on every commit to `main`:
 
 - Workflow: `.github/workflows/build-supervisor.yml`
-- Artifacts are stored for 90 days
+- Released with consistent tag: `supervisor-latest`
 - Available for Linux AMD64 and ARM64
-- Not published as public releases (internal tool)
+- URLs never change between builds
 
-## Development
+**Consistent Download URLs:**
 
-To test with a specific build:
+- AMD64: `https://github.com/VAIBHAVSING/Dev8.dev/releases/download/supervisor-latest/supervisor-linux-amd64`
+- ARM64: `https://github.com/VAIBHAVSING/Dev8.dev/releases/download/supervisor-latest/supervisor-linux-arm64`
 
-```json
-{
-  "features": {
-    "ghcr.io/dev8-community/devcontainer-features/supervisor:1": {
-      "version": "1234567890"
-    }
-  }
-}
-```
+These URLs always point to the latest build, so the DevContainer feature never needs updating!
 
-Where `1234567890` is the GitHub Actions run ID.
+## How It Works
+
+When you install the feature:
+
+1. The install script downloads from the **consistent release URL**
+2. The `supervisor-latest` release tag is automatically updated on every merge to `main`
+3. The URL never changes, but the binary content is always the latest version
+4. If download fails, it automatically builds from source as fallback
+
+This means **zero maintenance** - the feature always gets the latest supervisor binary without any updates needed!
 
 ## More Information
 
