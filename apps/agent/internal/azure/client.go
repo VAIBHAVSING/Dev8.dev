@@ -330,14 +330,11 @@ func (c *Client) StopContainerGroup(ctx context.Context, region, resourceGroup, 
 		return fmt.Errorf("failed to get ACI client for region %s: %w", region, err)
 	}
 
-	fmt.Printf("DEBUG: Attempting to stop container group: %s in resource group: %s, region: %s\n", name, resourceGroup, region)
-
 	_, err = client.Stop(ctx, resourceGroup, name, nil)
 	if err != nil {
 		return fmt.Errorf("failed to stop container group %s in resource group %s: %w", name, resourceGroup, err)
 	}
 
-	fmt.Printf("DEBUG: Successfully called Stop API for container group: %s\n", name)
 	return nil
 }
 

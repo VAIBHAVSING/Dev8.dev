@@ -296,27 +296,13 @@ func (d *DeploymentStrategy) deleteWithACA(ctx context.Context, workspaceID, res
 // stopWithACI stops a container using ACI (keeps it in stopped state)
 func (d *DeploymentStrategy) stopWithACI(ctx context.Context, workspaceID, region, resourceGroup string) error {
 	containerGroupName := fmt.Sprintf("aci-%s", workspaceID)
-	log.Printf("DEBUG: stopWithACI called for workspace %s, container group: %s", workspaceID, containerGroupName)
-	err := d.azureClient.StopContainerGroup(ctx, region, resourceGroup, containerGroupName)
-	if err != nil {
-		log.Printf("ERROR: stopWithACI failed for %s: %v", containerGroupName, err)
-	} else {
-		log.Printf("DEBUG: stopWithACI succeeded for %s", containerGroupName)
-	}
-	return err
+	return d.azureClient.StopContainerGroup(ctx, region, resourceGroup, containerGroupName)
 }
 
-// stopWithACA stops a container using ACA (scales to zero)
+// stopWithACA stops a container using ACA (uses native Stop API)
 func (d *DeploymentStrategy) stopWithACA(ctx context.Context, workspaceID, resourceGroup string) error {
 	containerAppName := fmt.Sprintf("aca-%s", workspaceID)
-	log.Printf("DEBUG: stopWithACA called for workspace %s, container app: %s", workspaceID, containerAppName)
-	err := d.azureClient.StopContainerApp(ctx, resourceGroup, containerAppName)
-	if err != nil {
-		log.Printf("ERROR: stopWithACA failed for %s: %v", containerAppName, err)
-	} else {
-		log.Printf("DEBUG: stopWithACA succeeded for %s (scaled to minReplicas=0, will stop when no traffic)", containerAppName)
-	}
-	return err
+	return d.azureClient.StopContainerApp(ctx, resourceGroup, containerAppName)
 }
 
 // startWithACI starts a container using ACI (starts stopped container or creates new one)
