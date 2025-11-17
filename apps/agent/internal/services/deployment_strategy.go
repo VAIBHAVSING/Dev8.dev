@@ -293,10 +293,10 @@ func (d *DeploymentStrategy) deleteWithACA(ctx context.Context, workspaceID, res
 	return d.azureClient.DeleteContainerApp(ctx, resourceGroup, containerAppName)
 }
 
-// stopWithACI stops a container using ACI (deletes it)
+// stopWithACI stops a container using ACI (keeps it in stopped state)
 func (d *DeploymentStrategy) stopWithACI(ctx context.Context, workspaceID, region, resourceGroup string) error {
 	containerGroupName := fmt.Sprintf("aci-%s", workspaceID)
-	return d.azureClient.DeleteContainerGroup(ctx, region, resourceGroup, containerGroupName)
+	return d.azureClient.StopContainerGroup(ctx, region, resourceGroup, containerGroupName)
 }
 
 // stopWithACA stops a container using ACA (scales to zero)
@@ -305,11 +305,38 @@ func (d *DeploymentStrategy) stopWithACA(ctx context.Context, workspaceID, resou
 	return d.azureClient.StopContainerApp(ctx, resourceGroup, containerAppName)
 }
 
-// startWithACI starts a container using ACI (creates new container group)
-// Since ACI stop deletes the container, we need to recreate it
+// startWithACI starts a container using ACI (starts stopped container or creates new one)
 func (d *DeploymentStrategy) startWithACI(ctx context.Context, workspaceID, region, resourceGroup string, spec ContainerDeploymentSpec) (*ContainerInfo, error) {
-	// For ACI, starting is the same as creating
-	return d.createWithACI(ctx, workspaceID, region, resourceGroup, spec)
+	containerGroupName := fmt.Sprintf("aci-%s", workspaceID)
+
+	// Check if container group exists
+	existingContainer, err := d.azureClient.GetContainerGroup(ctx, region, resourceGroup, containerGroupName)
+	if err != nil {
+		// Container doesn't exist, create a new one
+		log.Printf("Container group %s not found, creating new one", containerGroupName)
+		return d.createWithACI(ctx, workspaceID, region, resourceGroup, spec)
+	}
+
+	// Container exists, check its state and start it if stopped
+	log.Printf("Container group %s exists, starting it", containerGroupName)
+	if err := d.azureClient.StartContainerGroup(ctx, region, resourceGroup, containerGroupName); err != nil {
+		return nil, fmt.Errorf("failed to start container group: %w", err)
+	}
+
+	// Return existing container info
+	var fqdn string
+	if existingContainer != nil &&
+		existingContainer.Properties != nil &&
+		existingContainer.Properties.IPAddress != nil &&
+		existingContainer.Properties.IPAddress.Fqdn != nil {
+		fqdn = *existingContainer.Properties.IPAddress.Fqdn
+	}
+
+	return &ContainerInfo{
+		Name: containerGroupName,
+		FQDN: fqdn,
+		ID:   containerGroupName,
+	}, nil
 }
 
 // startWithACA starts a container using ACA (scales from zero to one)

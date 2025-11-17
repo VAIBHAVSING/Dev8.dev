@@ -37,7 +37,7 @@ Dev8 Agent is a stateless Go microservice that orchestrates Azure Container Inst
 - **Stateless**: No database, Next.js is source of truth
 - **Concurrent**: File shares + ACI created simultaneously
 - **Resilient**: Automatic cleanup on failures
-- **Fast Restart**: 15-20s with volume reuse
+- **Fast Restart**: 5-10s when restarting stopped containers
 
 ---
 
@@ -88,12 +88,12 @@ FQDN: ws-clxxx-yyyy-zzzz-aaaa-bbbb.centralindia.azurecontainer.io
 
 ### Operation Times
 
-| Operation            | Time       | Notes                      |
-| -------------------- | ---------- | -------------------------- |
-| **Create Workspace** | 2m10-2m15s | All operations concurrent  |
-| **Start Workspace**  | 15-20s     | ⚡ Reuses existing volumes |
-| **Stop Workspace**   | 2s         | Deletes container only     |
-| **Delete Workspace** | 5s         | Removes all resources      |
+| Operation            | Time       | Notes                           |
+| -------------------- | ---------- | ------------------------------- |
+| **Create Workspace** | 2m10-2m15s | All operations concurrent       |
+| **Start Workspace**  | 5-10s      | ⚡ Restarts stopped container   |
+| **Stop Workspace**   | 2s         | Stops container (keeps volumes) |
+| **Delete Workspace** | 5s         | Removes all resources           |
 
 ### Create Workspace Breakdown
 
@@ -144,11 +144,11 @@ TOTAL                     ~2m18s
    💰 $35/month (while running)
 
 3️⃣ STOP (End of Day)
-   ↓ 2s - Container deleted
-   💰 $1-2/month (volumes only)
+   ↓ 2s - Container stopped
+   💰 Reduced cost (container stopped, volumes preserved)
 
 4️⃣ START (Next Day)
-   ↓ 15-20s - Container recreated
+   ↓ 5-10s - Container restarted
    💰 $35/month (running again)
    ✅ All files preserved!
 ```
@@ -325,7 +325,7 @@ Content-Type: application/json
 }
 ```
 
-**Response (200 OK) - After ~15-20s:**
+**Response (200 OK) - After ~5-10s:**
 
 ```json
 {
@@ -348,10 +348,10 @@ Content-Type: application/json
 **Agent Logs:**
 
 ```
-2025/10/27 15:00:00 🚀 Starting workspace clxxx-yyyy-zzzz-aaaa-bbbb (checking volumes...)
-2025/10/27 15:00:01 ✅ Volumes verified: workspace=fs-clxxx-..., home=fs-clxxx-...-home
-2025/10/27 15:00:01 📦 Creating new container instance with existing volumes...
-2025/10/27 15:00:18 ✅ Workspace clxxx-yyyy-zzzz-aaaa-bbbb started successfully (reused existing volumes)
+2025/10/27 15:00:00 🚀 Starting workspace clxxx-yyyy-zzzz-aaaa-bbbb (checking volume...)
+2025/10/27 15:00:01 ✅ Unified volume verified: fs-clxxx-yyyy-zzzz-aaaa-bbbb
+2025/10/27 15:00:01 📦 Starting container instance with existing volumes...
+2025/10/27 15:00:08 ✅ Workspace clxxx-yyyy-zzzz-aaaa-bbbb started successfully (reused existing volumes)
 ```
 
 ---
@@ -379,7 +379,7 @@ Content-Type: application/json
   "message": "Workspace stopped successfully",
   "data": {
     "workspaceId": "clxxx-yyyy-zzzz-aaaa-bbbb",
-    "message": "Container deleted, volumes preserved. Restart anytime to resume work."
+    "message": "Container stopped, volumes preserved. Restart anytime to resume work."
   }
 }
 ```
@@ -387,8 +387,8 @@ Content-Type: application/json
 **Agent Logs:**
 
 ```
-2025/10/27 18:00:00 🛑 Stopping workspace clxxx-yyyy-zzzz-aaaa-bbbb: DELETING container (keeping volumes)
-2025/10/27 18:00:02 ✅ Workspace clxxx-yyyy-zzzz-aaaa-bbbb stopped (container deleted, volumes persisted for fast restart)
+2025/10/27 18:00:00 🛑 Stopping workspace clxxx-yyyy-zzzz-aaaa-bbbb (releasing compute, preserving storage)
+2025/10/27 18:00:02 ✅ Workspace clxxx-yyyy-zzzz-aaaa-bbbb stopped successfully (compute released, storage preserved for fast restart)
 ```
 
 ---
