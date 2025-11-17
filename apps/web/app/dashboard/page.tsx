@@ -1,223 +1,227 @@
 "use client";
 
-import { useSession, signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
-import Link from "next/link";
-import Image from "next/image";
+import { useEffect, useState } from "react";
+import { Sidebar } from "@/components/sidebar";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  Activity,
+  Code,
+  GitBranch,
+  Terminal,
+  Zap,
+  TrendingUp,
+  Clock,
+  Loader2,
+} from "lucide-react";
 
 export default function Dashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
-    if (status === "loading") return; // Still loading
-
-    if (!session) {
-      router.push("/signin");
-    }
+    if (status === "loading") return;
+    if (!session) router.push("/signin");
   }, [session, status, router]);
 
-  if (status === "loading") {
+  // Workspace data hooks must be declared before any return to keep hook order stable
+  type Workspace = { id: string | number; name: string; status: "running" | "stopped" };
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [loadingWs, setLoadingWs] = useState(true);
+
+  // Fetch dynamic workspaces and keep them fresh
+  useEffect(() => {
+    let timer: ReturnType<typeof setInterval> | undefined;
+    async function load() {
+      try {
+        const res = await fetch("/api/workspaces", { cache: "no-store" });
+        const j = await res.json();
+        setWorkspaces(j.workspaces ?? []);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoadingWs(false);
+      }
+    }
+    if (session) {
+      load();
+      timer = setInterval(load, 10000);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [session]);
+
+  if (!mounted || status === "loading") {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Loading...</div>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <div className="text-lg text-muted-foreground">Loading your workspace...</div>
+        </div>
       </div>
     );
   }
 
-  if (!session) {
-    return null; // Will redirect
-  }
+  if (!session) return null;
+
+  
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <Link href="/" className="text-xl font-bold text-gray-900">
-                Dev8.dev
-              </Link>
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      <div className="fixed inset-0 -z-10 grid-background opacity-20" />
+      <div className="fixed inset-0 -z-10">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl pulse-glow" />
+        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-secondary/10 rounded-full blur-3xl pulse-glow" style={{ animationDelay: "1s" }} />
+      </div>
+
+      <Sidebar />
+
+      <main className="ml-64 min-h-screen transition-all duration-300">
+        <div className="container mx-auto px-8 py-8">
+          {/* Top bar with search + new workspace */}
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-4 w-full max-w-2xl">
+              <div className="relative w-full">
+                <input
+                  aria-label="Search workspaces"
+                  placeholder="Search workspaces..."
+                  className="w-full rounded-lg border border-border bg-card px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+              </div>
             </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-gray-700">
-                {session.user?.name || session.user?.email}
-              </span>
-              <button
-                onClick={() => signOut()}
-                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-              >
-                Sign Out
+
+            <div className="flex items-center gap-4">
+              <Button onClick={() => router.push("/workspaces/new")} className="bg-gradient-to-r from-primary to-secondary">
+                + New Workspace
+              </Button>
+              <button className="h-9 w-9 rounded-md bg-card border border-border flex items-center justify-center text-muted-foreground">
+                <span>🔔</span>
               </button>
+              <div className="h-9 w-9 rounded-full bg-card border border-border flex items-center justify-center text-muted-foreground">R</div>
             </div>
           </div>
-        </div>
-      </nav>
 
-      <main className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-        <div className="md:flex md:items-center md:justify-between mb-8">
-          <div className="flex-1 min-w-0">
-            <h2 className="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">
-              Dashboard
-            </h2>
-            <p className="mt-1 text-sm text-gray-500">
-              Welcome to your protected dashboard!
-            </p>
-          </div>
-        </div>
+          {/* Heading */}
+          <h2 className="text-2xl font-semibold mb-4">Your Workspaces</h2>
 
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {/* Profile Card */}
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="p-5">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  {session.user?.image ? (
-                    <Image
-                      className="h-10 w-10 rounded-full"
-                      src={session.user.image}
-                      alt="Profile"
-                      width={40}
-                      height={40}
-                    />
-                  ) : (
-                    <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
-                      <span className="text-gray-600 font-medium">
-                        {session.user?.name?.[0] ||
-                          session.user?.email?.[0] ||
-                          "U"}
-                      </span>
+          {/* Workspace cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            {(loadingWs ? [1,2,3].map(n => ({ id: n, name: "Loading...", status: "running" as const })) : workspaces).map((ws) => (
+              <Card key={ws.id} className="border-border bg-card/50 backdrop-blur">
+                <div className="p-4">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="text-lg font-semibold text-foreground">{ws.name}</h3>
+                      <p className={`text-sm mt-1 ${ws.status === "running" ? "text-green-500" : "text-rose-500"}`}>
+                        {ws.status === "running" ? "Running" : "Stopped"}
+                      </p>
                     </div>
-                  )}
+                  </div>
+
+                  <div className="h-px my-4 bg-border" />
+
+                  <div className="flex items-center justify-between text-sm text-muted-foreground">
+                    <div className="flex items-center gap-4">
+                      <button onClick={() => router.push(`/workspaces/${ws.id}/ide`)} className="text-primary hover:underline">Open IDE</button>
+                      <button
+                        onClick={async () => {
+                          try {
+                            const endpoint = ws.status === 'running' 
+                              ? `/api/workspaces/${ws.id}/stop` 
+                              : `/api/workspaces/${ws.id}/start`;
+                            const res = await fetch(endpoint, { method: 'POST' });
+                            if (res.ok) {
+                              // Reload workspaces
+                              const wsRes = await fetch("/api/workspaces", { cache: "no-store" });
+                              const j = await wsRes.json();
+                              setWorkspaces(j.workspaces ?? []);
+                            }
+                          } catch (e) {
+                            console.error('Failed to toggle workspace:', e);
+                          }
+                        }}
+                        className="hover:underline"
+                      >
+                        {ws.status === 'running' ? 'Stop' : 'Start'}
+                      </button>
+                      <button
+                        onClick={async () => { 
+                          try {
+                            const res = await fetch(`/api/workspaces/${ws.id}/clone`, { method: 'POST' });
+                            if (res.ok) {
+                              // Reload workspaces to show the new clone
+                              const wsRes = await fetch("/api/workspaces", { cache: "no-store" });
+                              const j = await wsRes.json();
+                              setWorkspaces(j.workspaces ?? []);
+                              alert('Workspace cloned successfully!');
+                            } else {
+                              const error = await res.json();
+                              alert(`Failed to clone workspace: ${error.message || 'Unknown error'}`);
+                            }
+                          } catch (e) {
+                            console.error('Failed to clone workspace:', e);
+                            alert('Failed to clone workspace');
+                          }
+                        }}
+                        className="hover:underline"
+                      >
+                        Clone
+                      </button>
+                      <button
+                        onClick={async () => { 
+                          if (!confirm(`Are you sure you want to delete "${ws.name}"?`)) return;
+                          try {
+                            const res = await fetch(`/api/workspaces/${ws.id}`, { method: 'DELETE' });
+                            if (res.ok) {
+                              // Remove from list
+                              setWorkspaces(workspaces.filter(w => w.id !== ws.id));
+                            } else {
+                              alert('Failed to delete workspace');
+                            }
+                          } catch (e) {
+                            console.error('Failed to delete workspace:', e);
+                            alert('Failed to delete workspace');
+                          }
+                        }}
+                        className="text-rose-500 hover:underline"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                    <div className="text-xs text-muted-foreground">&nbsp;</div>
+                  </div>
                 </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">
-                      Profile
-                    </dt>
-                    <dd className="text-lg font-medium text-gray-900">
-                      {session.user?.name || "Anonymous User"}
-                    </dd>
-                  </dl>
-                </div>
-              </div>
-            </div>
-            <div className="bg-gray-50 px-5 py-3">
-              <div className="text-sm">
-                <Link
-                  href="/profile"
-                  className="font-medium text-indigo-600 hover:text-indigo-500"
-                >
-                  View profile
-                </Link>
-              </div>
-            </div>
+              </Card>
+            ))}
           </div>
 
-          {/* Session Info Card */}
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="p-5">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <svg
-                    className="h-8 w-8 text-gray-400"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                    />
-                  </svg>
-                </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">
-                      Session Status
-                    </dt>
-                    <dd className="text-lg font-medium text-gray-900">
-                      Active
-                    </dd>
-                  </dl>
-                </div>
+          {/* Two panels below */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="border-border bg-card/50 px-4 py-6">
+              <h3 className="text-lg font-semibold">Create a Custom Template</h3>
+              <p className="text-sm text-muted-foreground mt-2">Build a base environment with your preferred tools and dotfiles.</p>
+              <div className="mt-4">
+                <Button onClick={() => router.push('/templates/new')} className="bg-gradient-to-r from-primary to-secondary">
+                  Build Template
+                </Button>
               </div>
-            </div>
-            <div className="bg-gray-50 px-5 py-3">
-              <div className="text-sm">
-                <span className="font-medium text-green-600">
-                  Authenticated
-                </span>
-              </div>
-            </div>
-          </div>
+            </Card>
 
-          {/* Settings Card */}
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="p-5">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <svg
-                    className="h-8 w-8 text-gray-400"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                    />
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                    />
-                  </svg>
-                </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">
-                      Settings
-                    </dt>
-                    <dd className="text-lg font-medium text-gray-900">
-                      Account Settings
-                    </dd>
-                  </dl>
-                </div>
+            <Card className="border-border bg-card/50 px-4 py-6">
+              <h3 className="text-lg font-semibold">Start from a Repository</h3>
+              <p className="text-sm text-muted-foreground mt-2">Create a new workspace directly from a Git repository URL.</p>
+              <div className="mt-4 flex gap-2">
+                <input placeholder="Paste a Git Repository URL..." className="flex-1 rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground" />
+                <Button variant="outline" disabled className="opacity-60">Create</Button>
               </div>
-            </div>
-            <div className="bg-gray-50 px-5 py-3">
-              <div className="text-sm">
-                <Link
-                  href="/settings"
-                  className="font-medium text-indigo-600 hover:text-indigo-500"
-                >
-                  Manage settings
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Session Details */}
-        <div className="mt-8">
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="px-4 py-5 sm:p-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-                Session Details
-              </h3>
-              <div className="bg-gray-50 rounded-md p-4">
-                <pre className="text-sm text-gray-800 overflow-x-auto">
-                  {JSON.stringify(session, null, 2)}
-                </pre>
-              </div>
-            </div>
+            </Card>
           </div>
         </div>
       </main>

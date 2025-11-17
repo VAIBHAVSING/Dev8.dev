@@ -2,27 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 html,
 body {
   max-width: 100vw;
   overflow-x: hidden;
-}
-
-body {
-  color: var(--foreground);
-  background: var(--background);
 }
 
 * {
@@ -36,19 +19,161 @@ a {
   text-decoration: none;
 }
 
-.imgDark {
-  display: none;
+@layer base {
+  :root {
+    --background: 0 0% 3%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 6%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 4%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 189 100% 50%;
+    --primary-foreground: 0 0% 0%;
+    --secondary: 271 81% 56%;
+    --secondary-foreground: 0 0% 100%;
+    --accent: 142 76% 56%;
+    --accent-foreground: 0 0% 0%;
+    --muted: 0 0% 12%;
+    --muted-foreground: 0 0% 65%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 15%;
+    --input: 0 0% 12%;
+    --ring: 189 100% 50%;
+    --radius: 0.75rem;
+    --glow-primary: 189 100% 50%;
+    --glow-secondary: 271 81% 56%;
+    --glow-accent: 142 76% 56%;
+    --glow-intensity: 0.6;
+    --sidebar-width: 280px;
+    --sidebar-collapsed-width: 80px;
+    --grid-color: 0 0% 10%;
+    --grid-size: 20px;
+  }
+
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
 }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
+@layer utilities {
+  .glow-primary {
+    box-shadow: 
+      0 0 20px hsla(var(--glow-primary), var(--glow-intensity)),
+      0 0 40px hsla(var(--glow-primary), calc(var(--glow-intensity) * 0.6)),
+      0 0 60px hsla(var(--glow-primary), calc(var(--glow-intensity) * 0.3));
   }
 
-  .imgLight {
-    display: none;
+  .glow-secondary {
+    box-shadow: 
+      0 0 20px hsla(var(--glow-secondary), var(--glow-intensity)),
+      0 0 40px hsla(var(--glow-secondary), calc(var(--glow-intensity) * 0.6)),
+      0 0 60px hsla(var(--glow-secondary), calc(var(--glow-intensity) * 0.3));
   }
-  .imgDark {
-    display: unset;
+
+  .glow-accent {
+    box-shadow: 
+      0 0 20px hsla(var(--glow-accent), var(--glow-intensity)),
+      0 0 40px hsla(var(--glow-accent), calc(var(--glow-intensity) * 0.6)),
+      0 0 60px hsla(var(--glow-accent), calc(var(--glow-intensity) * 0.3));
+  }
+
+  .text-glow-primary {
+    text-shadow: 
+      0 0 10px hsla(var(--glow-primary), 0.8),
+      0 0 20px hsla(var(--glow-primary), 0.5),
+      0 0 30px hsla(var(--glow-primary), 0.3);
+  }
+
+  .text-glow-secondary {
+    text-shadow: 
+      0 0 10px hsla(var(--glow-secondary), 0.8),
+      0 0 20px hsla(var(--glow-secondary), 0.5),
+      0 0 30px hsla(var(--glow-secondary), 0.3);
+  }
+
+  .text-glow-accent {
+    text-shadow: 
+      0 0 10px hsla(var(--glow-accent), 0.8),
+      0 0 20px hsla(var(--glow-accent), 0.5),
+      0 0 30px hsla(var(--glow-accent), 0.3);
+  }
+
+  .grid-background {
+    background-image: 
+      linear-gradient(hsla(var(--grid-color), 0.5) 1px, transparent 1px),
+      linear-gradient(90deg, hsla(var(--grid-color), 0.5) 1px, transparent 1px);
+    background-size: var(--grid-size) var(--grid-size);
+  }
+
+  .scanlines {
+    position: relative;
+  }
+
+  .scanlines::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(transparent 50%, hsla(0, 0%, 0%, 0.05) 50%);
+    background-size: 100% 4px;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .animated-border {
+    position: relative;
+    background: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--secondary)), hsl(var(--accent)));
+    background-size: 200% 200%;
+    animation: border-animation 3s ease infinite;
+  }
+
+  @keyframes border-animation {
+    0%, 100% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+  }
+
+  .fade-in {
+    animation: fadeIn 0.6s ease-in;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .hover-lift {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-4px);
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+
+  .pulse-glow {
+    animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
 }

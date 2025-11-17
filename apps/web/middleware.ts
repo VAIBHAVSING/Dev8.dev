@@ -12,7 +12,8 @@ export async function middleware(req: NextRequest) {
   const { nextUrl } = req;
 
   // Get the token using next-auth/jwt which works with Edge Runtime
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+  // Use the same secret as NextAuth config; prefer AUTH_SECRET, fallback to NEXTAUTH_SECRET for compatibility
+  const token = await getToken({ req, secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET });
   const isLoggedIn = !!token;
 
   // Check if current route is public
