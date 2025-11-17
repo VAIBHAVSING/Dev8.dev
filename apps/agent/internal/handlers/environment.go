@@ -85,7 +85,7 @@ func (h *EnvironmentHandler) StartEnvironment(w http.ResponseWriter, r *http.Req
 
 	respondWithSuccess(w, http.StatusOK, "Workspace started successfully", map[string]interface{}{
 		"environment": env,
-		"message":     "Your workspace is now running with existing data",
+		"message":     "Your workspace is now running. All your files and settings have been preserved.",
 	})
 }
 
@@ -109,7 +109,7 @@ func (h *EnvironmentHandler) StopEnvironment(w http.ResponseWriter, r *http.Requ
 
 	respondWithSuccess(w, http.StatusOK, "Workspace stopped successfully", map[string]interface{}{
 		"workspaceId": req.WorkspaceID,
-		"message":     "Container deleted, volumes preserved. Restart anytime to resume work.",
+		"message":     "Workspace stopped and compute resources released. All your files are safely preserved. Restart anytime to resume work.",
 	})
 }
 

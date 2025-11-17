@@ -264,14 +264,8 @@ func (s *EnvironmentService) StartEnvironment(ctx context.Context, req *models.S
 
 	log.Printf("✅ Unified volume verified: %s", fileShareName)
 
-	// Check if container already exists
-	existingContainer, err := s.deploymentStrategy.GetContainer(ctx, workspaceID, req.CloudRegion, resourceGroup)
-	if err == nil && existingContainer != nil {
-		return nil, models.ErrInvalidRequest(fmt.Sprintf("workspace %s: container already exists. Use stop first if needed.", workspaceID))
-	}
-
-	// Recreate container with existing volumes (fast!)
-	log.Printf("📦 Creating new container instance with existing volumes...")
+	// Start or restart container with existing volumes (fast!)
+	log.Printf("📦 Starting container instance with existing volumes...")
 
 	deploySpec := ContainerDeploymentSpec{
 		Image:              s.getContainerImage(req.BaseImage),
@@ -295,9 +289,9 @@ func (s *EnvironmentService) StartEnvironment(ctx context.Context, req *models.S
 		GeminiAPIKey:       req.GeminiAPIKey,
 	}
 
-	containerInfo, err := s.deploymentStrategy.CreateContainer(ctx, workspaceID, req.CloudRegion, resourceGroup, deploySpec)
+	containerInfo, err := s.deploymentStrategy.StartContainer(ctx, workspaceID, req.CloudRegion, resourceGroup, deploySpec)
 	if err != nil {
-		return nil, models.ErrInternalServer(fmt.Sprintf("workspace %s: failed to create container: %v", workspaceID, err))
+		return nil, models.ErrInternalServer(fmt.Sprintf("workspace %s: failed to start container: %v", workspaceID, err))
 	}
 
 	// Wait for FQDN
@@ -345,7 +339,7 @@ func (s *EnvironmentService) StopEnvironment(ctx context.Context, workspaceID, r
 		resourceGroup = s.config.Azure.ResourceGroupName
 	}
 
-	log.Printf("🛑 Stopping workspace %s: Stopping container (keeping volumes)", workspaceID)
+	log.Printf("🛑 Stopping workspace %s (releasing compute, preserving storage)", workspaceID)
 
 	// Check if container exists
 	_, err := s.deploymentStrategy.GetContainer(ctx, workspaceID, region, resourceGroup)
@@ -358,7 +352,7 @@ func (s *EnvironmentService) StopEnvironment(ctx context.Context, workspaceID, r
 		return models.ErrInternalServer(fmt.Sprintf("workspace %s: failed to stop container: %v", workspaceID, err))
 	}
 
-	log.Printf("✅ Workspace %s stopped (container stopped, unified volume persisted for fast restart)", workspaceID)
+	log.Printf("✅ Workspace %s stopped successfully (compute released, storage preserved for fast restart)", workspaceID)
 	return nil
 }
 
