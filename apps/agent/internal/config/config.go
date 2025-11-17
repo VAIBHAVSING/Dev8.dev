@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Config holds the application configuration
@@ -34,6 +35,16 @@ type Config struct {
 	// Application Settings
 	Environment string
 	LogLevel    string
+
+	// Security Settings
+	APIKeys []string
+
+	// Rate Limiting
+	RateLimitRPS   int
+	RateLimitBurst int
+
+	// Timeouts
+	RequestTimeout time.Duration
 }
 
 // AzureConfig holds Azure-specific configuration
@@ -80,10 +91,20 @@ func Load() (*Config, error) {
 		RegistryUsername:   getEnv("REGISTRY_USERNAME", ""), // Optional
 		RegistryPassword:   getEnv("REGISTRY_PASSWORD", ""), // Optional
 		AgentBaseURL:       getEnv("AGENT_BASE_URL", "http://localhost:8080"),
+
+		// Rate Limiting
+		RateLimitRPS:   getEnvInt("RATE_LIMIT_RPS", 100),
+		RateLimitBurst: getEnvInt("RATE_LIMIT_BURST", 200),
+
+		// Timeouts
+		RequestTimeout: time.Duration(getEnvInt("REQUEST_TIMEOUT_SECONDS", 300)) * time.Second,
 	}
 
 	// Load CORS configuration
 	config.CORSAllowedOrigins = loadCORSAllowedOrigins()
+
+	// Load API keys
+	config.APIKeys = loadAPIKeys()
 
 	// Load Azure configuration
 	azureConfig, err := loadAzureConfig()
@@ -272,4 +293,35 @@ func getEnv(key, defaultValue string) string {
 		return value
 	}
 	return defaultValue
+}
+
+// getEnvInt gets an integer environment variable with a fallback default value
+func getEnvInt(key string, defaultValue int) int {
+	if value := os.Getenv(key); value != "" {
+		if intValue, err := strconv.Atoi(value); err == nil {
+			return intValue
+		}
+	}
+	return defaultValue
+}
+
+// loadAPIKeys loads API keys from environment variables
+func loadAPIKeys() []string {
+	// API_KEYS format: comma-separated list of API keys
+	// Example: "key1,key2,key3"
+	keysEnv := getEnv("API_KEYS", "")
+	if keysEnv == "" {
+		return []string{}
+	}
+
+	keys := strings.Split(keysEnv, ",")
+	var trimmedKeys []string
+	for _, key := range keys {
+		trimmed := strings.TrimSpace(key)
+		if trimmed != "" {
+			trimmedKeys = append(trimmedKeys, trimmed)
+		}
+	}
+
+	return trimmedKeys
 }
