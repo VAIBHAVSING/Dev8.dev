@@ -2,7 +2,7 @@ name: Dependencies
 
 on:
   schedule:
-    - cron: '0 9 * * 1'  # Weekly on Monday
+    - cron: "0 9 * * 1" # Weekly on Monday
   workflow_dispatch:
   push:
     branches: [main]
@@ -22,7 +22,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: "18"
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -32,7 +32,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version: "1.24"
 
       - name: Update dependencies
         run: |
@@ -54,7 +54,7 @@ jobs:
         uses: peter-evans/create-pull-request@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          title: 'chore: update dependencies'
+          title: "chore: update dependencies"
           body: |
             Automated dependency updates for Dev8.dev
 
@@ -66,7 +66,7 @@ jobs:
             Changes made by automated dependency update workflow.
           branch: deps-update
           base: main
-          commit-message: 'chore: update dependencies'
+          commit-message: "chore: update dependencies"
           author: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
           committer: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
           delete-branch: true
