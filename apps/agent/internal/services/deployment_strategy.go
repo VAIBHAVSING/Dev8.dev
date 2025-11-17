@@ -296,7 +296,14 @@ func (d *DeploymentStrategy) deleteWithACA(ctx context.Context, workspaceID, res
 // stopWithACI stops a container using ACI (keeps it in stopped state)
 func (d *DeploymentStrategy) stopWithACI(ctx context.Context, workspaceID, region, resourceGroup string) error {
 	containerGroupName := fmt.Sprintf("aci-%s", workspaceID)
-	return d.azureClient.StopContainerGroup(ctx, region, resourceGroup, containerGroupName)
+	log.Printf("DEBUG: stopWithACI called for workspace %s, container group: %s", workspaceID, containerGroupName)
+	err := d.azureClient.StopContainerGroup(ctx, region, resourceGroup, containerGroupName)
+	if err != nil {
+		log.Printf("ERROR: stopWithACI failed for %s: %v", containerGroupName, err)
+	} else {
+		log.Printf("DEBUG: stopWithACI succeeded for %s", containerGroupName)
+	}
+	return err
 }
 
 // stopWithACA stops a container using ACA (scales to zero)
