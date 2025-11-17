@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	armappcontainers "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/appcontainers/armappcontainers/v2"
@@ -309,37 +308,21 @@ func (c *Client) DeleteContainerApp(ctx context.Context, resourceGroup, appName 
 	return nil
 }
 
-// StopContainerApp stops a container app by scaling minReplicas to 0 while keeping maxReplicas at 1
-// NOTE: Azure Container Apps requires maxReplicas > 0, so we can't set it to 0
-// The app will scale to zero when there's no traffic (Consumption plan behavior)
+// StopContainerApp stops a container app using the native Azure API
+// This immediately stops the container app (not scale-to-zero)
 func (c *Client) StopContainerApp(ctx context.Context, resourceGroup, appName string) error {
 	client, err := armappcontainers.NewContainerAppsClient(c.config.Azure.SubscriptionID, c.credential, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create container apps client: %w", err)
 	}
 
-	// Get current container app
-	resp, err := client.Get(ctx, resourceGroup, appName, nil)
+	// Use the native Stop API - this is an async operation
+	poller, err := client.BeginStop(ctx, resourceGroup, appName, nil)
 	if err != nil {
-		return fmt.Errorf("failed to get container app %s: %w", appName, err)
+		return fmt.Errorf("failed to begin stop for container app %s: %w", appName, err)
 	}
 
-	// Stop the app by setting MinReplicas to 0, MaxReplicas to 1
-	// With minReplicas=0, the app will scale to zero with no traffic
-	// Azure requires maxReplicas > 0
-	if resp.Properties != nil && resp.Properties.Template != nil && resp.Properties.Template.Scale != nil {
-		resp.Properties.Template.Scale.MinReplicas = to.Ptr(int32(0))
-		resp.Properties.Template.Scale.MaxReplicas = to.Ptr(int32(1)) // Required by Azure
-		// Clear HTTP scaling rules to prevent auto-scaling
-		resp.Properties.Template.Scale.Rules = nil
-	}
-
-	// Update container app
-	poller, err := client.BeginUpdate(ctx, resourceGroup, appName, resp.ContainerApp, nil)
-	if err != nil {
-		return fmt.Errorf("failed to begin container app update for %s: %w", appName, err)
-	}
-
+	// Wait for the stop operation to complete
 	_, err = poller.PollUntilDone(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("failed to stop container app %s: %w", appName, err)
@@ -348,40 +331,25 @@ func (c *Client) StopContainerApp(ctx context.Context, resourceGroup, appName st
 	return nil
 }
 
-// StartContainerApp starts a container app by setting minReplicas to 1
-// This ensures at least one replica is always running
+// StartContainerApp starts a container app using the native Azure API
+// This immediately starts the stopped container app
 func (c *Client) StartContainerApp(ctx context.Context, resourceGroup, appName string) error {
 	client, err := armappcontainers.NewContainerAppsClient(c.config.Azure.SubscriptionID, c.credential, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create container apps client: %w", err)
 	}
 
-	// Get current container app
-	resp, err := client.Get(ctx, resourceGroup, appName, nil)
+	// Use the native Start API - this is an async operation
+	poller, err := client.BeginStart(ctx, resourceGroup, appName, nil)
 	if err != nil {
-		return fmt.Errorf("failed to get container app %s: %w", appName, err)
+		return fmt.Errorf("failed to begin start for container app %s: %w", appName, err)
 	}
 
-	// Start the app by setting MinReplicas to 1 and MaxReplicas to 1
-	// This ensures exactly one replica is running
-	if resp.Properties != nil && resp.Properties.Template != nil && resp.Properties.Template.Scale != nil {
-		resp.Properties.Template.Scale.MinReplicas = to.Ptr(int32(1))
-		resp.Properties.Template.Scale.MaxReplicas = to.Ptr(int32(1))
-	}
-
-	// Update container app
-	poller, err := client.BeginUpdate(ctx, resourceGroup, appName, resp.ContainerApp, nil)
-	if err != nil {
-		return fmt.Errorf("failed to begin container app update for %s: %w", appName, err)
-	}
-
+	// Wait for the start operation to complete
 	_, err = poller.PollUntilDone(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("failed to start container app %s: %w", appName, err)
 	}
-
-	// Wait a moment for the replica to start
-	time.Sleep(10 * time.Second)
 
 	return nil
 }
