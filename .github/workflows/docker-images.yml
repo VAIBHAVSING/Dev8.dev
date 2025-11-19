@@ -1,0 +1,326 @@
+# ============================================================================
+# Docker Images CI Pipeline
+# Runs on: Pull requests to main branch
+# Purpose: Build and test Docker images
+# ============================================================================
+name: Docker CI - Build & Test
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'docker/**'
+      - 'apps/supervisor/**'
+      - '.github/workflows/docker-images.yml'
+  workflow_dispatch:
+    inputs:
+      build_base:
+        description: 'Build base image'
+        required: false
+        default: true
+        type: boolean
+      build_languages:
+        description: 'Build languages image'
+        required: false
+        default: true
+        type: boolean
+      build_vscode:
+        description: 'Build VS Code Server image'
+        required: false
+        default: true
+        type: boolean
+      build_ai_tools:
+        description: 'Build AI tools image (final)'
+        required: false
+        default: true
+        type: boolean
+
+env:
+  DOCKER_BUILDKIT: 1
+  COMPOSE_DOCKER_CLI_BUILD: 1
+
+concurrency:
+  group: docker-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Determine what to build
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      build_base: ${{ steps.check.outputs.build_base }}
+      build_languages: ${{ steps.check.outputs.build_languages }}
+      build_vscode: ${{ steps.check.outputs.build_vscode }}
+      build_ai_tools: ${{ steps.check.outputs.build_ai_tools }}
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine what to build
+        id: check
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "build_base=${{ inputs.build_base }}" >> "$GITHUB_OUTPUT"
+            echo "build_languages=${{ inputs.build_languages }}" >> "$GITHUB_OUTPUT"
+            echo "build_vscode=${{ inputs.build_vscode }}" >> "$GITHUB_OUTPUT"
+            echo "build_ai_tools=${{ inputs.build_ai_tools }}" >> "$GITHUB_OUTPUT"
+          else
+            # Detect changes to determine what to build
+            if git diff --name-only HEAD~1 | grep -q "docker/images/00-base/\|apps/supervisor/"; then
+              echo "build_base=true" >> "$GITHUB_OUTPUT"
+              echo "build_languages=true" >> "$GITHUB_OUTPUT"
+              echo "build_vscode=true" >> "$GITHUB_OUTPUT"
+              echo "build_ai_tools=true" >> "$GITHUB_OUTPUT"
+            elif git diff --name-only HEAD~1 | grep -q "docker/images/10-languages/"; then
+              echo "build_base=false" >> "$GITHUB_OUTPUT"
+              echo "build_languages=true" >> "$GITHUB_OUTPUT"
+              echo "build_vscode=true" >> "$GITHUB_OUTPUT"
+              echo "build_ai_tools=true" >> "$GITHUB_OUTPUT"
+            elif git diff --name-only HEAD~1 | grep -q "docker/images/20-vscode/"; then
+              echo "build_base=false" >> "$GITHUB_OUTPUT"
+              echo "build_languages=false" >> "$GITHUB_OUTPUT"
+              echo "build_vscode=true" >> "$GITHUB_OUTPUT"
+              echo "build_ai_tools=true" >> "$GITHUB_OUTPUT"
+            elif git diff --name-only HEAD~1 | grep -q "docker/images/30-ai-tools/"; then
+              echo "build_base=false" >> "$GITHUB_OUTPUT"
+              echo "build_languages=false" >> "$GITHUB_OUTPUT"
+              echo "build_vscode=false" >> "$GITHUB_OUTPUT"
+              echo "build_ai_tools=true" >> "$GITHUB_OUTPUT"
+            else
+              # Default: build all layers
+              echo "build_base=true" >> "$GITHUB_OUTPUT"
+              echo "build_languages=true" >> "$GITHUB_OUTPUT"
+              echo "build_vscode=true" >> "$GITHUB_OUTPUT"
+              echo "build_ai_tools=true" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
+      - name: Determine version
+        id: version
+        run: |
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          echo "version=pr-${{ github.event.pull_request.number }}-${SHORT_SHA}" >> $GITHUB_OUTPUT
+
+  # Build and test base image
+  build-base:
+    runs-on: ubuntu-latest
+    needs: setup
+    if: needs.setup.outputs.build_base == 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker
+
+      - name: Build base image
+        run: |
+          docker build \
+            -t dev8-base:${{ needs.setup.outputs.version }} \
+            -t dev8-base:latest \
+            -f ./docker/images/00-base/Dockerfile \
+            .
+
+      - name: Test base image
+        run: |
+          echo "Testing base image..."
+          docker run --rm dev8-base:latest git --version
+          docker run --rm dev8-base:latest ssh -V
+          docker run --rm dev8-base:latest which workspace-supervisor
+          echo "Base image works!"
+
+      - name: Scan for vulnerabilities
+        uses: aquasecurity/trivy-action@master
+        continue-on-error: true
+        with:
+          image-ref: dev8-base:${{ needs.setup.outputs.version }}
+          format: 'sarif'
+          output: 'trivy-base-results.sarif'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '0'
+
+      - name: Upload Trivy results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always() && hashFiles('trivy-base-results.sarif') != ''
+        with:
+          sarif_file: 'trivy-base-results.sarif'
+          category: docker-base
+
+  # Build and test languages image
+  build-languages:
+    runs-on: ubuntu-latest
+    needs: [setup, build-base]
+    if: needs.setup.outputs.build_languages == 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker
+
+      - name: Build base image
+        run: |
+          docker build \
+            -t dev8-base:latest \
+            -f ./docker/images/00-base/Dockerfile \
+            .
+
+      - name: Build languages image
+        run: |
+          docker build \
+            -t dev8-languages:${{ needs.setup.outputs.version }} \
+            -t dev8-languages:latest \
+            -f ./docker/images/10-languages/Dockerfile \
+            .
+
+      - name: Test languages image
+        run: |
+          echo "Testing language runtimes..."
+          docker run --rm dev8-languages:latest node --version
+          docker run --rm dev8-languages:latest python --version
+          docker run --rm dev8-languages:latest go version
+          docker run --rm dev8-languages:latest rustc --version
+          echo "Languages image tests completed!"
+
+  # Build and test VS Code image
+  build-vscode:
+    runs-on: ubuntu-latest
+    needs: [setup, build-languages]
+    if: needs.setup.outputs.build_vscode == 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker
+
+      - name: Build base image
+        run: |
+          docker build \
+            -t dev8-base:latest \
+            -f ./docker/images/00-base/Dockerfile \
+            .
+
+      - name: Build languages image
+        run: |
+          docker build \
+            -t dev8-languages:latest \
+            -f ./docker/images/10-languages/Dockerfile \
+            .
+
+      - name: Build VS Code image
+        run: |
+          docker build \
+            -t dev8-vscode:${{ needs.setup.outputs.version }} \
+            -t dev8-vscode:latest \
+            -f ./docker/images/20-vscode/Dockerfile \
+            .
+
+      - name: Test VS Code image
+        run: |
+          echo "Testing VS Code Server..."
+          docker run --rm dev8-vscode:latest code-server --version
+          echo "VS Code image tests completed!"
+
+  # Build and test AI tools image (final)
+  build-ai-tools:
+    runs-on: ubuntu-latest
+    needs: [setup, build-vscode]
+    if: needs.setup.outputs.build_ai_tools == 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker
+
+      - name: Build base image
+        run: |
+          docker build \
+            -t dev8-base:latest \
+            -f ./docker/images/00-base/Dockerfile \
+            .
+
+      - name: Build languages image
+        run: |
+          docker build \
+            -t dev8-languages:latest \
+            -f ./docker/images/10-languages/Dockerfile \
+            .
+
+      - name: Build VS Code image
+        run: |
+          docker build \
+            -t dev8-vscode:latest \
+            -f ./docker/images/20-vscode/Dockerfile \
+            .
+
+      - name: Build AI tools image (final)
+        run: |
+          docker build \
+            -t dev8-workspace:${{ needs.setup.outputs.version }} \
+            -t dev8-workspace:latest \
+            -f ./docker/images/30-ai-tools/Dockerfile \
+            .
+
+      - name: Test AI tools image
+        run: |
+          echo "Testing AI tools..."
+          docker run --rm dev8-workspace:latest gh --version
+          docker run --rm dev8-workspace:latest az version
+          docker run --rm dev8-workspace:latest yq --version
+          echo "AI tools image tests completed!"
+
+      - name: Scan for vulnerabilities
+        uses: aquasecurity/trivy-action@master
+        continue-on-error: true
+        with:
+          image-ref: dev8-workspace:${{ needs.setup.outputs.version }}
+          format: 'sarif'
+          output: 'trivy-workspace-results.sarif'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '0'
+
+      - name: Upload Trivy results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always() && hashFiles('trivy-workspace-results.sarif') != ''
+        with:
+          sarif_file: 'trivy-workspace-results.sarif'
+          category: docker-workspace
+
+  # Generate build summary
+  summary:
+    runs-on: ubuntu-latest
+    needs: [setup, build-base, build-languages, build-vscode, build-ai-tools]
+    if: always()
+    steps:
+      - name: Generate summary
+        run: |
+          {
+            echo "# Docker Images Build Summary"
+            echo ""
+            echo "## Build Status"
+            echo ""
+            echo "| Image | Status |"
+            echo "|-------|--------|"
+            echo "| dev8-base | ${{ needs.build-base.result }} |"
+            echo "| dev8-languages | ${{ needs.build-languages.result }} |"
+            echo "| dev8-vscode | ${{ needs.build-vscode.result }} |"
+            echo "| dev8-workspace (AI tools) | ${{ needs.build-ai-tools.result }} |"
+            echo ""
+            echo "## Version"
+            echo "- **Version**: ${{ needs.setup.outputs.version }}"
+            echo "- **Commit**: ${{ github.sha }}"
+            echo "- **Branch**: ${{ github.ref_name }}"
+          } >> "$GITHUB_STEP_SUMMARY"

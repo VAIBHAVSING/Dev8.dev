@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { WorkspaceManager } from "../components/workspace-manager";
 
 export default function Dashboard() {
   const { data: session, status } = useSession();
@@ -203,6 +204,11 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Workspace Manager */}
+        <div className="mt-8">
+          <WorkspaceManager />
         </div>
 
         {/* Session Details */}

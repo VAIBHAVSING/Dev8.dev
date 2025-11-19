@@ -1,0 +1,125 @@
+# Production Docker Compose for Azure Container Instances
+#
+# Azure Container Instances (ACI) Considerations:
+# - No support for named volumes (use Azure Files instead)
+# - No support for build context (must use pre-built images from registry)
+# - Limited networking options
+# - Resource limits are required
+# - Must use specific restart policies
+# - No support for host networking or privileged mode
+
+services:
+  workspace:
+    # IMPORTANT: Replace with your Azure Container Registry (ACR) or Docker Hub
+    # Examples:
+    #   - yourregistry.azurecr.io/dev8-workspace:latest
+    #   - yourusername/dev8-workspace:latest
+    image: ${CONTAINER_REGISTRY:-dev8-workspace}:${IMAGE_TAG:-latest}
+    
+    # ACI-compatible container name
+    container_name: ${CONTAINER_NAME:-dev8-workspace}
+    
+    # Ports exposed to Azure Load Balancer
+    ports:
+      - "${VSCODE_PORT:-8080}:8080"   # VS Code Server
+      - "${SSH_PORT:-2222}:2222"       # SSH Access
+      - "${API_PORT:-9000}:9000"       # Supervisor API
+    
+    # Environment variables
+    environment:
+      # Production environment identifier
+      - ENVIRONMENT_ID=${ENVIRONMENT_ID:?ENVIRONMENT_ID is required}
+      
+      # Required: GitHub Token for Copilot and tools
+      - GITHUB_TOKEN=${GITHUB_TOKEN:?GITHUB_TOKEN is required}
+      
+      # Git configuration
+      - GIT_USER_NAME=${GIT_USER_NAME:?GIT_USER_NAME is required}
+      - GIT_USER_EMAIL=${GIT_USER_EMAIL:?GIT_USER_EMAIL is required}
+      
+      # VS Code Server (default: no authentication)
+      # For production with authentication, set CODE_SERVER_AUTH=password and CODE_SERVER_PASSWORD
+      - CODE_SERVER_AUTH=${CODE_SERVER_AUTH:-none}
+      - CODE_SERVER_PASSWORD=${CODE_SERVER_PASSWORD:-}
+      
+      # SSH Access (optional)
+      - SSH_PASSWORD=${SSH_PASSWORD:-}
+      - SSH_PUBLIC_KEY=${SSH_PUBLIC_KEY:-}
+      
+      # AI CLI Tools (production keys)
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      
+      # Workspace Supervisor Configuration
+      - SUPERVISOR_PORT=${SUPERVISOR_PORT:-9000}
+      - REPORT_INTERVAL=${REPORT_INTERVAL:-60s}
+      
+      # Azure Storage Configuration (for backup/restore)
+      - AZURE_STORAGE_ACCOUNT=${AZURE_STORAGE_ACCOUNT:-}
+      - AZURE_STORAGE_KEY=${AZURE_STORAGE_KEY:-}
+      - AZURE_STORAGE_CONTAINER=${AZURE_STORAGE_CONTAINER:-dev8-backups}
+      - WORKSPACE_BACKUP_ENABLED=${WORKSPACE_BACKUP_ENABLED:-true}
+      - WORKSPACE_BACKUP_INTERVAL=${WORKSPACE_BACKUP_INTERVAL:-3600}
+      
+      # Monitoring and Logging
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - ENABLE_TELEMETRY=${ENABLE_TELEMETRY:-true}
+      
+      # Azure-specific
+      - AZURE_REGION=${AZURE_REGION:-eastus}
+      - AZURE_SUBSCRIPTION_ID=${AZURE_SUBSCRIPTION_ID:-}
+    
+    # Azure Files volume for persistence
+    # NOTE: You must create this Azure File Share first!
+    volumes:
+      # Single persistent volume for all data
+      # Stores both user home directory and workspace in one volume
+      # Create with: az storage share create --name dev8-data
+      - type: bind
+        source: /mnt/azurefiles/dev8-data
+        target: /home/dev8
+      
+      # Workspace is now a subdirectory within home: /home/dev8/workspace
+      # This consolidates all persistent data into one volume
+    
+    # ACI restart policy
+    # Options: no, on-failure, always, unless-stopped
+    restart: always
+    
+    # Health check (ACI-compatible)
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/healthz || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s  # Longer for production startup
+    
+    # Resource limits (REQUIRED for ACI)
+    # ACI supported sizes: https://learn.microsoft.com/en-us/azure/container-instances/container-instances-resource-limits
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'      # Adjust based on ACI plan
+          memory: 8G       # Adjust based on ACI plan
+        reservations:
+          cpus: '2.0'
+          memory: 4G
+    
+    # Labels for Azure resource management
+    labels:
+      com.dev8.environment: "${ENVIRONMENT_TYPE:-production}"
+      com.dev8.workspace-id: "${ENVIRONMENT_ID}"
+      com.dev8.version: "${IMAGE_TAG:-latest}"
+      com.dev8.backup-enabled: "${WORKSPACE_BACKUP_ENABLED:-true}"
+      # Azure-specific labels
+      azure.resource-group: "${AZURE_RESOURCE_GROUP:-dev8-rg}"
+      azure.location: "${AZURE_REGION:-eastus}"
+
+# ACI doesn't support named volumes - use Azure Files instead
+# See AZURE_FILES_SETUP.md for configuration instructions
+
+networks:
+  default:
+    # ACI uses default bridge networking
+    name: ${NETWORK_NAME:-dev8-network}
