@@ -1,9 +1,5 @@
 # Makefile for Go Agent Development
-<<<<<<< HEAD
-.PHONY: build clean test lint format dev deps help install-tools
-=======
 .PHONY: build clean test lint format dev deps help install-tools config-dev-aca config-prod-aci config-show config-validate
->>>>>>> 6c208e89cfd9111d6f3217b9f725aebcc95d9627
 
 # Go parameters
 GOCMD=go
@@ -67,8 +63,6 @@ all: deps format lint test build ## Run all checks and build
 
 check: format-check lint test ## Run all checks without building
 
-<<<<<<< HEAD
-=======
 # ============================================================================
 # Azure Configuration Management
 # ============================================================================
@@ -121,5 +115,4 @@ config-validate: ## Validate .env configuration
 		exit 1; \
 	fi
 
->>>>>>> 6c208e89cfd9111d6f3217b9f725aebcc95d9627
 .DEFAULT_GOAL := help

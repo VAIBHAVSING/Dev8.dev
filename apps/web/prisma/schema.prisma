@@ -11,18 +11,6 @@ datasource db {
 }
 
 model User {
-<<<<<<< HEAD
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  emailVerified DateTime?
-  image         String?
-  password      String?   // For credentials authentication
-  accounts      Account[]
-  sessions      Session[]
-  // Optional for WebAuthn support
-  Authenticator Authenticator[]
-=======
   id            String          @id @default(cuid())
   name          String?
   email         String          @unique
@@ -36,7 +24,6 @@ model User {
   sshKeys       SSHKey[]
   secrets       Secret[]
   workspaces    Workspace[]
->>>>>>> 6c208e89cfd9111d6f3217b9f725aebcc95d9627
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -96,8 +83,6 @@ model Authenticator {
 
   @@id([userId, credentialID])
 }
-<<<<<<< HEAD
-=======
 
 enum EnvironmentStatus {
   CREATING
@@ -426,4 +411,3 @@ model Backup {
   @@index([startedAt])
   @@map("backups")
 }
->>>>>>> 6c208e89cfd9111d6f3217b9f725aebcc95d9627
