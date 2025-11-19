@@ -1,0 +1,76 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Testing
+coverage/
+*.coverage
+
+# Build outputs
+.next/
+out/
+build/
+dist/
+.turbo/
+
+# Misc
+.DS_Store
+*.pem
+*.log
+
+# IDE
+.vscode/
+.idea/
+
+# Git
+.git/
+.gitignore
+
+# Environment
+.env
+.env.*
+
+# Go
+**/bin/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+
+# Rust
+target/
+
+# Proprietary infrastructure (do not include in builds)
+in/
+
+# Documentation archives (large, not needed in images)
+docker/docs/archive/
+docker-new/docs/archive/
+
+# Old docker structure (if building from new)
+docker/base/
+docker/mvp/
+docker/vscode-server/
+docker/workspace/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+*.swp
+*.swo
+
+# CI/CD artifacts
+*.tar.gz
+*.zip
+trivy-results.sarif
+gosec-results.sarif

@@ -1,0 +1,112 @@
+services:
+  # Layer 1: Base image (build this first)
+  base:
+    image: dev8-base:latest
+    pull_policy: build
+    build:
+      context: ..
+      dockerfile: docker/images/00-base/Dockerfile
+    profiles: ["manual"]
+
+  # Layer 2: Languages (build after base)
+  languages:
+    image: dev8-languages:latest
+    pull_policy: build
+    build:
+      context: ..
+      dockerfile: docker/images/10-languages/Dockerfile
+    profiles: ["manual"]
+
+  # Layer 3: VS Code (build after languages)
+  vscode:
+    image: dev8-vscode:latest
+    pull_policy: build
+    build:
+      context: ..
+      dockerfile: docker/images/20-vscode/Dockerfile
+    profiles: ["manual"]
+
+  # Layer 4: Complete workspace with VS Code Server and AI tools
+  # This is the only service you need to run
+  workspace:
+    image: dev8-workspace:latest
+    pull_policy: build
+    build:
+      context: ..
+      dockerfile: docker/images/30-ai-tools/Dockerfile
+    container_name: dev8-workspace
+    ports:
+      - "8080:8080"   # VS Code Server
+      - "2222:2222"   # SSH
+      - "9000:9000"   # Workspace Supervisor API
+    environment:
+      # Required
+      - GITHUB_TOKEN=${GITHUB_TOKEN:?GITHUB_TOKEN is required}
+      - ENVIRONMENT_ID=${ENVIRONMENT_ID:-dev8-local-001}
+      
+      # Git configuration
+      - GIT_USER_NAME=${GIT_USER_NAME:-Dev8 User}
+      - GIT_USER_EMAIL=${GIT_USER_EMAIL:-user@dev8.dev}
+      
+      # VS Code Server (default: no authentication required)
+      - CODE_SERVER_AUTH=${CODE_SERVER_AUTH:-none}
+      - CODE_SERVER_PASSWORD=${CODE_SERVER_PASSWORD:-}
+      
+      # SSH Access (optional - not required for development)
+      - SSH_PASSWORD=${SSH_PASSWORD:-}
+      - SSH_PUBLIC_KEY=${SSH_PUBLIC_KEY:-}
+      
+      # AI CLI Tools (optional - only warn if not set)
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      
+      # Workspace Supervisor
+      - SUPERVISOR_PORT=${SUPERVISOR_PORT:-9000}
+      - REPORT_INTERVAL=${REPORT_INTERVAL:-60s}
+      
+    volumes:
+      # Single persistent volume for all data
+      # Stores both user home directory and workspace in one volume
+      - dev8-data:/home/dev8
+      
+      # Workspace is now a subdirectory within home: /home/dev8/workspace
+      # This consolidates all persistent data into one volume
+      
+      # Optional: SSH keys
+      # - ~/.ssh:/home/dev8/.ssh-host:ro
+      
+    restart: unless-stopped
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/healthz", "||", "exit", "1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    
+    # Resource limits (adjust based on your needs)
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '4'
+    #       memory: 8G
+    #     reservations:
+    #       cpus: '2'
+    #       memory: 4G
+
+volumes:
+  # Single named volume for all persistent data
+  # This stores user home directory (configs, extensions, packages) and workspace (project files)
+  # Data persists across container restarts and rebuilds
+  dev8-data:
+    driver: local
+    # Optional: use a specific mount point for persistent data
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /path/to/persistent/storage/dev8-data
+
+networks:
+  default:
+    name: dev8-network

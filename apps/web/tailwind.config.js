@@ -1,12 +1,17 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+<<<<<<< HEAD
     darkMode: ['class'],
     content: [
+=======
+  content: [
+>>>>>>> 6c208e89cfd9111d6f3217b9f725aebcc95d9627
     './pages/**/*.{js,ts,jsx,tsx,mdx}',
     './components/**/*.{js,ts,jsx,tsx,mdx}',
     './app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
+<<<<<<< HEAD
   	extend: {
   		borderRadius: {
   			lg: 'var(--radius)',
@@ -58,4 +63,9 @@ export default {
   	}
   },
   plugins: [require("tailwindcss-animate")],
+=======
+    extend: {},
+  },
+  plugins: [],
+>>>>>>> 6c208e89cfd9111d6f3217b9f725aebcc95d9627
 }

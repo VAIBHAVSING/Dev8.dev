@@ -1,0 +1,237 @@
+name: Build Supervisor Binary
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "apps/supervisor/**"
+      - ".github/workflows/build-supervisor.yml"
+  pull_request:
+    paths:
+      - "apps/supervisor/**"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build Supervisor
+    runs-on: ubuntu-latest
+    # Only build on PRs for validation, actual release happens on main
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    strategy:
+      matrix:
+        include:
+          - os: linux
+            arch: amd64
+            goos: linux
+            goarch: amd64
+          - os: linux
+            arch: arm64
+            goos: linux
+            goarch: arm64
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+          cache-dependency-path: apps/supervisor/go.sum
+
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            VERSION="${{ github.sha }}"
+            SHORT_SHA=$(echo $VERSION | cut -c1-7)
+            echo "version=$SHORT_SHA" >> $GITHUB_OUTPUT
+            echo "full_version=$VERSION" >> $GITHUB_OUTPUT
+            echo "is_release=true" >> $GITHUB_OUTPUT
+          else
+            VERSION="pr-${{ github.event.pull_request.number }}"
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "full_version=$VERSION" >> $GITHUB_OUTPUT
+            echo "is_release=false" >> $GITHUB_OUTPUT
+          fi
+          echo "Building version: $VERSION"
+
+      - name: Install dependencies
+        working-directory: apps/supervisor
+        run: go mod download
+
+      - name: Run tests
+        working-directory: apps/supervisor
+        run: go test -v ./...
+
+      - name: Build binary
+        working-directory: apps/supervisor
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 0
+        run: |
+          cd cmd/supervisor
+          go build \
+            -ldflags="-s -w -X main.version=${{ steps.version.outputs.full_version }}" \
+            -o supervisor-${{ matrix.os }}-${{ matrix.arch }} \
+            .
+
+          # Verify the binary
+          file supervisor-${{ matrix.os }}-${{ matrix.arch }}
+          ls -lh supervisor-${{ matrix.os }}-${{ matrix.arch }}
+
+      - name: Create release directory
+        run: |
+          mkdir -p release
+          cp apps/supervisor/cmd/supervisor/supervisor-${{ matrix.os }}-${{ matrix.arch }} \
+             release/supervisor-${{ matrix.os }}-${{ matrix.arch }}
+
+          # Create checksum
+          cd release
+          sha256sum supervisor-${{ matrix.os }}-${{ matrix.arch }} > supervisor-${{ matrix.os }}-${{ matrix.arch }}.sha256
+          cat supervisor-${{ matrix.os }}-${{ matrix.arch }}.sha256
+
+      - name: Upload build artifacts (for release job)
+        uses: actions/upload-artifact@v4
+        with:
+          name: supervisor-${{ matrix.os }}-${{ matrix.arch }}
+          path: release/*
+          retention-days: 1
+          if-no-files-found: error
+
+  release:
+    name: Create/Update Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get version info
+        id: version
+        run: |
+          VERSION="${{ github.sha }}"
+          SHORT_SHA=$(echo $VERSION | cut -c1-7)
+          BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          echo "version=$SHORT_SHA" >> $GITHUB_OUTPUT
+          echo "full_version=$VERSION" >> $GITHUB_OUTPUT
+          echo "build_date=$BUILD_DATE" >> $GITHUB_OUTPUT
+
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare release assets
+        run: |
+          mkdir -p release-assets
+
+          # Copy all binaries and checksums
+          find artifacts -type f -name "supervisor-*" -exec cp {} release-assets/ \;
+
+          # List what we have
+          ls -lh release-assets/
+
+          # Create a manifest
+          cat > release-assets/manifest.json << EOF
+          {
+            "version": "${{ steps.version.outputs.full_version }}",
+            "short_version": "${{ steps.version.outputs.version }}",
+            "build_date": "${{ steps.version.outputs.build_date }}",
+            "commit": "${{ github.sha }}",
+            "repository": "${{ github.repository }}",
+            "binaries": {
+              "linux-amd64": {
+                "filename": "supervisor-linux-amd64",
+                "download_url": "https://github.com/${{ github.repository }}/releases/download/supervisor-latest/supervisor-linux-amd64",
+                "checksum_url": "https://github.com/${{ github.repository }}/releases/download/supervisor-latest/supervisor-linux-amd64.sha256"
+              },
+              "linux-arm64": {
+                "filename": "supervisor-linux-arm64",
+                "download_url": "https://github.com/${{ github.repository }}/releases/download/supervisor-latest/supervisor-linux-arm64",
+                "checksum_url": "https://github.com/${{ github.repository }}/releases/download/supervisor-latest/supervisor-linux-arm64.sha256"
+              }
+            }
+          }
+          EOF
+
+          cat release-assets/manifest.json
+
+      - name: Delete existing release if exists
+        continue-on-error: true
+        run: |
+          gh release delete supervisor-latest --yes --cleanup-tag || true
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Create new release
+        run: |
+          gh release create supervisor-latest \
+            --title "Supervisor Binary (Latest)" \
+            --notes "**Dev8 Workspace Supervisor - Internal Build**
+
+          This is an automatically updated release containing the latest supervisor binaries.
+
+          **Build Information:**
+          - Commit: \`${{ steps.version.outputs.full_version }}\`
+          - Short Version: \`${{ steps.version.outputs.version }}\`
+          - Build Date: ${{ steps.version.outputs.build_date }}
+          - Branch: main
+
+          **Available Binaries:**
+          - \`supervisor-linux-amd64\` - Linux x86_64
+          - \`supervisor-linux-arm64\` - Linux ARM64
+
+          **Consistent Download URLs:**
+          - AMD64: https://github.com/${{ github.repository }}/releases/download/supervisor-latest/supervisor-linux-amd64
+          - ARM64: https://github.com/${{ github.repository }}/releases/download/supervisor-latest/supervisor-linux-arm64
+
+          **Usage:**
+          These binaries are used internally by the DevContainer feature installation.
+          The URLs remain consistent across builds - only the binary content is updated.
+
+          **Note:** This is an internal tool and not intended for external distribution." \
+            release-assets/*
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  summary:
+    name: Build Summary
+    needs: [build, release]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Create summary
+        run: |
+          echo "# Supervisor Build Complete ✓" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "**Release Updated:** supervisor-latest" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Consistent Download URLs:**" >> $GITHUB_STEP_SUMMARY
+            echo "- AMD64: \`https://github.com/${{ github.repository }}/releases/download/supervisor-latest/supervisor-linux-amd64\`" >> $GITHUB_STEP_SUMMARY
+            echo "- ARM64: \`https://github.com/${{ github.repository }}/releases/download/supervisor-latest/supervisor-linux-arm64\`" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "These URLs never change - perfect for DevContainer features!" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "**PR Build:** Validation complete, binaries not released" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Build Information:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Commit: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Branch: \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Workflow: [${{ github.run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Built Platforms:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Linux AMD64 ✓" >> $GITHUB_STEP_SUMMARY
+          echo "- Linux ARM64 ✓" >> $GITHUB_STEP_SUMMARY
