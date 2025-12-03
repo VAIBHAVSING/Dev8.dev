@@ -19,6 +19,8 @@
     ".next/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    // Exclude unused shadcn/radix demo components under app/components/ui
+    "app/components/ui/**"
   ]
 }

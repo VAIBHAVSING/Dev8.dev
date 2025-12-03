@@ -12,6 +12,7 @@ export type EnvironmentStatus =
   | "RUNNING"
   | "STOPPING"
   | "STOPPED"
+  | "PAUSED"
   | "ERROR"
   | "DELETING";
 
@@ -297,6 +298,7 @@ export function isValidEnvironmentStatus(
     "RUNNING",
     "STOPPING",
     "STOPPED",
+    "PAUSED",
     "ERROR",
     "DELETING",
   ].includes(status);

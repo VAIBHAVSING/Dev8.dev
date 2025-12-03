@@ -122,10 +122,11 @@ export function createAuthConfig(): AuthOptions {
       signIn: "/signin",
     },
     secret: (() => {
-      if (process.env.NODE_ENV === "production" && !process.env.AUTH_SECRET) {
-        throw new Error("AUTH_SECRET must be set in production environments.");
+      const secret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || "development-secret";
+      if (process.env.NODE_ENV === "production" && !secret) {
+        throw new Error("AUTH_SECRET or NEXTAUTH_SECRET must be set in production environments.");
       }
-      return process.env.AUTH_SECRET || "development-secret";
+      return secret;
     })(),
   };
 }

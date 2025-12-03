@@ -204,20 +204,14 @@ export const INSTANCE_TYPE_DESCRIPTIONS: Record<InstanceType, string> = {
  */
 export const DEFAULT_CLOUD_CONFIG = {
   provider: "AZURE" as const,
-  region: "eastus",
+  region: "centralindia",
 };
 
 /**
  * Azure regions
  */
 export const AZURE_REGIONS = {
-  eastus: "East US",
-  westus: "West US",
-  centralus: "Central US",
-  northeurope: "North Europe",
-  westeurope: "West Europe",
-  eastasia: "East Asia",
-  southeastasia: "Southeast Asia",
+  centralindia: "Central India (Pune)",
 } as const;
 
 /**

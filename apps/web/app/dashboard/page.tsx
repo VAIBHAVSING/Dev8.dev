@@ -1,223 +1,371 @@
 "use client";
 
-import { useSession, signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
-import Link from "next/link";
-import Image from "next/image";
+import { useCallback, useEffect, useState } from "react";
+import { Sidebar } from "@/components/sidebar";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Loader2 } from "lucide-react";
+
+const WORKSPACE_STATUS_VALUES = [
+  "running",
+  "paused",
+  "stopped",
+  "creating",
+  "starting",
+  "stopping",
+  "deleting",
+  "error",
+] as const;
+
+type WorkspaceStatus = (typeof WORKSPACE_STATUS_VALUES)[number];
+type WorkspaceAction = "start" | "pause" | "stop" | "delete";
+
+type Workspace = {
+  id: string;
+  name: string;
+  status: WorkspaceStatus;
+  vsCodeUrl?: string | null;
+};
+
+type WorkspacePayload = {
+  id?: string | number;
+  name?: string;
+  status?: string;
+  vsCodeUrl?: string | null;
+};
+
+const ACTION_LABELS: Record<WorkspaceAction, string> = {
+  start: "Start",
+  pause: "Pause",
+  stop: "Stop",
+  delete: "Delete",
+};
+
+const ACTION_STYLES: Record<WorkspaceAction, string> = {
+  start: "border-green-500/30 text-green-500 hover:bg-green-500/10",
+  pause: "border-amber-500/30 text-amber-500 hover:bg-amber-500/10",
+  stop: "border-rose-500/30 text-rose-500 hover:bg-rose-500/10",
+  delete: "",
+};
+
+const STATUS_STYLES: Record<WorkspaceStatus, { label: string; color: string }> = {
+  running: { label: "Running", color: "text-green-500" },
+  paused: { label: "Paused", color: "text-amber-500" },
+  stopped: { label: "Stopped", color: "text-muted-foreground" },
+  creating: { label: "Creating", color: "text-blue-500" },
+  starting: { label: "Starting", color: "text-blue-500" },
+  stopping: { label: "Stopping", color: "text-amber-500" },
+  deleting: { label: "Deleting", color: "text-rose-500" },
+  error: { label: "Error", color: "text-rose-500" },
+};
+
+const normalizeStatus = (value?: string): WorkspaceStatus => {
+  const normalized = (value || "stopped").toLowerCase();
+  return WORKSPACE_STATUS_VALUES.includes(normalized as WorkspaceStatus)
+    ? (normalized as WorkspaceStatus)
+    : "stopped";
+};
+
+const PLACEHOLDER_WORKSPACES: Workspace[] = [
+  { id: "placeholder-1", name: "Loading...", status: "starting" },
+  { id: "placeholder-2", name: "Loading...", status: "starting" },
+  { id: "placeholder-3", name: "Loading...", status: "starting" },
+];
+
+const buildActionRequest = (workspaceId: string, action: WorkspaceAction) => {
+  switch (action) {
+    case "start":
+      return { endpoint: `/api/workspaces/${workspaceId}/start`, method: "POST" as const };
+    case "pause":
+      return { endpoint: `/api/workspaces/${workspaceId}/pause`, method: "POST" as const };
+    case "stop":
+      return { endpoint: `/api/workspaces/${workspaceId}/stop`, method: "POST" as const };
+    case "delete":
+      return { endpoint: `/api/workspaces/${workspaceId}`, method: "DELETE" as const };
+    default:
+      throw new Error("Unsupported action");
+  }
+};
+
+const isActionDisabled = (
+  action: WorkspaceAction,
+  status: WorkspaceStatus,
+  busyAction?: WorkspaceAction,
+) => {
+  if (busyAction) {
+    return true;
+  }
+
+  switch (action) {
+    case "start":
+      return ["running", "starting", "creating"].includes(status);
+    case "pause":
+      return status !== "running";
+    case "stop":
+      return !["running", "paused"].includes(status);
+    case "delete":
+      return status === "deleting";
+    default:
+      return false;
+  }
+};
 
 export default function Dashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
-    if (status === "loading") return; // Still loading
-
-    if (!session) {
-      router.push("/signin");
-    }
+    if (status === "loading") return;
+    if (!session) router.push("/signin");
   }, [session, status, router]);
 
-  if (status === "loading") {
+  // Workspace data hooks must be declared before any return to keep hook order stable
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [loadingWs, setLoadingWs] = useState(true);
+  const [actionBusy, setActionBusy] = useState<Record<string, WorkspaceAction | undefined>>({});
+
+  const refreshWorkspaces = useCallback(async () => {
+    try {
+      const res = await fetch("/api/workspaces", { cache: "no-store" });
+      if (!res.ok) {
+        throw new Error("Failed to fetch workspaces");
+      }
+      const data = await res.json();
+      const payloads: WorkspacePayload[] = Array.isArray(data.workspaces) ? data.workspaces : [];
+      const normalized: Workspace[] = payloads.map((entry) => ({
+        id: String(entry.id ?? crypto.randomUUID()),
+        name: entry.name ?? "Workspace",
+        status: normalizeStatus(entry.status),
+        vsCodeUrl: entry.vsCodeUrl,
+      }));
+      setWorkspaces(normalized);
+    } catch (error) {
+      console.error("Failed to load workspaces:", error);
+    } finally {
+      setLoadingWs(false);
+    }
+  }, []);
+
+  const handleWorkspaceAction = useCallback(
+    async (workspace: Workspace, action: WorkspaceAction) => {
+      const key = workspace.id.toString();
+      setActionBusy((prev) => ({ ...prev, [key]: action }));
+
+      try {
+        if (action === "delete") {
+          const confirmed = window.confirm(
+            `Delete workspace "${workspace.name}"? This action cannot be undone.`,
+          );
+          if (!confirmed) {
+            setActionBusy((prev) => {
+              const next = { ...prev };
+              delete next[key];
+              return next;
+            });
+            return;
+          }
+        }
+
+        const { endpoint, method } = buildActionRequest(workspace.id, action);
+        const response = await fetch(endpoint, { method });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(payload?.message || payload?.error || `Failed to ${action} workspace`);
+        }
+
+        await refreshWorkspaces();
+      } catch (error) {
+        console.error(`Failed to ${action} workspace:`, error);
+        alert(`Failed to ${action} workspace: ${error instanceof Error ? error.message : "Unknown error"}`);
+      } finally {
+        setActionBusy((prev) => {
+          const next = { ...prev };
+          delete next[key];
+          return next;
+        });
+      }
+    },
+    [refreshWorkspaces],
+  );
+
+  // Fetch dynamic workspaces and keep them fresh
+  useEffect(() => {
+    if (!session) return;
+
+    let timer: ReturnType<typeof setInterval> | undefined;
+
+    const bootstrap = async () => {
+      await refreshWorkspaces();
+      timer = setInterval(refreshWorkspaces, 10000);
+    };
+
+    bootstrap();
+
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [session, refreshWorkspaces]);
+
+  if (!mounted || status === "loading") {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Loading...</div>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <div className="text-lg text-muted-foreground">Loading your workspace...</div>
+        </div>
       </div>
     );
   }
 
-  if (!session) {
-    return null; // Will redirect
-  }
+  if (!session) return null;
+
+  
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <Link href="/" className="text-xl font-bold text-gray-900">
-                Dev8.dev
-              </Link>
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      <div className="fixed inset-0 -z-10 grid-background opacity-20" />
+      <div className="fixed inset-0 -z-10">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl pulse-glow" />
+        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-secondary/10 rounded-full blur-3xl pulse-glow" style={{ animationDelay: "1s" }} />
+      </div>
+
+      <Sidebar />
+
+      <main className="ml-64 min-h-screen transition-all duration-300">
+        <div className="container mx-auto px-8 py-8">
+          {/* Top bar with search + new workspace */}
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-4 w-full max-w-2xl">
+              <div className="relative w-full">
+                <input
+                  aria-label="Search workspaces"
+                  placeholder="Search workspaces..."
+                  className="w-full rounded-lg border border-border bg-card px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+              </div>
             </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-gray-700">
-                {session.user?.name || session.user?.email}
-              </span>
-              <button
-                onClick={() => signOut()}
-                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-              >
-                Sign Out
+
+            <div className="flex items-center gap-4">
+              <Button onClick={() => router.push("/workspaces/new")} className="bg-gradient-to-r from-primary to-secondary">
+                + New Workspace
+              </Button>
+              <button className="h-9 w-9 rounded-md bg-card border border-border flex items-center justify-center text-muted-foreground">
+                <span>🔔</span>
               </button>
+              <div className="h-9 w-9 rounded-full bg-card border border-border flex items-center justify-center text-muted-foreground">R</div>
             </div>
           </div>
-        </div>
-      </nav>
 
-      <main className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-        <div className="md:flex md:items-center md:justify-between mb-8">
-          <div className="flex-1 min-w-0">
-            <h2 className="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">
-              Dashboard
-            </h2>
-            <p className="mt-1 text-sm text-gray-500">
-              Welcome to your protected dashboard!
-            </p>
-          </div>
-        </div>
+          {/* Heading */}
+          <h2 className="text-2xl font-semibold mb-4">Your Workspaces</h2>
 
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {/* Profile Card */}
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="p-5">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  {session.user?.image ? (
-                    <Image
-                      className="h-10 w-10 rounded-full"
-                      src={session.user.image}
-                      alt="Profile"
-                      width={40}
-                      height={40}
-                    />
-                  ) : (
-                    <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
-                      <span className="text-gray-600 font-medium">
-                        {session.user?.name?.[0] ||
-                          session.user?.email?.[0] ||
-                          "U"}
-                      </span>
+          {/* Workspace cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            {(loadingWs ? PLACEHOLDER_WORKSPACES : workspaces).map((ws) => {
+              const statusMeta = STATUS_STYLES[ws.status];
+              const busyAction = actionBusy[ws.id];
+              const isPlaceholder = ws.id.startsWith("placeholder-");
+              const disableConnections = isPlaceholder || ws.status !== "running" || Boolean(busyAction);
+
+              return (
+                <Card key={ws.id} className="border-border bg-card/50 backdrop-blur">
+                  <div className="p-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h3 className="text-lg font-semibold text-foreground">{ws.name}</h3>
+                        <p className="text-xs text-muted-foreground">ID: {ws.id}</p>
+                      </div>
+                      <p className={`text-sm font-medium ${statusMeta.color}`}>
+                        {statusMeta.label}
+                      </p>
                     </div>
-                  )}
-                </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">
-                      Profile
-                    </dt>
-                    <dd className="text-lg font-medium text-gray-900">
-                      {session.user?.name || "Anonymous User"}
-                    </dd>
-                  </dl>
-                </div>
-              </div>
-            </div>
-            <div className="bg-gray-50 px-5 py-3">
-              <div className="text-sm">
-                <Link
-                  href="/profile"
-                  className="font-medium text-indigo-600 hover:text-indigo-500"
-                >
-                  View profile
-                </Link>
-              </div>
-            </div>
-          </div>
 
-          {/* Session Info Card */}
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="p-5">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <svg
-                    className="h-8 w-8 text-gray-400"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                    />
-                  </svg>
-                </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">
-                      Session Status
-                    </dt>
-                    <dd className="text-lg font-medium text-gray-900">
-                      Active
-                    </dd>
-                  </dl>
-                </div>
-              </div>
-            </div>
-            <div className="bg-gray-50 px-5 py-3">
-              <div className="text-sm">
-                <span className="font-medium text-green-600">
-                  Authenticated
-                </span>
-              </div>
-            </div>
-          </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {( ["start", "pause", "stop", "delete"] as WorkspaceAction[] ).map((action) => {
+                        const disabled = isPlaceholder || isActionDisabled(action, ws.status, busyAction);
+                        const isDelete = action === "delete";
+                        return (
+                          <Button
+                            key={action}
+                            size="sm"
+                            variant={isDelete ? "destructive" : "outline"}
+                            className={!isDelete ? `${ACTION_STYLES[action]} border` : undefined}
+                            disabled={disabled}
+                            onClick={() => {
+                              if (isPlaceholder) return;
+                              handleWorkspaceAction(ws, action);
+                            }}
+                          >
+                            {busyAction === action ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              ACTION_LABELS[action]
+                            )}
+                          </Button>
+                        );
+                      })}
+                    </div>
 
-          {/* Settings Card */}
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="p-5">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <svg
-                    className="h-8 w-8 text-gray-400"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                    />
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                    />
-                  </svg>
-                </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">
-                      Settings
-                    </dt>
-                    <dd className="text-lg font-medium text-gray-900">
-                      Account Settings
-                    </dd>
-                  </dl>
-                </div>
-              </div>
-            </div>
-            <div className="bg-gray-50 px-5 py-3">
-              <div className="text-sm">
-                <Link
-                  href="/settings"
-                  className="font-medium text-indigo-600 hover:text-indigo-500"
-                >
-                  Manage settings
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
+                    <div className="h-px my-4 bg-border" />
 
-        {/* Session Details */}
-        <div className="mt-8">
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="px-4 py-5 sm:p-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-                Session Details
-              </h3>
-              <div className="bg-gray-50 rounded-md p-4">
-                <pre className="text-sm text-gray-800 overflow-x-auto">
-                  {JSON.stringify(session, null, 2)}
-                </pre>
-              </div>
-            </div>
+                    <div className="mt-4 flex items-center justify-between gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          if (ws.vsCodeUrl) {
+                            // Azure Container Apps doesn't support :port in URLs, strip :8080
+                            const cleanUrl = ws.vsCodeUrl.replace(':8080', '');
+                            console.log('Opening VSCode:', cleanUrl, '(original:', ws.vsCodeUrl, ')');
+                            window.open(cleanUrl, '_blank');
+                          } else {
+                            alert('VSCode URL not available. Please ensure workspace is running.');
+                          }
+                        }}
+                        className="flex-1"
+                        disabled={disableConnections || !ws.vsCodeUrl}
+                        title="Open VSCode in browser"
+                      >
+                        Open VSCode
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={async () => {
+                          try {
+                            const res = await fetch(`/api/workspaces/${ws.id}/details`);
+                            if (res.ok) {
+                              const data = await res.json();
+                              const sshUrl = data.sshUrl || data.sshURL;
+                              if (sshUrl) {
+                                await navigator.clipboard.writeText(sshUrl);
+                                alert('SSH URL copied to clipboard!');
+                              } else {
+                                alert('SSH URL not available');
+                              }
+                            } else {
+                              alert('Failed to fetch workspace details');
+                            }
+                          } catch (e) {
+                            console.error('Failed to copy SSH:', e);
+                            alert('Failed to copy SSH URL');
+                          }
+                        }}
+                        className="flex-1"
+                        disabled={disableConnections}
+                      >
+                        Copy SSH
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
           </div>
         </div>
       </main>

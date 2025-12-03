@@ -1,0 +1,853 @@
+{
+  "info": {
+    "name": "Dev8 Backend APIs - Complete Collection",
+    "description": "Complete testing collection for all 40 Dev8 backend API endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "workspaceId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "teamId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Authentication APIs",
+      "item": [
+        {
+          "name": "1.1 Register New User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('accessToken', response.tokens.accessToken);",
+                  "    pm.collectionVariables.set('refreshToken', response.tokens.refreshToken);",
+                  "    pm.collectionVariables.set('userId', response.user.id);",
+                  "    console.log('✅ Tokens saved to collection variables');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"testuser@dev8.com\",\n  \"password\": \"SecurePass@123\",\n  \"name\": \"Test User\",\n  \"username\": \"testuser\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.2 Login User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"testuser@dev8.com\",\n  \"password\": \"SecurePass@123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.3 Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "me"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.4 Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "logout"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.5 Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "refresh"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.6 Change Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"SecurePass@123\",\n  \"newPassword\": \"NewSecurePass@456\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/change-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "change-password"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.7 Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"testuser@dev8.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/forgot-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "forgot-password"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.8 Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"YOUR_RESET_TOKEN\",\n  \"newPassword\": \"ResetPass@789\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/reset-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "reset-password"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.9 Verify Email",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"VERIFICATION_TOKEN\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/verify-email",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "verify-email"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. User Management APIs",
+      "item": [
+        {
+          "name": "2.1 Get User Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "me"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2.2 Update User Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Test User\",\n  \"bio\": \"Full-stack developer passionate about cloud computing\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "me"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2.3 Get User Usage",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/me/usage",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "me", "usage"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2.4 Search Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/search?q=test",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "search"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "test"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2.5 Delete User Account",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"password\": \"NewSecurePass@456\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "me"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. Workspace Management APIs",
+      "item": [
+        {
+          "name": "3.1 Create Workspace",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('workspaceId', response.workspace.id);",
+                  "    console.log('✅ Workspace ID saved:', response.workspace.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"My Dev Environment\",\n  \"template\": \"node-typescript\",\n  \"instanceType\": \"small\",\n  \"region\": \"eastus\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "workspaces"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3.2 List Workspaces",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "workspaces"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3.3 Get Workspace Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces/{{workspaceId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "workspaces", "{{workspaceId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3.4 Update Workspace",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Dev Environment\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces/{{workspaceId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "workspaces", "{{workspaceId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3.5 Start Workspace",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces/{{workspaceId}}/start",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "workspaces", "{{workspaceId}}", "start"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3.6 Stop Workspace",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces/{{workspaceId}}/stop",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "workspaces", "{{workspaceId}}", "stop"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3.7 Get Workspace Activity",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces/{{workspaceId}}/activity",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "workspaces", "{{workspaceId}}", "activity"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3.8 Record Workspace Activity",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cpuUsagePercent\": 45.5,\n  \"memoryUsageMB\": 512,\n  \"diskUsageMB\": 2048,\n  \"networkInMB\": 100,\n  \"networkOutMB\": 50\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces/{{workspaceId}}/activity",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "workspaces", "{{workspaceId}}", "activity"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3.9 List SSH Keys",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces/{{workspaceId}}/ssh-keys",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "workspaces", "{{workspaceId}}", "ssh-keys"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3.10 Add SSH Key",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"My Laptop SSH Key\",\n  \"publicKey\": \"ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCtest user@laptop\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces/{{workspaceId}}/ssh-keys",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "workspaces", "{{workspaceId}}", "ssh-keys"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3.11 Delete Workspace",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces/{{workspaceId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "workspaces", "{{workspaceId}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4. Team Management APIs",
+      "item": [
+        {
+          "name": "4.1 Create Team",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('teamId', response.team.id);",
+                  "    console.log('✅ Team ID saved:', response.team.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Dev8 Team\",\n  \"slug\": \"dev8-team\",\n  \"description\": \"Our awesome development team\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/teams",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "teams"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4.2 List User Teams",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/teams",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "teams"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4.3 Get Team Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/teams/{{teamId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "teams", "{{teamId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4.4 Update Team",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Dev8 Team\",\n  \"description\": \"Best development team ever!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/teams/{{teamId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "teams", "{{teamId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4.5 List Team Members",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/teams/{{teamId}}/members",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "teams", "{{teamId}}", "members"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4.6 Invite Team Member",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"newmember@dev8.com\",\n  \"role\": \"MEMBER\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/teams/{{teamId}}/members",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "teams", "{{teamId}}", "members"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4.10 Get Team Workspaces",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/teams/{{teamId}}/workspaces",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "teams", "{{teamId}}", "workspaces"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4.11 Get Team Usage",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/teams/{{teamId}}/usage",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "teams", "{{teamId}}", "usage"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4.12 Get Team Activity",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/teams/{{teamId}}/activity",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "teams", "{{teamId}}", "activity"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4.15 Delete Team",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"confirmSlug\": \"dev8-team\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/teams/{{teamId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "teams", "{{teamId}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

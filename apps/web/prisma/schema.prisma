@@ -24,6 +24,7 @@ model User {
   sshKeys       SSHKey[]
   secrets       Secret[]
   workspaces    Workspace[]
+  actionLogs    EnvironmentActionLog[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -90,8 +91,22 @@ enum EnvironmentStatus {
   RUNNING
   STOPPING
   STOPPED
+  PAUSED
   ERROR
   DELETING
+}
+
+enum EnvironmentActionType {
+  START
+  PAUSE
+  STOP
+  DELETE
+}
+
+enum EnvironmentActionStatus {
+  PENDING
+  SUCCESS
+  FAILED
 }
 
 enum CloudProvider {
@@ -152,7 +167,7 @@ model Environment {
 
   // Cloud Configuration
   cloudProvider       CloudProvider @default(AZURE)
-  cloudRegion         String        @default("eastus")
+  cloudRegion         String        @default("centralindia")
   aciContainerGroupId String?
   aciPublicIp         String?
 
@@ -191,6 +206,7 @@ model Environment {
   secrets         EnvironmentSecret[]
   workspace       Workspace?
   backups         Backup[]
+  actionLogs      EnvironmentActionLog[]
 
   @@index([userId])
   @@index([status])
@@ -202,6 +218,26 @@ model Environment {
   @@index([deletedAt])
   @@index([userId, status, deletedAt])
   @@map("environments")
+}
+
+model EnvironmentActionLog {
+  id            String                     @id @default(cuid())
+  environmentId String
+  userId        String
+  action        EnvironmentActionType
+  status        EnvironmentActionStatus    @default(PENDING)
+  message       String?
+  metadata      Json?                      @default("{}")
+  createdAt     DateTime                   @default(now())
+  updatedAt     DateTime                   @updatedAt
+
+  environment Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([environmentId, action])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("environment_action_logs")
 }
 
 model Template {

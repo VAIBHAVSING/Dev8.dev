@@ -2,13 +2,14 @@
 
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 
 export default function Profile() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const [connections, setConnections] = useState<Array<{ provider: string; connected: boolean }>>([]);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -16,6 +17,25 @@ export default function Profile() {
       router.push("/signin");
     }
   }, [session, status, router]);
+
+  useEffect(() => {
+    if (status !== "authenticated") return;
+    async function load() {
+      try {
+        const r = await fetch("/api/account/connections", { cache: "no-store" });
+        if (!r.ok) return;
+        const text = await r.text();
+        if (!text) return;
+        const j = JSON.parse(text);
+        setConnections(j.connections ?? []);
+      } catch (e) {
+        console.error("profile: connections fetch error", e);
+      }
+    }
+    load();
+    const timer = setInterval(load, 8000);
+    return () => clearInterval(timer);
+  }, [status]);
 
   if (status === "loading") {
     return (
@@ -138,6 +158,18 @@ export default function Profile() {
                 >
                   Sign Out
                 </button>
+              </div>
+            </div>
+
+            <div className="mt-8 pt-8 border-t border-gray-200">
+              <h4 className="text-md font-medium text-gray-900 mb-4">Connected Accounts</h4>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {connections.map((c) => (
+                  <div key={c.provider} className="flex items-center justify-between rounded-md border border-gray-200 bg-white px-4 py-3">
+                    <div className="text-sm font-medium text-gray-900">{c.provider}</div>
+                    <span className={`text-xs ${c.connected ? 'text-emerald-600' : 'text-rose-600'}`}>{c.connected ? 'Connected' : 'Disconnected'}</span>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
