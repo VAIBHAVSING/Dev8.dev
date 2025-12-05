@@ -1,0 +1,202 @@
+name: Publish DevContainer Features
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "packages/devcontainer-features/**"
+  workflow_dispatch:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        feature:
+          - supervisor
+          - claude-cli
+          - ai-tools
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Extract feature metadata
+        id: meta
+        run: |
+          FEATURE_PATH="packages/devcontainer-features/src/${{ matrix.feature }}"
+          VERSION=$(jq -r '.version' "$FEATURE_PATH/devcontainer-feature.json")
+          FEATURE_ID=$(jq -r '.id' "$FEATURE_PATH/devcontainer-feature.json")
+          DESCRIPTION=$(jq -r '.description' "$FEATURE_PATH/devcontainer-feature.json")
+
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "feature_id=$FEATURE_ID" >> $GITHUB_OUTPUT
+          echo "description=$DESCRIPTION" >> $GITHUB_OUTPUT
+
+          echo "Feature: $FEATURE_ID"
+          echo "Version: $VERSION"
+          echo "Description: $DESCRIPTION"
+
+      - name: Create feature tarball
+        run: |
+          FEATURE_PATH="packages/devcontainer-features/src/${{ matrix.feature }}"
+          OUTPUT_DIR="dist/${{ matrix.feature }}"
+
+          mkdir -p "$OUTPUT_DIR"
+
+          # Copy feature files
+          cp "$FEATURE_PATH/devcontainer-feature.json" "$OUTPUT_DIR/"
+          cp "$FEATURE_PATH/install.sh" "$OUTPUT_DIR/"
+
+          # Copy README if exists
+          if [ -f "$FEATURE_PATH/README.md" ]; then
+            cp "$FEATURE_PATH/README.md" "$OUTPUT_DIR/"
+          fi
+
+          # Create tarball
+          cd dist
+          tar -czf "${{ matrix.feature }}.tgz" "${{ matrix.feature }}"
+
+          echo "Tarball created: dist/${{ matrix.feature }}.tgz"
+          ls -lh "${{ matrix.feature }}.tgz"
+
+      - name: Generate OCI annotations
+        id: annotations
+        run: |
+          cat > annotations.json << EOF
+          {
+            "org.opencontainers.image.title": "${{ steps.meta.outputs.feature_id }}",
+            "org.opencontainers.image.description": "${{ steps.meta.outputs.description }}",
+            "org.opencontainers.image.version": "${{ steps.meta.outputs.version }}",
+            "org.opencontainers.image.source": "${{ github.server_url }}/${{ github.repository }}",
+            "org.opencontainers.image.vendor": "Dev8 Community",
+            "org.opencontainers.image.licenses": "MIT",
+            "dev.containers.metadata": "$(cat packages/devcontainer-features/src/${{ matrix.feature }}/devcontainer-feature.json | jq -c)"
+          }
+          EOF
+
+          cat annotations.json
+
+      - name: Push to GitHub Container Registry
+        run: |
+          FEATURE_NAME="${{ matrix.feature }}"
+          VERSION="${{ steps.meta.outputs.version }}"
+          REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+
+          # Build base image tag
+          IMAGE_BASE="ghcr.io/${REPO_LOWER}/devcontainer-features/${FEATURE_NAME}"
+
+          # Tag with version and latest
+          IMAGE_VERSION="${IMAGE_BASE}:${VERSION}"
+          IMAGE_LATEST="${IMAGE_BASE}:latest"
+
+          # For DevContainer features, we use OCI artifacts
+          # Create a simple Dockerfile that embeds the feature
+          cat > Dockerfile << 'DOCKERFILE'
+          FROM scratch
+          COPY dist/${{ matrix.feature }}.tgz /
+          DOCKERFILE
+
+          # Build and push with both version and latest tags
+          docker buildx build \
+            --platform linux/amd64,linux/arm64 \
+            --tag "$IMAGE_VERSION" \
+            --tag "$IMAGE_LATEST" \
+            --label "org.opencontainers.image.title=${{ steps.meta.outputs.feature_id }}" \
+            --label "org.opencontainers.image.description=${{ steps.meta.outputs.description }}" \
+            --label "org.opencontainers.image.version=${{ steps.meta.outputs.version }}" \
+            --label "org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}" \
+            --label "org.opencontainers.image.vendor=Dev8 Community" \
+            --label "org.opencontainers.image.licenses=MIT" \
+            --push \
+            .
+
+          echo "✓ Published feature: ${{ matrix.feature }}"
+          echo "  - $IMAGE_VERSION"
+          echo "  - $IMAGE_LATEST"
+
+      - name: Create usage instructions
+        run: |
+          cat > usage-${{ matrix.feature }}.md << EOF
+          # ${{ steps.meta.outputs.feature_id }} - Version ${{ steps.meta.outputs.version }}
+
+          ${{ steps.meta.outputs.description }}
+
+          ## Usage
+
+          Add to your \`.devcontainer/devcontainer.json\`:
+
+          \`\`\`json
+          {
+            "features": {
+              "ghcr.io/$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')/devcontainer-features/${{ matrix.feature }}:${{ steps.meta.outputs.version }}": {}
+            }
+          }
+          \`\`\`
+
+          Or use \`latest\`:
+
+          \`\`\`json
+          {
+            "features": {
+              "ghcr.io/$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')/devcontainer-features/${{ matrix.feature }}:latest": {}
+            }
+          }
+          \`\`\`
+
+          ## Documentation
+
+          See [packages/devcontainer-features/src/${{ matrix.feature }}/README.md](../../packages/devcontainer-features/src/${{ matrix.feature }}/README.md) for full documentation.
+          EOF
+
+          cat usage-${{ matrix.feature }}.md
+
+      - name: Upload usage instructions as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: usage-${{ matrix.feature }}
+          path: usage-${{ matrix.feature }}.md
+
+  summary:
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Summary
+        run: |
+          echo "# DevContainer Features Published ✓" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The following features have been published to GitHub Container Registry:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- supervisor" >> $GITHUB_STEP_SUMMARY
+          echo "- claude-cli" >> $GITHUB_STEP_SUMMARY
+          echo "- ai-tools" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Usage" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Add features to your \`.devcontainer/devcontainer.json\`:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```json' >> $GITHUB_STEP_SUMMARY
+          echo '{' >> $GITHUB_STEP_SUMMARY
+          echo '  "features": {' >> $GITHUB_STEP_SUMMARY
+          echo '    "ghcr.io/${{ github.repository }}/devcontainer-features/supervisor:latest": {},' >> $GITHUB_STEP_SUMMARY
+          echo '    "ghcr.io/${{ github.repository }}/devcontainer-features/claude-cli:latest": {},' >> $GITHUB_STEP_SUMMARY
+          echo '    "ghcr.io/${{ github.repository }}/devcontainer-features/ai-tools:latest": {}' >> $GITHUB_STEP_SUMMARY
+          echo '  }' >> $GITHUB_STEP_SUMMARY
+          echo '}' >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
