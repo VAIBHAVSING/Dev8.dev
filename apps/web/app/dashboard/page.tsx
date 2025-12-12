@@ -245,24 +245,35 @@ export default function Dashboard() {
                 <input
                   aria-label="Search workspaces"
                   placeholder="Search workspaces..."
-                  className="w-full rounded-lg border border-border bg-card px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  className="w-full rounded-lg border border-border/50 bg-card/50 backdrop-blur px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all"
                 />
               </div>
             </div>
 
             <div className="flex items-center gap-4">
-              <Button onClick={() => router.push("/workspaces/new")} className="bg-gradient-to-r from-primary to-secondary">
-                + New Workspace
+              <Button 
+                onClick={() => router.push("/workspaces/new")} 
+                className="bg-gradient-to-r from-primary via-primary to-secondary hover:glow-primary hover-lift group"
+              >
+                <span className="text-lg mr-1">+</span> New Workspace
               </Button>
-              <button className="h-9 w-9 rounded-md bg-card border border-border flex items-center justify-center text-muted-foreground">
+              <button className="h-9 w-9 rounded-lg bg-card/50 backdrop-blur border border-border/50 flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary/30 transition-all hover-scale">
                 <span>🔔</span>
               </button>
-              <div className="h-9 w-9 rounded-full bg-card border border-border flex items-center justify-center text-muted-foreground">R</div>
+              <div className="h-9 w-9 rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 border border-primary/30 flex items-center justify-center text-primary font-semibold hover-scale cursor-pointer transition-all">
+                R
+              </div>
             </div>
           </div>
 
           {/* Heading */}
-          <h2 className="text-2xl font-semibold mb-4">Your Workspaces</h2>
+          <div className="flex items-center gap-3 mb-6">
+            <h2 className="text-2xl font-bold">Your Workspaces</h2>
+            <div className="h-6 w-px bg-border/50" />
+            <p className="text-sm text-muted-foreground">
+              {loadingWs ? "Loading..." : `${workspaces.length} workspace${workspaces.length !== 1 ? 's' : ''}`}
+            </p>
+          </div>
 
           {/* Workspace cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
@@ -273,19 +284,22 @@ export default function Dashboard() {
               const disableConnections = isPlaceholder || ws.status !== "running" || Boolean(busyAction);
 
               return (
-                <Card key={ws.id} className="border-border bg-card/50 backdrop-blur">
-                  <div className="p-4">
-                    <div className="flex items-start justify-between gap-2">
+                <Card key={ws.id} className="border-border/50 bg-card/50 backdrop-blur hover:border-primary/30 hover-lift transition-all duration-300 group">
+                  <div className="p-5">
+                    <div className="flex items-start justify-between gap-2 mb-4">
                       <div>
-                        <h3 className="text-lg font-semibold text-foreground">{ws.name}</h3>
-                        <p className="text-xs text-muted-foreground">ID: {ws.id}</p>
+                        <h3 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">{ws.name}</h3>
+                        <p className="text-xs text-muted-foreground mt-1">ID: {ws.id}</p>
                       </div>
-                      <p className={`text-sm font-medium ${statusMeta.color}`}>
-                        {statusMeta.label}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <div className={`h-2 w-2 rounded-full ${statusMeta.color.includes('green') ? 'bg-green-500' : statusMeta.color.includes('amber') ? 'bg-amber-500' : statusMeta.color.includes('rose') ? 'bg-rose-500' : statusMeta.color.includes('blue') ? 'bg-blue-500' : 'bg-muted'} ${ws.status === 'running' ? 'pulse-scale' : ''}`} />
+                        <p className={`text-sm font-medium ${statusMeta.color}`}>
+                          {statusMeta.label}
+                        </p>
+                      </div>
                     </div>
 
-                    <div className="mt-3 flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-2">
                       {( ["start", "pause", "stop", "delete"] as WorkspaceAction[] ).map((action) => {
                         const disabled = isPlaceholder || isActionDisabled(action, ws.status, busyAction);
                         const isDelete = action === "delete";
@@ -294,7 +308,7 @@ export default function Dashboard() {
                             key={action}
                             size="sm"
                             variant={isDelete ? "destructive" : "outline"}
-                            className={!isDelete ? `${ACTION_STYLES[action]} border` : undefined}
+                            className={!isDelete ? `${ACTION_STYLES[action]} border hover-scale transition-all` : 'hover-scale transition-all'}
                             disabled={disabled}
                             onClick={() => {
                               if (isPlaceholder) return;
@@ -311,9 +325,9 @@ export default function Dashboard() {
                       })}
                     </div>
 
-                    <div className="h-px my-4 bg-border" />
+                    <div className="h-px my-4 bg-border/50" />
 
-                    <div className="mt-4 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
                       <Button
                         size="sm"
                         variant="outline"
@@ -327,7 +341,7 @@ export default function Dashboard() {
                             alert('VSCode URL not available. Please ensure workspace is running.');
                           }
                         }}
-                        className="flex-1"
+                        className="flex-1 bg-primary/10 border-primary/30 text-primary hover:bg-primary/20 hover:border-primary/50 transition-all"
                         disabled={disableConnections || !ws.vsCodeUrl}
                         title="Open VSCode in browser"
                       >
@@ -356,7 +370,7 @@ export default function Dashboard() {
                             alert('Failed to copy SSH URL');
                           }
                         }}
-                        className="flex-1"
+                        className="flex-1 hover-scale transition-all"
                         disabled={disableConnections}
                       >
                         Copy SSH
