@@ -173,35 +173,51 @@ export default function NewWorkspacePage() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <Card className="bg-card/50 backdrop-blur border-border lg:col-span-2">
-              <CardHeader>
-                <CardTitle className="text-sm font-medium">Configuration</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="name">Workspace Name</Label>
-                    <Input id="name" placeholder="e.g. api-backend-dev" value={name} onChange={(e) => setName(e.target.value)} />
+            <Card className="bg-card/50 backdrop-blur border-border/50 lg:col-span-2 hover:border-primary/20 transition-all">
+              <CardHeader className="border-b border-border/50">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <span className="text-xl">⚙️</span>
                   </div>
                   <div>
-                    <Label>Provider</Label>
-                    <div className="mt-2 grid grid-cols-1 gap-3">
+                    <CardTitle className="text-lg font-bold">Configuration</CardTitle>
+                    <p className="text-xs text-muted-foreground mt-0.5">Set up your development environment</p>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6 pt-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <Label htmlFor="name" className="text-sm font-medium mb-2 block">Workspace Name</Label>
+                    <Input 
+                      id="name" 
+                      placeholder="e.g. api-backend-dev" 
+                      value={name} 
+                      onChange={(e) => setName(e.target.value)}
+                      className="border-border/50 bg-card/30 backdrop-blur focus:border-primary/50 transition-all"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium mb-2 block">Cloud Provider</Label>
+                    <div className="grid grid-cols-1 gap-3">
                       {options?.providers.map((p) => (
                         <button
                           key={p.id}
                           type="button"
                           onClick={() => setProviderId(p.id)}
-                          className={`flex w-full flex-col rounded-lg border p-4 text-left transition ${
-                            providerId === p.id ? "border-primary bg-primary/10" : "border-border bg-card"
+                          className={`flex w-full flex-col rounded-lg border p-4 text-left hover-lift transition-all ${
+                            providerId === p.id ? "border-primary/50 bg-primary/10 glow-primary" : "border-border/50 bg-card/30 backdrop-blur hover:border-primary/30"
                           }`}
                         >
                           <div className="flex items-center justify-between">
                             <span className="font-semibold text-sm">{p.label}</span>
-                            <Badge variant={p.status === "online" ? "default" : "secondary"}>{p.status === "online" ? "Live" : "Planned"}</Badge>
+                            <Badge variant={p.status === "online" ? "default" : "secondary"} className="text-xs">
+                              {p.status === "online" ? "✓ Live" : "Planned"}
+                            </Badge>
                           </div>
-                          <p className="mt-1 text-xs text-muted-foreground">{p.description}</p>
+                          <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">{p.description}</p>
                           <p className="mt-2 text-xs text-muted-foreground">
-                            Region: {p.regions.map((region) => region.label).join(", ")}
+                            📍 {p.regions.map((region) => region.label).join(", ")}
                           </p>
                         </button>
                       ))}
@@ -286,28 +302,68 @@ export default function NewWorkspacePage() {
                   </div>
                 </div>
 
-                <div className="flex justify-end">
-                  <Button onClick={onSubmit} disabled={submitting} className="bg-gradient-to-r from-primary to-secondary">
-                    {submitting ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Creating...</> : "Create Workspace"}
+                <div className="flex justify-end pt-2">
+                  <Button 
+                    onClick={onSubmit} 
+                    disabled={submitting} 
+                    className="bg-gradient-to-r from-primary via-primary to-secondary hover:glow-primary hover-lift px-8 py-5 text-base group"
+                  >
+                    {submitting ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" /> 
+                        Creating...
+                      </>
+                    ) : (
+                      <>
+                        Create Workspace
+                        <span className="ml-2 group-hover:translate-x-1 transition-transform inline-block">→</span>
+                      </>
+                    )}
                   </Button>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-card/50 backdrop-blur border-border">
-              <CardHeader>
-                <CardTitle className="text-sm font-medium">Estimate</CardTitle>
+            <Card className="bg-card/50 backdrop-blur border-border/50 hover:border-accent/20 transition-all">
+              <CardHeader className="border-b border-border/50">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-accent/10 flex items-center justify-center">
+                    <span className="text-xl">💰</span>
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg font-bold">Cost Estimate</CardTitle>
+                    <p className="text-xs text-muted-foreground mt-0.5">Transparent pricing</p>
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-6">
                 {estimate ? (
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center justify-between"><span>Hourly</span><span className="font-semibold">{estimate.cost.currency} {estimate.cost.hourly.toFixed(2)}</span></div>
-                    <div className="flex items-center justify-between"><span>Daily</span><span className="font-semibold">{estimate.cost.currency} {estimate.cost.daily.toFixed(2)}</span></div>
-                    <div className="flex items-center justify-between"><span>Monthly</span><span className="font-semibold">{estimate.cost.currency} {estimate.cost.monthly.toFixed(2)}</span></div>
-                    <p className="text-xs text-muted-foreground mt-3">Azure costs are estimated with persistent volumes. Actual billing depends on runtime.</p>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-4 rounded-lg bg-card/30 backdrop-blur border border-border/30">
+                      <span className="text-sm text-muted-foreground">Hourly</span>
+                      <span className="text-lg font-bold text-accent">{estimate.cost.currency} {estimate.cost.hourly.toFixed(2)}</span>
+                    </div>
+                    <div className="flex items-center justify-between p-4 rounded-lg bg-card/30 backdrop-blur border border-border/30">
+                      <span className="text-sm text-muted-foreground">Daily</span>
+                      <span className="text-lg font-bold">{estimate.cost.currency} {estimate.cost.daily.toFixed(2)}</span>
+                    </div>
+                    <div className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-br from-primary/5 to-secondary/5 border border-primary/30">
+                      <span className="text-sm font-medium">Monthly</span>
+                      <span className="text-xl font-bold text-gradient-primary">{estimate.cost.currency} {estimate.cost.monthly.toFixed(2)}</span>
+                    </div>
+                    <div className="p-3 rounded-lg bg-muted/20 border border-border/30">
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        💡 Estimated costs include persistent storage. Actual billing based on runtime.
+                      </p>
+                    </div>
                   </div>
                 ) : (
-                  <div className="text-sm text-muted-foreground">Adjust options to see cost estimate.</div>
+                  <div className="text-center py-8">
+                    <div className="h-16 w-16 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-3">
+                      <span className="text-3xl">📊</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">Select configuration to see pricing</p>
+                  </div>
                 )}
               </CardContent>
             </Card>

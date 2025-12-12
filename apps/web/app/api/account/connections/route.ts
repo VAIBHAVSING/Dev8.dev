@@ -21,7 +21,7 @@ export async function GET() {
           where: { userId: session.user.id },
           select: { provider: true },
         });
-        connected = new Set(accounts.map((a) => a.provider.toLowerCase()));
+        connected = new Set(accounts.map((a: { provider: string }) => a.provider.toLowerCase()));
       } catch (e) {
         console.error("/api/account/connections prisma error", e);
       }

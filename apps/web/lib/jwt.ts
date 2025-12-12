@@ -40,5 +40,7 @@ export function extractTokenFromHeader(authHeader: string): string {
   if (!authHeader) throw new Error('Authorization header is missing');
   const parts = authHeader.split(' ');
   if (parts.length !== 2 || parts[0] !== 'Bearer') throw new Error('Invalid authorization header format');
-  return parts[1];
+  const token = parts[1];
+  if (!token) throw new Error('Token is missing from authorization header');
+  return token;
 }

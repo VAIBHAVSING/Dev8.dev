@@ -1,6 +1,6 @@
 /**
- * GET /api/teams/[id]/workspaces
- * List team workspaces
+ * GET /api/teams/[id]/activity
+ * Get team activity logs
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -12,15 +12,16 @@ import { isTeamMember } from '@/lib/permissions';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const payload = await requireAuth(request);
-    const { id } = params;
     const { searchParams } = new URL(request.url);
     
-    const status = searchParams.get('status');
-    const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 100);
+    const startDate = searchParams.get('startDate');
+    const endDate = searchParams.get('endDate');
+    const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100);
     const offset = parseInt(searchParams.get('offset') || '0');
 
     // Verify user is team member
@@ -32,38 +33,47 @@ export async function GET(
       );
     }
 
-    const where: Prisma.EnvironmentWhereInput = {
-      teamId: id,
-      deletedAt: null,
+    const where: Prisma.ResourceUsageWhereInput = {
+      environment: {
+        teamId: id,
+      },
     };
 
-    if (status) {
-      where.status = status;
+    if (startDate || endDate) {
+      const timestampFilter: Prisma.DateTimeFilter = {};
+      if (startDate) timestampFilter.gte = new Date(startDate);
+      if (endDate) timestampFilter.lte = new Date(endDate);
+      where.timestamp = timestampFilter;
     }
 
-    const environments = await prisma.environment.findMany({
+    const activities = await prisma.resourceUsage.findMany({
       where,
       include: {
-        user: {
+        environment: {
           select: {
             id: true,
             name: true,
-            email: true,
-            image: true,
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
           },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { timestamp: 'desc' },
       skip: offset,
       take: limit,
     });
 
-    const total = await prisma.environment.count({ where });
+    const total = await prisma.resourceUsage.count({ where });
 
     return NextResponse.json({
       success: true,
       data: {
-        workspaces: environments,
+        activities,
         pagination: {
           total,
           limit,

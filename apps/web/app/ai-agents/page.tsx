@@ -121,8 +121,8 @@ export default function AiAgentsPage() {
     <div className="min-h-screen bg-background relative overflow-hidden">
       <div className="fixed inset-0 -z-10 grid-background opacity-20" />
       <div className="fixed inset-0 -z-10">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl pulse-glow" />
-        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-secondary/10 rounded-full blur-3xl pulse-glow" style={{ animationDelay: "1s" }} />
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl pulse-glow [animation-delay:0s]" />
+        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-secondary/10 rounded-full blur-3xl pulse-glow [animation-delay:1s]" />
       </div>
 
       <Sidebar />
@@ -140,30 +140,36 @@ export default function AiAgentsPage() {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left: Agents list (2 cols) */}
-            <Card className="lg:col-span-2 border-border bg-card/50">
-              <div className="p-4 md:p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <Bot className="h-5 w-5 text-primary" />
-                  <h2 className="text-sm font-medium">AI Coding Agents</h2>
+            <Card className="lg:col-span-2 border-border/50 bg-card/50 backdrop-blur hover:border-primary/20 transition-all">
+              <div className="p-6 md:p-8">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Bot className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold">AI Coding Agents</h2>
+                    <p className="text-xs text-muted-foreground">Connect AI assistants to your workspaces</p>
+                  </div>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {(loadingAgents ? [1,2,3].map(n => ({ id: String(n), name: "", status: "disconnected" as const })) : agents).map((agent, idx) => (
-                    <div key={agent.id || idx} className="flex items-center justify-between rounded-md border border-border bg-card px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-md bg-primary/10 flex items-center justify-center text-primary">
-                          <Bot className="h-5 w-5" />
+                    <div key={agent.id || idx} className="flex items-center justify-between rounded-lg border border-border/50 bg-card/30 backdrop-blur px-5 py-4 hover:border-primary/30 hover-lift transition-all group">
+                      <div className="flex items-center gap-4">
+                        <div className="h-12 w-12 rounded-lg bg-primary/10 group-hover:bg-primary/20 flex items-center justify-center text-primary transition-all">
+                          <Bot className="h-6 w-6" />
                         </div>
                         <div>
-                          <div className="font-medium text-foreground">{agent.name || "Loading..."}</div>
+                          <div className="font-semibold text-foreground">{agent.name || "Loading..."}</div>
+                          <div className="text-xs text-muted-foreground mt-0.5">AI-powered code assistant</div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-4">
                         <StatusDot s={agent.status} />
                         <Button
                           size="sm"
                           variant={agent.status === "connected" ? "secondary" : "default"}
-                          className={agent.status === "connected" ? "" : "bg-primary"}
+                          className={agent.status === "connected" ? "hover-scale transition-all" : "bg-primary hover:glow-primary hover-scale transition-all"}
                           onClick={() => toggleAgent(agent)}
                           disabled={savingAgentId === agent.id || loadingAgents}
                         >
@@ -183,22 +189,44 @@ export default function AiAgentsPage() {
             </Card>
 
             {/* Right: MCP server config */}
-            <Card className="border-border bg-card/50">
-              <div className="p-4 md:p-6 space-y-4">
-                <div className="flex items-center gap-2">
-                  <ServerCog className="h-5 w-5 text-primary" />
-                  <h2 className="text-sm font-medium">MCP Server Configuration</h2>
+            <Card className="border-border/50 bg-card/50 backdrop-blur hover:border-secondary/20 transition-all">
+              <div className="p-6 md:p-8 space-y-6">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-secondary/10 flex items-center justify-center">
+                    <ServerCog className="h-5 w-5 text-secondary" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold">MCP Server</h2>
+                    <p className="text-xs text-muted-foreground">Configure your server connection</p>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="mcpUrl">MCP Server URL</Label>
-                  <Input id="mcpUrl" placeholder="https://..." value={config.url} onChange={(e) => setConfig({ ...config, url: e.target.value })} />
+                <div className="space-y-3">
+                  <Label htmlFor="mcpUrl" className="text-sm font-medium">MCP Server URL</Label>
+                  <Input 
+                    id="mcpUrl" 
+                    placeholder="https://mcp.example.com" 
+                    value={config.url} 
+                    onChange={(e) => setConfig({ ...config, url: e.target.value })}
+                    className="border-border/50 bg-card/30 backdrop-blur focus:border-secondary/50 transition-all"
+                  />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="mcpKey">API Key</Label>
-                  <Input id="mcpKey" type="password" placeholder="••••••••" value={config.apiKey} onChange={(e) => setConfig({ ...config, apiKey: e.target.value })} />
+                <div className="space-y-3">
+                  <Label htmlFor="mcpKey" className="text-sm font-medium">API Key</Label>
+                  <Input 
+                    id="mcpKey" 
+                    type="password" 
+                    placeholder="sk-••••••••••••••••" 
+                    value={config.apiKey} 
+                    onChange={(e) => setConfig({ ...config, apiKey: e.target.value })}
+                    className="border-border/50 bg-card/30 backdrop-blur focus:border-secondary/50 transition-all"
+                  />
                 </div>
                 <div>
-                  <Button onClick={saveConfig} disabled={savingConfig} className="bg-primary">
+                  <Button 
+                    onClick={saveConfig} 
+                    disabled={savingConfig} 
+                    className="w-full bg-gradient-to-r from-secondary to-secondary/80 hover:glow-secondary hover-lift transition-all"
+                  >
                     {savingConfig ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                     Save Configuration
                   </Button>
@@ -208,16 +236,27 @@ export default function AiAgentsPage() {
           </div>
 
           {/* Recent configs */}
-          <Card className="mt-6 border-border bg-card/50">
-            <div className="p-4 md:p-6">
-              <h3 className="text-sm font-medium mb-3">Recent MCP Server Configurations</h3>
-              <ul className="list-disc pl-5 space-y-1 text-sm text-muted-foreground">
-                {recent.length === 0 ? (
-                  <li>No recent configurations.</li>
-                ) : (
-                  recent.map((r, i) => <li key={i}>{r}</li>)
-                )}
-              </ul>
+          <Card className="mt-6 border-border/50 bg-card/50 backdrop-blur">
+            <div className="p-6 md:p-8">
+              <h3 className="text-lg font-bold mb-4">Recent Configurations</h3>
+              {recent.length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="h-16 w-16 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-3">
+                    <ServerCog className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                  <p className="text-sm text-muted-foreground">No recent configurations yet</p>
+                  <p className="text-xs text-muted-foreground mt-1">Configure your MCP server above to get started</p>
+                </div>
+              ) : (
+                <ul className="space-y-2">
+                  {recent.map((r, i) => (
+                    <li key={i} className="flex items-center gap-3 p-3 rounded-lg border border-border/30 bg-card/30 hover:border-primary/30 transition-all">
+                      <div className="h-2 w-2 rounded-full bg-accent" />
+                      <span className="text-sm text-foreground">{r}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           </Card>
         </div>
