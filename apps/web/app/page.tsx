@@ -75,9 +75,9 @@ export default function HomePage() {
       {/* Animated Background */}
       <div className="fixed inset-0 -z-10 grid-background opacity-20" />
       <div className="fixed inset-0 -z-10">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl pulse-glow" />
-        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-secondary/20 rounded-full blur-3xl pulse-glow" style={{ animationDelay: "1s" }} />
-        <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-accent/20 rounded-full blur-3xl pulse-glow" style={{ animationDelay: "2s" }} />
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl pulse-glow [animation-delay:0s]" />
+        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-secondary/20 rounded-full blur-3xl pulse-glow [animation-delay:1s]" />
+        <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-accent/20 rounded-full blur-3xl pulse-glow [animation-delay:2s]" />
       </div>
 
       {/* Header */}
@@ -155,15 +155,15 @@ export default function HomePage() {
 
           <div className="flex flex-wrap items-center justify-center gap-6 md:gap-10 pt-8 text-sm md:text-base text-muted-foreground">
             <div className="flex items-center gap-2.5 hover:text-accent transition-colors">
-              <div className="h-2.5 w-2.5 rounded-full bg-accent pulse-scale" />
+              <div className="h-2.5 w-2.5 rounded-full bg-accent pulse-scale [animation-delay:0s]" />
               <span className="font-medium">No credit card required</span>
             </div>
             <div className="flex items-center gap-2.5 hover:text-accent transition-colors">
-              <div className="h-2.5 w-2.5 rounded-full bg-accent pulse-scale" style={{ animationDelay: '0.5s' }} />
+              <div className="h-2.5 w-2.5 rounded-full bg-accent pulse-scale [animation-delay:0.5s]" />
               <span className="font-medium">Free forever plan</span>
             </div>
             <div className="flex items-center gap-2.5 hover:text-accent transition-colors">
-              <div className="h-2.5 w-2.5 rounded-full bg-accent pulse-scale" style={{ animationDelay: '1s' }} />
+              <div className="h-2.5 w-2.5 rounded-full bg-accent pulse-scale [animation-delay:1s]" />
               <span className="font-medium">5-minute setup</span>
             </div>
           </div>

@@ -314,10 +314,10 @@ a {
   /* Shimmer effect */
   @keyframes shimmer {
     0% {
-      background-position: -1000px 0;
+      background-position: -200% 0;
     }
     100% {
-      background-position: 1000px 0;
+      background-position: 200% 0;
     }
   }
   
@@ -328,7 +328,7 @@ a {
       hsl(var(--border)) 50%,
       hsl(var(--muted)) 100%
     );
-    background-size: 1000px 100%;
+    background-size: 200% 100%;
     animation: shimmer 2s infinite;
   }
   

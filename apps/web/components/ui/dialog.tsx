@@ -13,8 +13,10 @@ export interface DialogProps {
 
 export function Dialog({ open, onOpenChange, children }: DialogProps) {
   React.useEffect(() => {
+    if (!open) return;
+    
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && open) {
+      if (e.key === "Escape") {
         onOpenChange(false);
       }
     };

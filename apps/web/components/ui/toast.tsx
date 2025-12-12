@@ -73,19 +73,32 @@ export function ToastContainer({ children }: { children: React.ReactNode }) {
 // Toast manager hook
 type ToastType = Omit<ToastProps, "id" | "onClose">;
 
-let toastId = 0;
-
 export function useToast() {
   const [toasts, setToasts] = React.useState<ToastProps[]>([]);
+  const timeoutsRef = React.useRef<Map<string, NodeJS.Timeout>>(new Map());
+
+  // Cleanup all timeouts on unmount
+  React.useEffect(() => {
+    return () => {
+      timeoutsRef.current.forEach((timeout) => clearTimeout(timeout));
+      timeoutsRef.current.clear();
+    };
+  }, []);
 
   const addToast = React.useCallback((toast: ToastType) => {
-    const id = `toast-${toastId++}`;
+    const id = `toast-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const duration = toast.duration || 5000;
 
     const newToast: ToastProps = {
       ...toast,
       id,
       onClose: (id: string) => {
+        // Clear timeout if exists
+        const timeout = timeoutsRef.current.get(id);
+        if (timeout) {
+          clearTimeout(timeout);
+          timeoutsRef.current.delete(id);
+        }
         setToasts((prev) => prev.filter((t) => t.id !== id));
       },
     };
@@ -93,9 +106,12 @@ export function useToast() {
     setToasts((prev) => [...prev, newToast]);
 
     // Auto remove after duration
-    setTimeout(() => {
+    const timeout = setTimeout(() => {
+      timeoutsRef.current.delete(id);
       setToasts((prev) => prev.filter((t) => t.id !== id));
     }, duration);
+    
+    timeoutsRef.current.set(id, timeout);
 
     return id;
   }, []);
